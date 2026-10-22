@@ -46,7 +46,7 @@ jobs:
           exit 1
 
       # Full history and tags: version.ts reads the release tags and the commits since them.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
