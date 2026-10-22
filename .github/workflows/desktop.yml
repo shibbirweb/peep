@@ -1,0 +1,212 @@
+name: Desktop
+
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+    paths:
+      - 'desktop/**'
+      - 'server/**'
+      - '.github/workflows/desktop.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Rust checks
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: desktop/src-tauri
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Placeholder sidecar and resources (checks do not bundle)
+        run: |
+          mkdir -p binaries resources
+          touch "binaries/php-$(rustc -vV | sed -n 's/^host: //p')" resources/peep-server.phar
+
+      - name: Format
+        run: cargo fmt --check
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Tests
+        run: cargo test
+
+  viewer:
+    name: Build peep-server.phar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+          ini-values: phar.readonly=0
+          tools: composer:v2
+
+      - name: Build the UI
+        working-directory: server/resources/ui
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+
+      - name: Build the PHAR
+        working-directory: server
+        run: |
+          composer install --no-dev --classmap-authoritative --prefer-dist --no-interaction --no-progress
+          composer install --working-dir=../tools --prefer-dist --no-interaction --no-progress
+          ../tools/vendor/bin/box compile --no-interaction
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: peep-server-phar
+          path: server/build/peep-server.phar
+          if-no-files-found: error
+
+  app:
+    name: App (${{ matrix.target }})
+    needs: [checks, viewer]
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-latest
+            target: aarch64-apple-darwin
+          - runner: macos-latest
+            target: x86_64-apple-darwin
+          - runner: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - runner: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+          - runner: windows-latest
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.runner }}
+    env:
+      # Secrets cannot be tested in "if:"; this flag can.
+      HAS_WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: peep-server-phar
+          path: server/build
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Linux libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Bundled PHP and viewer
+        shell: bash
+        working-directory: desktop
+        run: |
+          bun install --frozen-lockfile
+          bash scripts/prepare-sidecar.sh ${{ matrix.target }}
+
+      - name: The bundled PHP runs the viewer
+        # Cross builds (x86_64 macOS on an arm64 runner) cannot run their PHP here.
+        if: matrix.target != 'x86_64-apple-darwin'
+        shell: bash
+        working-directory: desktop/src-tauri
+        run: |
+          PHP=$(ls binaries/php-${{ matrix.target }}*)
+          "$PHP" -m | tr -d '\r' | grep -qx pdo_sqlite
+          "$PHP" -m | tr -d '\r' | grep -qx openssl
+          "$PHP" resources/peep-server.phar --version
+
+      - name: Release settings (update key, Windows certificate)
+        shell: bash
+        working-directory: desktop/src-tauri
+        env:
+          UPDATER_PUBKEY: ${{ vars.TAURI_UPDATER_PUBKEY }}
+          WINDOWS_THUMBPRINT: ${{ vars.WINDOWS_CERTIFICATE_THUMBPRINT }}
+        run: |
+          cat > release.conf.js <<'JS'
+          const config = {};
+          if (process.env.UPDATER_PUBKEY) {
+            config.plugins = { updater: { pubkey: process.env.UPDATER_PUBKEY } };
+            config.bundle = { createUpdaterArtifacts: true };
+          }
+          if (process.env.WINDOWS_THUMBPRINT) {
+            config.bundle = { ...config.bundle, windows: { certificateThumbprint: process.env.WINDOWS_THUMBPRINT, digestAlgorithm: 'sha256', timestampUrl: 'http://timestamp.digicert.com' } };
+          }
+          await Bun.write('tauri.release.conf.json', JSON.stringify(config, null, 2));
+          JS
+          bun release.conf.js
+          cat tauri.release.conf.json
+
+      - name: Import the Windows signing certificate
+        if: runner.os == 'Windows' && env.HAS_WINDOWS_CERTIFICATE == 'true'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          $bytes = [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE)
+          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\certificate.pfx", $bytes)
+          $password = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          Import-PfxCertificate -FilePath "$env:RUNNER_TEMP\certificate.pfx" -CertStoreLocation Cert:\CurrentUser\My -Password $password | Out-Null
+          Remove-Item "$env:RUNNER_TEMP\certificate.pfx"
+
+      - name: Build (and attach to the draft release for tags)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # macOS signing and notarization; skipped when the secrets are not set.
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Signs the update artifacts the app checks with TAURI_UPDATER_PUBKEY.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: desktop
+          tauriScript: bun run tauri
+          args: --target ${{ matrix.target }} --config src-tauri/tauri.release.conf.json
+          tagName: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
+          releaseName: Peep ${{ github.ref_name }}
+          releaseDraft: true
+          includeUpdaterJson: true
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        with:
+          name: peep-desktop-${{ matrix.target }}
+          path: |
+            desktop/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.dmg
+            desktop/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.app.tar.gz
+            desktop/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.deb
+            desktop/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.rpm
+            desktop/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage
+            desktop/src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi
+            desktop/src-tauri/target/${{ matrix.target }}/release/bundle/**/*-setup.exe
+          if-no-files-found: warn

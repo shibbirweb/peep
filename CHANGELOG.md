@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Desktop app (Tauri 2, `desktop/`) for macOS, Windows and Linux: the viewer in a native window with its own PHP 8.5, reusing a viewer started from the CLI; tray with the unread count, hotkey, always on top, native notifications, start at login, updates, and `peep://open` for `serve --open=window`.
+- `peep-server serve --exit-with=<pid>`: the viewer stops when the process that started it is gone.
 - Webhook simulator: rules that call the app back when a mail or SMS is caught (or by hand from the inbox), with a template language for the body (`{{ mail.message_id }}`, `{{ now.unix_float }}`, `hmac_sha256(...)` and more), JSON, form, XML or raw bodies, timed steps, Mailgun and Twilio signatures that the providers' own checks accept, presets for Mailgun, Twilio and Vonage, optional retries, a delivery log with resend, a Test button, and import and export.
 - Mail catching: SMTP on port 23525, the Laravel `peep` mailer (`MAIL_MAILER=peep`, Laravel 5.5 to 13), a Mailgun-compatible API and a generic `/_peep/mail` endpoint. A mail inbox with HTML (desktop and mobile width), text, source, headers and attachment downloads, unread counts, and a link to the request that sent the mail.
 - SMS catching: generic `/_peep/sms`, Twilio- and Vonage-compatible APIs that answer like the real ones, Laravel SMS notifications (Vonage, Nexmo, Twilio channel; optionally blocking the real send), and `peep()->sms()`. An SMS inbox with a thread per number, segment counts and GSM-7 or UCS-2 encoding.

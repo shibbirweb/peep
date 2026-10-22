@@ -50,6 +50,15 @@ final class ServeOptionsTest extends TestCase
         ServeOptions::fromArguments(['--host=0.0.0.0']);
     }
 
+    public function testExitWithTakesAProcessId(): void
+    {
+        $this->assertSame(4242, ServeOptions::fromArguments(['--exit-with=4242'])->exitWith);
+        $this->assertNull(ServeOptions::fromArguments([])->exitWith);
+
+        $this->expectException(InvalidArgumentException::class);
+        ServeOptions::fromArguments(['--exit-with=abc']);
+    }
+
     public function testRejectsInvalidOptions(): void
     {
         foreach ([['--port=0'], ['--port=abc'], ['--open=tab'], ['--verbose'], ['--host=0.0.0.0'], ['--host=192.168.1.5']] as $arguments) {

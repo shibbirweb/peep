@@ -16,7 +16,7 @@ How each feature works is described in [implementation.md](implementation.md). T
 | VF: Full viewer | 6 | 23 / 23 (2 dropped) |
 | MS: Mail and SMS catching | 7 | 15 / 15 |
 | WH: Webhook simulator | 7 | 13 / 13 |
-| DT: Desktop app (Tauri) | 8 | 0 / 15 |
+| DT: Desktop app (Tauri) | 8 | 12 / 15 |
 | RL: Release | 9 | 0 / 10 |
 
 ## SU: Project setup (Phase 0)
@@ -261,21 +261,21 @@ After the viewer catches a mail or SMS, it can call back a URL the user sets up,
 
 ## DT: Desktop app, Tauri (Phase 8)
 
-- [ ] DT-01 Tauri project in `desktop/`
-- [ ] DT-02 Static PHP 8.5 binaries per platform (static-php-cli) built in CI
-- [ ] DT-03 Viewer started as a sidecar (`bundle.externalBin`), stopped on quit
-- [ ] DT-04 Window loads `http://127.0.0.1:23517`; reuses a server already running
-- [ ] DT-05 Display mode: window, or tray only and open browser
-- [ ] DT-06 `peep-server serve --open=window` launches the app when installed
-- [ ] DT-07 Tray icon with unread count
-- [ ] DT-08 Global hotkey to show and hide
-- [ ] DT-09 Always on top (pin)
-- [ ] DT-10 Native notifications
-- [ ] DT-11 Auto-start at login (optional)
-- [ ] DT-12 Auto-update
-- [ ] DT-13 macOS signing and notarization
-- [ ] DT-14 Windows signing
-- [ ] DT-15 CI builds for macOS, Windows, Linux attached to the GitHub Release
+- [x] DT-01 Tauri project in `desktop/` (Tauri 2)
+- [x] DT-02 Static PHP 8.5 binaries per platform: static-php-cli's published builds, pinned by SHA-256 and checked in CI (`desktop/scripts/fetch-php.sh`)
+- [x] DT-03 Viewer started as a sidecar (`bundle.externalBin`), stopped on quit, and by itself when the app is gone (`serve --exit-with`)
+- [x] DT-04 Window loads `http://127.0.0.1:23517`; reuses a server already running
+- [x] DT-05 Display mode: window, or tray only and open browser
+- [x] DT-06 `peep-server serve --open=window` launches the app when installed
+- [x] DT-07 Tray icon with unread count
+- [x] DT-08 Global hotkey to show and hide (Cmd/Ctrl+Alt+P)
+- [x] DT-09 Always on top (pin)
+- [x] DT-10 Native notifications
+- [x] DT-11 Auto-start at login (optional)
+- [x] DT-12 Auto-update (from GitHub Releases; active in builds made with the update key)
+- [ ] DT-13 macOS signing and notarization (in progress: wired in CI, waits for an Apple Developer ID certificate)
+- [ ] DT-14 Windows signing (in progress: wired in CI, waits for a code signing certificate)
+- [ ] DT-15 CI builds for macOS, Windows, Linux attached to the GitHub Release (in progress: workflow written, first run pending)
 
 ## RL: Release (Phase 9)
 

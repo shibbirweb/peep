@@ -1,5 +1,7 @@
 // Desktop notifications for notify() and exceptions, while the viewer is in the background.
 
+import { isDesktop, nativeNotify } from './desktop.js';
+
 /**
  * @param {object} card A new card.
  * @returns {{title: string, body: string}|null}
@@ -26,6 +28,12 @@ export function notificationFor(card) {
 export function maybeNotify(card) {
   const notification = notificationFor(card);
 
+  if (notification !== null && isDesktop()) {
+    nativeNotify(notification.title, notification.body);
+
+    return;
+  }
+
   if (notification === null || typeof Notification === 'undefined' || Notification.permission !== 'granted' || !document.hidden) {
     return;
   }
@@ -37,6 +45,10 @@ export function maybeNotify(card) {
  * @returns {Promise<boolean>} Whether notifications may be shown.
  */
 export async function askPermission() {
+  if (isDesktop()) {
+    return true;
+  }
+
   if (typeof Notification === 'undefined') {
     return false;
   }

@@ -1,4 +1,5 @@
 import { applyEvent } from './cards.js';
+import { appCommand } from './desktop.js';
 import { setPathMappings } from './ide.js';
 import { MAIL_EVENTS, SMS_EVENTS, applyInboxEvent } from './inbox.js';
 import { maybeNotify } from './notify.js';
@@ -70,6 +71,11 @@ export function connect() {
       }
     });
   }
+
+  // peep()->showApp() / hideApp(): only the desktop app can act on them.
+  on(source, 'app.command', (data) => {
+    appCommand(data.command);
+  });
 
   on(source, 'lock.released', (data) => {
     viewer.locks[data.name] = data.stop ? 'stopped' : 'continued';

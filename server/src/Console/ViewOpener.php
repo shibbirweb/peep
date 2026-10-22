@@ -21,7 +21,7 @@ final class ViewOpener
         }
 
         if ($mode === OpenMode::Window) {
-            // The desktop app registers peep:// (DT-06). Until it exists, fall back to the browser.
+            // Without the desktop app, the browser shows the viewer instead.
             if ($this->desktopAppInstalled() && $this->launch(self::DEEP_LINK . '?url=' . rawurlencode($url))) {
                 return null;
             }
@@ -34,12 +34,32 @@ final class ViewOpener
         return $this->launch($url) ? null : "Could not open a browser. Open {$url} yourself.";
     }
 
+    /**
+     * The desktop app registers the peep:// link when it is installed (DT-06).
+     */
     private function desktopAppInstalled(): bool
     {
         return match (PHP_OS_FAMILY) {
             'Darwin' => is_dir('/Applications/Peep.app') || is_dir(getenv('HOME') . '/Applications/Peep.app'),
+            'Linux' => trim((string) @shell_exec('xdg-mime query default x-scheme-handler/peep 2>/dev/null')) !== '',
+            'Windows' => $this->succeeds('reg query HKCU\\Software\\Classes\\peep'),
             default => false,
         };
+    }
+
+    private function succeeds(string $command): bool
+    {
+        $process = @proc_open($command, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+        if (! is_resource($process)) {
+            return false;
+        }
+
+        foreach ($pipes as $pipe) {
+            stream_get_contents($pipe);
+            fclose($pipe);
+        }
+
+        return proc_close($process) === 0;
     }
 
     private function launch(string $target): bool

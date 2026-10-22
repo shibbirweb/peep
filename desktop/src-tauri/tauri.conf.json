@@ -1,0 +1,53 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Peep",
+  "version": "0.0.0",
+  "identifier": "com.shibbirweb.peep",
+  "build": {
+    "frontendDist": "../loading"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "DeveloperTool",
+    "shortDescription": "Debug any PHP app in a separate window",
+    "longDescription": "Peep shows values, queries, logs, exceptions, mail and SMS from your PHP app, live. The desktop app runs the Peep viewer with its own PHP, so nothing else needs to be installed.",
+    "copyright": "MIT License, MD. Shibbir Ahmed",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "externalBin": [
+      "binaries/php"
+    ],
+    "resources": {
+      "resources/peep-server.phar": "peep-server.phar"
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["peep"]
+      }
+    },
+    "updater": {
+      "endpoints": [
+        "https://github.com/shibbirweb/peep/releases/latest/download/latest.json"
+      ],
+      "pubkey": ""
+    }
+  }
+}

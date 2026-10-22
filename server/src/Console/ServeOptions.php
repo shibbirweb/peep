@@ -20,6 +20,7 @@ final readonly class ServeOptions
         public string $host = self::DEFAULT_HOST,
         public int $port = self::DEFAULT_PORT,
         public OpenMode $open = OpenMode::Browser,
+        public ?int $exitWith = null,
     ) {}
 
     /**
@@ -35,7 +36,7 @@ final readonly class ServeOptions
         for ($index = 0; $index < count($arguments); $index++) {
             $argument = $arguments[$index];
 
-            if (preg_match('/^--(host|port|open)(?:=(.*))?$/', $argument, $matches) !== 1) {
+            if (preg_match('/^--(host|port|open|exit-with)(?:=(.*))?$/', $argument, $matches) !== 1) {
                 throw new InvalidArgumentException("Unknown option: {$argument}");
             }
 
@@ -57,7 +58,15 @@ final readonly class ServeOptions
             throw new InvalidArgumentException('Listening on ' . $host . ' needs a token. Set one in the Peep settings first, or use 127.0.0.1.');
         }
 
-        return new self($host, $port, $open);
+        $exitWith = null;
+        if (isset($values['exit-with'])) {
+            $exitWith = filter_var($values['exit-with'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($exitWith === false) {
+                throw new InvalidArgumentException('--exit-with must be a process id.');
+            }
+        }
+
+        return new self($host, $port, $open, $exitWith);
     }
 
     public static function isLoopback(string $host): bool

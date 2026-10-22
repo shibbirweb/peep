@@ -17,7 +17,9 @@ use ShibbirWeb\PeepServer\Storage\CardStorage;
 use ShibbirWeb\PeepServer\Storage\NullCardStorage;
 use ShibbirWeb\PeepServer\Storage\SqliteCardStorage;
 use Throwable;
+use Revolt\EventLoop;
 
+use function Amp\async;
 use function Amp\trapSignal;
 
 /**
@@ -25,6 +27,8 @@ use function Amp\trapSignal;
  */
 final readonly class ServeCommand
 {
+    public const float PARENT_CHECK_SECONDS = 1.0;
+
     /**
      * @param resource $output
      * @param resource $errors
@@ -102,7 +106,7 @@ final readonly class ServeCommand
         $this->write('Settings: ' . $settingsFile->path());
         $this->openView($options->open, $application->url());
 
-        $this->waitUntilStopped();
+        $this->waitUntilStopped($options->exitWith !== null ? new ParentProcess($options->exitWith) : null);
         $application->stop();
 
         return 0;
@@ -134,20 +138,42 @@ final readonly class ServeCommand
         }
     }
 
-    private function waitUntilStopped(): void
+    /**
+     * Until Ctrl+C or SIGTERM, or until the parent process (the desktop app) is gone.
+     */
+    private function waitUntilStopped(?ParentProcess $parent): void
     {
-        if (defined('SIGINT') && defined('SIGTERM')) {
-            try {
-                trapSignal([SIGINT, SIGTERM]);
-
-                return;
-            } catch (UnsupportedFeatureException) {
-                // Fall through: the event loop driver cannot watch signals.
+        $stopped = new DeferredFuture();
+        $stop = static function () use ($stopped): void {
+            if (! $stopped->isComplete()) {
+                $stopped->complete();
             }
+        };
+
+        if (defined('SIGINT') && defined('SIGTERM')) {
+            async(static function () use ($stop): void {
+                try {
+                    trapSignal([SIGINT, SIGTERM]);
+                    $stop();
+                } catch (UnsupportedFeatureException) {
+                    // The event loop driver cannot watch signals: run until killed.
+                }
+            })->ignore();
         }
 
-        // No signal support (e.g. no pcntl): run until the process is killed.
-        new DeferredFuture()->getFuture()->await();
+        $watch = $parent !== null
+            ? EventLoop::repeat(self::PARENT_CHECK_SECONDS, static function () use ($parent, $stop): void {
+                if (! $parent->isRunning()) {
+                    $stop();
+                }
+            })
+            : null;
+
+        $stopped->getFuture()->await();
+
+        if ($watch !== null) {
+            EventLoop::cancel($watch);
+        }
     }
 
     private function write(string $line): void

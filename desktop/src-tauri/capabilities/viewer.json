@@ -1,0 +1,16 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "viewer",
+  "description": "The Peep viewer page, served by the local viewer server, may call only these commands.",
+  "windows": ["main"],
+  "remote": {
+    "urls": ["http://127.0.0.1:*", "http://localhost:*"]
+  },
+  "permissions": [
+    "allow-set-unread",
+    "allow-notify",
+    "allow-show-window",
+    "allow-hide-window",
+    "allow-set-pinned"
+  ]
+}

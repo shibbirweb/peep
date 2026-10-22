@@ -13,6 +13,7 @@
   import { clock } from './lib/format.js';
   import { emptyFilters, matches } from './lib/filters.js';
   import { groupRows } from './lib/groups.js';
+  import { setUnread } from './lib/desktop.js';
   import { connect, viewer } from './lib/stream.svelte.js';
 
   let project = $state('');
@@ -54,6 +55,11 @@
   const screens = $derived(viewer.screens.filter((screen) => project === '' || screen.project === project));
   const unreadMail = $derived(viewer.mails.filter((mail) => !mail.read && (project === '' || mail.project === project)).length);
   const unreadSms = $derived(viewer.sms.filter((sms) => !sms.read && (project === '' || sms.project === project)).length);
+
+  // The desktop app shows unread mail and SMS of every project on its tray and dock.
+  $effect(() => {
+    setUnread(viewer.mails.filter((mail) => !mail.read).length + viewer.sms.filter((sms) => !sms.read).length);
+  });
 
   // From a mail or SMS to the cards of the request or job that sent it (MS-08, MS-15).
   function showRequest(requestId) {

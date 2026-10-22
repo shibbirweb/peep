@@ -622,32 +622,40 @@ Target URL rules [WH-12]: the rule's URL is whatever the user typed. A status ca
 
 ## 12. Desktop app (Phase 8)
 
-Tauri v2 in `desktop/src-tauri/`.
+Tauri 2 in `desktop/src-tauri/` (Rust: `lib.rs` for the app, `server.rs` for the viewer process, `settings.rs` for `settings.json`). The window shows the viewer's own page over `http://127.0.0.1:{port}`; a small local page (`desktop/loading/`) is shown until then and reports start-up failures.
 
 ### Start-up [DT-03 to DT-06]
 
-1. `GET http://127.0.0.1:{port}/_peep/health`. If Peep answers, reuse that server (started from the CLI or another app instance).
-2. Otherwise start the sidecar: bundled static PHP 8.5 binary running `peep-server.phar serve --open=none` (`bundle.externalBin`, shell plugin `sidecar`). Poll health every 100 ms for up to 5 s; show an error window with the sidecar's stderr if it never comes up.
-3. Read `display_mode` from `GET /_peep/ui/settings`. `window`: create the main window on `http://127.0.0.1:{port}`. `browser`: no window, tray only, open the URL with the system browser.
-4. On quit, stop the sidecar only if this app started it.
+1. Read `port` and `display_mode` from `settings.json`, found by the same rules as the viewer (`PEEP_CONFIG_DIR`, `%APPDATA%\peep`, `$XDG_CONFIG_HOME/peep`, `~/.config/peep`).
+2. `GET http://127.0.0.1:{port}/_peep/health`. If Peep answers, reuse that server (started from the CLI or another app instance). If something else owns the port, show why.
+3. Otherwise start the sidecar: the bundled static PHP runs `-d zend.assertions=-1 peep-server.phar serve --open=none --port={port} --exit-with={app pid}` (`bundle.externalBin`, the PHAR in `bundle.resources`). Poll health every 100 ms for up to 15 s (macOS scans a new app's binaries on first launch); on failure show the error page with the sidecar's output.
+4. `window`: navigate the main window to the viewer. `browser`: keep the window hidden (tray only) and open the URL in the system browser.
+5. On quit, stop the sidecar only if this app started it: SIGTERM first so it can save its history, then kill. `--exit-with` makes the viewer check every second that the app still runs (`posix_kill(pid, 0)`, `tasklist` on Windows) and stop when it does not, so a crash or force quit leaves nothing behind.
+6. A second launch, or a `peep://open?url=...` link (from `peep-server serve --open=window`, which detects the installed app on macOS, Linux and Windows), goes to the running instance (`tauri-plugin-single-instance` with deep-link support), which shows its window; the `url` is followed only for local viewers.
 
 ### Native features [DT-07 to DT-12]
 
 | Feature | Plugin / logic |
 |---------|----------------|
-| Tray with unread count | Tray menu (Show, Pin, Display mode, Quit); the UI sends the count through `window.__TAURI__` and the app sets the tray title / badge |
-| Global hotkey | `tauri-plugin-global-shortcut`, toggles the window |
-| Always on top | `window.set_always_on_top` |
-| Notifications | `tauri-plugin-notification`, called from the UI |
-| Auto-start | `tauri-plugin-autostart`, off by default |
-| Auto-update | `tauri-plugin-updater` reading `latest.json` from GitHub Releases |
-| `peep://open` deep link | `tauri-plugin-deep-link`, used by `peep-server serve --open=window` |
+| Tray with unread count | Tray menu (Show Peep, Open in browser, Always on top, Start at login, Quit). The viewer page calls `set_unread` with the unread mail and SMS count: the tray title (macOS), tooltip and dock badge |
+| Global hotkey | `tauri-plugin-global-shortcut`, Cmd/Ctrl+Alt+P toggles the window (Cmd+Shift+P is left to editors) |
+| Always on top | `set_pinned`, the tray item, `window.set_always_on_top` |
+| Notifications | `tauri-plugin-notification` through the `notify` command, only while the window is not focused; the viewer's notifications setting decides whether the page sends them |
+| `showApp()` / `hideApp()` | The page turns the viewer's `app.command` events into `show_window` / `hide_window` |
+| Auto-start | `tauri-plugin-autostart`, off by default, switched in the tray menu |
+| Auto-update | `tauri-plugin-updater` reading `latest.json` from GitHub Releases, in release builds that carry `TAURI_UPDATER_PUBKEY`; installs in the background and says so in a notification |
+| `peep://open` | `tauri-plugin-deep-link` |
+| Closing the window | Hides it; Quit is in the tray |
 
-Security: the window loads a local `http://` page, so Tauri capabilities allow IPC only for the remote origin `http://127.0.0.1:{port}` and only the commands listed above.
+Security: the viewer page is a remote origin to Tauri. The `viewer` capability allows `http://127.0.0.1:*` and `http://localhost:*` to call only the five app commands (`set_unread`, `notify`, `show_window`, `hide_window`, `set_pinned`, declared in `build.rs`); no plugin APIs. The local start-up page may only listen for events.
 
 ### Bundled PHP [DT-02]
 
-Built with static-php-cli in CI for `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu` and `x86_64-pc-windows-msvc`, named `php-{target-triple}` as Tauri's sidecar convention requires. Extensions: `openssl`, `mbstring`, `pdo_sqlite`, `phar`, `zlib`, `ctype`, `filter`, `iconv`, `sockets`.
+static-php-cli's published "common" builds of PHP 8.5.8 (Windows: the "spc-max" build of 8.5.5, the newest published), downloaded by `desktop/scripts/fetch-php.sh` and checked against pinned SHA-256 sums, for `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu` and `x86_64-pc-windows-msvc`, named `php-{target-triple}` as Tauri's sidecar convention requires. They include every extension the viewer needs (`openssl`, `mbstring`, `pdo_sqlite`, `phar`, `zlib`, `sockets`, `pcntl`, `posix`). CI checks that the bundled PHP loads `pdo_sqlite` and `openssl` and runs the PHAR. Downloading pinned builds instead of compiling PHP in CI keeps a release build at minutes instead of most of an hour per platform; to update, change the version and sums in the script.
+
+### CI [DT-13 to DT-15]
+
+`.github/workflows/desktop.yml`: Rust format, clippy and tests; the viewer PHAR built once; then one build per target (macOS arm64 and x86_64 on an arm64 runner, Linux x86_64 and arm64, Windows) with `tauri-apps/tauri-action`, attached to a draft release for `v*` tags. macOS signing and notarization, Windows signing and update signing run when their secrets are set (listed in `desktop/README.md`).
 
 ## 13. Release pipeline (Phase 9)
 

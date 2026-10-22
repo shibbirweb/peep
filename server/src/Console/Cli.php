@@ -11,7 +11,7 @@ use ShibbirWeb\PeepServer\Version;
  */
 final class Cli
 {
-    public const string USAGE = 'Usage: peep-server [serve] [--host=127.0.0.1] [--port=23517] [--open=browser|window|none]';
+    public const string USAGE = 'Usage: peep-server [serve] [--host=127.0.0.1] [--port=23517] [--open=browser|window|none] [--exit-with=PID]';
 
     private function __construct() {}
 

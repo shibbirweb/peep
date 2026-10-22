@@ -1,0 +1,52 @@
+// The Peep desktop app shows this page in its window and exposes a few commands to it
+// (window.__TAURI__, allowed by the app's "viewer" capability). In a browser they do nothing.
+
+function tauri() {
+  return typeof window !== 'undefined' ? window.__TAURI__ : undefined;
+}
+
+export function isDesktop() {
+  return typeof tauri()?.core?.invoke === 'function';
+}
+
+function invoke(command, args = {}) {
+  if (!isDesktop()) {
+    return Promise.resolve(null);
+  }
+
+  return tauri().core.invoke(command, args).catch(() => null);
+}
+
+/**
+ * @param {number} count Unread mail and SMS, shown on the tray and the dock.
+ */
+export function setUnread(count) {
+  return invoke('set_unread', { count });
+}
+
+/**
+ * A native notification; the app shows it only while its window is in the background.
+ *
+ * @param {string} title
+ * @param {string} body
+ */
+export function nativeNotify(title, body) {
+  return invoke('notify', { title, body });
+}
+
+/**
+ * peep()->showApp() and peep()->hideApp().
+ *
+ * @param {string} command "show_app" or "hide_app"
+ */
+export function appCommand(command) {
+  if (command === 'show_app') {
+    return invoke('show_window');
+  }
+
+  if (command === 'hide_app') {
+    return invoke('hide_window');
+  }
+
+  return Promise.resolve(null);
+}
