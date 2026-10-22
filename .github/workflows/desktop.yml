@@ -185,6 +185,33 @@ jobs:
           Import-PfxCertificate -FilePath "$env:RUNNER_TEMP\certificate.pfx" -CertStoreLocation Cert:\CurrentUser\My -Password $password | Out-Null
           Remove-Item "$env:RUNNER_TEMP\certificate.pfx"
 
+      # tauri-action reports a broken certificate only as a failed `security import` deep in the
+      # build, so it is opened here first, with an error that says which secret to fix.
+      - name: Check the Apple signing certificate
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          if [ -z "$APPLE_CERTIFICATE" ]; then
+            echo "No APPLE_CERTIFICATE secret: the app is built unsigned."
+            exit 0
+          fi
+          p12="$RUNNER_TEMP/certificate.p12"
+          printf '%s' "$APPLE_CERTIFICATE" | base64 --decode > "$p12" 2>/dev/null || true
+          if ! subject="$(/usr/bin/openssl pkcs12 -in "$p12" -nokeys -clcerts -passin fd:3 3<<<"$APPLE_CERTIFICATE_PASSWORD" 2>/dev/null | /usr/bin/openssl x509 -noout -subject 2>/dev/null)"; then
+            rm -f "$p12"
+            echo "::error::APPLE_CERTIFICATE is not a .p12 file that APPLE_CERTIFICATE_PASSWORD opens. Export the Developer ID Application certificate with its private key from Keychain Access as .p12, set APPLE_CERTIFICATE to the output of 'base64 -i certificate.p12' and APPLE_CERTIFICATE_PASSWORD to the export password. Delete both secrets to build unsigned."
+            exit 1
+          fi
+          rm -f "$p12"
+          echo "Signing certificate: $subject"
+          if [ -n "$APPLE_SIGNING_IDENTITY" ] && [[ "$subject" != *"$APPLE_SIGNING_IDENTITY"* ]]; then
+            echo "::warning::APPLE_SIGNING_IDENTITY ($APPLE_SIGNING_IDENTITY) does not appear in the certificate's subject."
+          fi
+
       - name: Build (and attach to the draft release for tags)
         uses: tauri-apps/tauri-action@v0
         env:
