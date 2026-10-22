@@ -1,0 +1,52 @@
+name: Viewer
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+      - 'tools/**'
+      - '.github/workflows/server.yml'
+  pull_request:
+    paths:
+      - 'server/**'
+      - 'tools/**'
+      - '.github/workflows/server.yml'
+
+concurrency:
+  group: server-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Tests, code style, static analysis (PHP 8.5)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+          ini-values: error_reporting=-1, zend.assertions=1
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: |
+          composer install --prefer-dist --no-interaction --no-progress
+          composer install --working-dir=../tools --prefer-dist --no-interaction --no-progress
+
+      - name: Tests
+        run: vendor/bin/phpunit
+
+      - name: Code style (PER-CS 2.0)
+        run: composer cs
+
+      - name: PHPStan
+        run: composer analyse

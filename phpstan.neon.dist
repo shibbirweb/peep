@@ -1,0 +1,18 @@
+# Client static analysis: types and bugs.
+#
+# PHP 7.1 compatibility is not checked here. PHPStan judges functions and classes by
+# the PHP it runs on, and setting phpVersion to 70100 stops it from reading the newer
+# PHPUnit installed for analysis. Compatibility is covered by PHPCompatibility
+# (phpcs.xml.dist), `php -l` on PHP 7.1 and the test suite on every PHP version in CI.
+parameters:
+    level: 8
+    paths:
+        - src
+        - tests
+    bootstrapFiles:
+        - vendor/autoload.php
+    excludePaths:
+        analyseAndScan:
+            # The polyfill declares TestCase twice and loads one at runtime by PHPUnit
+            # version; PHPStan runs with a current PHPUnit, so it must see the Gte8 one.
+            - vendor/yoast/phpunit-polyfills/src/TestCases/TestCasePHPUnitLte7.php

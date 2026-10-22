@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<ruleset name="Peep client PHP compatibility">
+    <description>
+        The client must run on PHP 7.1 and every later version. PHPCompatibility flags
+        syntax newer than 7.1 and code removed or deprecated in later versions.
+        Code style is checked by PHP-CS-Fixer, not here.
+    </description>
+
+    <file>src</file>
+    <file>tests</file>
+
+    <arg name="extensions" value="php"/>
+    <arg name="colors"/>
+    <arg value="sp"/>
+
+    <config name="testVersion" value="7.1-"/>
+
+    <rule ref="PHPCompatibility"/>
+</ruleset>

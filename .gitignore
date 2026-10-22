@@ -1,0 +1,29 @@
+# Dependencies
+/vendor/
+/tools/vendor/
+/server/vendor/
+
+# The client is a library: no lock file. The viewer and tools commit theirs.
+/composer.lock
+
+# Tool caches
+.phpunit.result.cache
+.phpunit.cache/
+.php-cs-fixer.cache
+.phpcs-cache
+
+# Local overrides
+/phpunit.xml
+/server/phpunit.xml
+/phpstan.neon
+/server/phpstan.neon
+/peep.php
+
+# Build output
+/build/
+*.phar
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store

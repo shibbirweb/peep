@@ -19,7 +19,7 @@ The feature checklist is in [features.md](features.md) and how each part works i
 
 | Phase | Goal | Release | Status |
 |-------|------|---------|--------|
-| 0 | Project setup | | Not started |
+| 0 | Project setup | | In progress (CI first run pending) |
 | 1 | Protocol and core client MVP | | Not started |
 | 2 | Viewer MVP in the browser | v0.1.0 | Not started |
 | 3 | Full client API | v0.2.0 | Not started |

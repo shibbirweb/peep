@@ -1,0 +1,22 @@
+{
+    "name": "shibbirweb/peep-tools",
+    "description": "Quality tools for Peep (static analysis, code style, PHP compatibility). Kept apart from the client package because these tools need a newer PHP than the client's 7.1 minimum.",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.5",
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.1",
+        "friendsofphp/php-cs-fixer": "^3.95",
+        "phpcompatibility/php-compatibility": "^10.0@alpha",
+        "phpstan/phpstan": "^2.3",
+        "squizlabs/php_codesniffer": "^4.0"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

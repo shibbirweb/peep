@@ -1,0 +1,45 @@
+{
+    "name": "shibbirweb/peep-server",
+    "description": "Peep viewer: receives events from the Peep client and shows them in the browser or the desktop app.",
+    "homepage": "https://github.com/shibbirweb/peep",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "MD. Shibbir Ahmed",
+            "homepage": "https://github.com/shibbirweb"
+        }
+    ],
+    "require": {
+        "php": ">=8.5"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^12.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "ShibbirWeb\\PeepServer\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ShibbirWeb\\PeepServer\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "scripts": {
+        "test": "phpunit",
+        "cs": "../tools/vendor/bin/php-cs-fixer fix --dry-run --diff",
+        "cs:fix": "../tools/vendor/bin/php-cs-fixer fix",
+        "analyse": "../tools/vendor/bin/phpstan analyse --memory-limit=1G",
+        "check": [
+            "@test",
+            "@cs",
+            "@analyse"
+        ]
+    }
+}

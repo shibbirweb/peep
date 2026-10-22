@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Kept to elements every supported PHPUnit version understands (7.5 to 12),
+    because the client is tested on PHP 7.1 to 8.5 and each gets its own PHPUnit.
+-->
+<phpunit
+    bootstrap="vendor/autoload.php"
+    colors="true"
+>
+    <php>
+        <ini name="error_reporting" value="-1"/>
+    </php>
+    <testsuites>
+        <testsuite name="Client">
+            <directory>tests</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>

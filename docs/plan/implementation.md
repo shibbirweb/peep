@@ -77,12 +77,18 @@ Client `src/` components: `Config/`, `Transport/`, `Envelope/`, `Payload/`, `Ser
 
 | Tool | Client (`/`) | Viewer (`server/`) |
 |------|--------------|--------------------|
-| PHPUnit | `^7.5 \|\| ^8.5 \|\| ^9.6 \|\| ^10.5 \|\| ^11.5` with `yoast/phpunit-polyfills`; Composer picks the right one per PHP version | current PHPUnit |
+| PHPUnit | `^7.5.20 \|\| ^8.5.40 \|\| ^9.6 \|\| ^11.5 \|\| ^12.5` with `yoast/phpunit-polyfills` 4 (PHPUnit 10 is skipped: the polyfills do not support it); Composer picks the right one per PHP version | PHPUnit 12 |
 | Style | PHP-CS-Fixer `@PSR12` | PHP-CS-Fixer `@PER-CS2.0` |
-| Static analysis | PHPStan, `phpVersion: 70100` | PHPStan, PHP 8.5 |
+| Static analysis | PHPStan level 8, types and bugs only | PHPStan level 9 |
 | Compatibility | PHP_CodeSniffer + PHPCompatibility, `testVersion 7.1-` | not needed |
 
-- No `composer.lock` for the client (it is a library); CI runs `composer update` on each PHP version so each gets compatible dev tools. `server/` commits its lock file (it is an application).
+Quality tools (PHPStan, PHP-CS-Fixer, PHPCompatibility) live in their own Composer project in `tools/`, because they cannot install on PHP 7.1 and would break the client's dependency resolution there. PHPStan does not check PHP 7.1 compatibility: it judges functions by the PHP it runs on, and pinning `phpVersion` to 7.1 stops it from reading the PHPUnit installed for analysis. Compatibility comes from PHPCompatibility, `php -l` on 7.1 and the tests on every version.
+
+PHPUnit 7.5 (the only PHPUnit for PHP 7.1) is affected by advisory PKSA-z3gr-8qht-p93v (CVE-2026-24765, PHPT code coverage). Composer blocks it by default, so `composer.json` ignores that one advisory with the reason recorded; the project uses neither PHPT tests nor coverage on 7.1.
+
+- No `composer.lock` for the client (it is a library); CI runs `composer update` on each PHP version so each gets compatible dev tools. `server/` and `tools/` commit their lock files.
+- CI installs Composer 2.2 LTS on PHP 7.1 and 7.2 (Composer 2.3+ needs PHP 7.2.5).
+- PHPUnit 12 lowers `error_reporting` during tests, so both `phpunit.xml.dist` files set `error_reporting=-1` and the base `TestCase` sets `E_ALL` itself.
 - Tests extend the polyfill `TestCase` and use `set_up()` / `tear_down()`, so one suite runs on PHPUnit 7.5 and current versions.
 - Base `TestCase` installs an error handler that throws on every warning, notice and deprecation [SU-08]. This is how "no deprecations on 8.5" is enforced.
 

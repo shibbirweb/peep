@@ -1,0 +1,88 @@
+name: Client
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: client-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.1', '7.2', '7.3', '7.4', '8.0', '8.1', '8.2', '8.3', '8.4', '8.5']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          ini-values: error_reporting=-1, display_errors=On, zend.assertions=1
+          # Composer 2.3+ needs PHP 7.2.5; PHP 7.1 and 7.2 get the 2.2 LTS line.
+          tools: composer:${{ (matrix.php == '7.1' || matrix.php == '7.2') && '2.2' || 'v2' }}
+
+      - name: Install dependencies
+        run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Run tests
+        run: vendor/bin/phpunit
+
+  syntax:
+    name: Syntax on PHP 7.1
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.1'
+          coverage: none
+          tools: none
+
+      - name: Lint every client file with PHP 7.1
+        run: find src tests -name '*.php' -print0 | xargs -0 -n1 php -l
+
+  quality:
+    name: Code style, static analysis, compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: |
+          composer update --prefer-dist --no-interaction --no-progress
+          composer install --working-dir=tools --prefer-dist --no-interaction --no-progress
+
+      - name: Code style (PSR-12)
+        run: composer cs
+
+      - name: PHPStan
+        run: composer analyse
+
+      - name: PHP 7.1+ compatibility
+        run: composer compat
+
+  dist:
+    name: Composer archive contains only the client
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check export-ignore
+        run: bash .github/scripts/check-dist.sh

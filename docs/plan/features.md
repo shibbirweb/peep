@@ -6,7 +6,7 @@ How each feature works is described in [implementation.md](implementation.md). T
 
 | Area | Phase | Done |
 |------|-------|------|
-| SU: Project setup | 0 | 0 / 14 |
+| SU: Project setup | 0 | 12 / 14 |
 | PR: Protocol | 1 | 0 / 7 |
 | CL: Core client MVP | 1 | 0 / 14 |
 | VW: Viewer MVP | 2 | 0 / 12 |
@@ -21,20 +21,20 @@ How each feature works is described in [implementation.md](implementation.md). T
 
 ## SU: Project setup (Phase 0)
 
-- [ ] SU-01 Repository skeleton in pds/skeleton layout (`src/`, `tests/`, `config/`, `resources/`, `docs/`, `server/`, `desktop/`)
-- [ ] SU-02 Root `composer.json`: `shibbirweb/peep`, `"php": ">=7.1"`, PSR-4 `ShibbirWeb\Peep\`, `files` autoload for `src/helpers.php`, Laravel auto-discovery
-- [ ] SU-03 `server/composer.json`: `"php": ">=8.5"`, PSR-4 `ShibbirWeb\PeepServer\`
-- [ ] SU-04 `.gitattributes` export-ignore for `server/`, `desktop/`, `docs/`, `tests/` and dev config files
-- [ ] SU-05 `.editorconfig`, `.gitignore`
-- [ ] SU-06 `LICENSE` (MIT), `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`
-- [ ] SU-07 PHPUnit with `yoast/phpunit-polyfills` so one suite runs on PHPUnit 7.5 (PHP 7.1) to current
-- [ ] SU-08 Base `TestCase` that turns warnings, notices and deprecations into failures
-- [ ] SU-09 PHP-CS-Fixer: PSR-12 for the client, PER-CS 2.0 for the viewer
-- [ ] SU-10 PHPStan: `phpVersion: 70100` for the client, PHP 8.5 for the viewer
-- [ ] SU-11 PHP_CodeSniffer with PHPCompatibility, `testVersion 7.1-`
-- [ ] SU-12 CI: client tests on PHP 7.1, 7.2, 7.3, 7.4, 8.0, 8.1, 8.2, 8.3, 8.4, 8.5
-- [ ] SU-13 CI: `php -l` of every client file on PHP 7.1; viewer tests on 8.5; lint and static analysis jobs
-- [ ] SU-14 CI: install check from a test project proves only client files are downloaded
+- [x] SU-01 Repository skeleton in pds/skeleton layout (`src/`, `tests/`, `docs/`, `server/`, `desktop/`, `tools/`; `config/` and `resources/` are added with their first file in LV-02 and CL-03)
+- [x] SU-02 Root `composer.json`: `shibbirweb/peep`, `"php": ">=7.1"`, PSR-4 `ShibbirWeb\Peep\` (the `files` autoload for `src/helpers.php` comes with CL-01 and Laravel auto-discovery with LV-01, so nothing points at classes that do not exist yet)
+- [x] SU-03 `server/composer.json`: `"php": ">=8.5"`, PSR-4 `ShibbirWeb\PeepServer\`
+- [x] SU-04 `.gitattributes` export-ignore for `server/`, `desktop/`, `docs/`, `tests/` and dev config files
+- [x] SU-05 `.editorconfig`, `.gitignore`
+- [x] SU-06 `LICENSE` (MIT), `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`
+- [x] SU-07 PHPUnit with `yoast/phpunit-polyfills` so one suite runs on PHPUnit 7.5 (PHP 7.1) to current
+- [x] SU-08 Base `TestCase` that turns warnings, notices and deprecations into failures
+- [x] SU-09 PHP-CS-Fixer: PSR-12 for the client, PER-CS 2.0 for the viewer
+- [x] SU-10 PHPStan for types and bugs: level 8 for the client, level 9 for the viewer (PHP 7.1 compatibility is checked by SU-11, SU-12 and SU-13, not PHPStan)
+- [x] SU-11 PHP_CodeSniffer with PHPCompatibility, `testVersion 7.1-`
+- [ ] SU-12 CI: client tests on PHP 7.1, 7.2, 7.3, 7.4, 8.0, 8.1, 8.2, 8.3, 8.4, 8.5 (in progress: workflow written; first run waits for the GitHub repository)
+- [ ] SU-13 CI: `php -l` of every client file on PHP 7.1; viewer tests on 8.5; lint and static analysis jobs (in progress: workflows written; first run waits for the GitHub repository)
+- [x] SU-14 CI: install check from a test project proves only client files are downloaded
 
 ## PR: Protocol (Phase 1)
 
