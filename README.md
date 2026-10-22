@@ -1,5 +1,13 @@
 # Peep
 
+[![CI](https://github.com/shibbirweb/peep/actions/workflows/ci.yml/badge.svg)](https://github.com/shibbirweb/peep/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/shibbirweb/peep?include_prereleases&sort=semver)](https://github.com/shibbirweb/peep/releases)
+[![Packagist version](https://img.shields.io/packagist/v/shibbirweb/peep)](https://packagist.org/packages/shibbirweb/peep)
+[![Packagist downloads](https://img.shields.io/packagist/dt/shibbirweb/peep)](https://packagist.org/packages/shibbirweb/peep)
+[![PHP 7.1 to 8.5](https://img.shields.io/badge/PHP-7.1%20to%208.5-777bb4?logo=php&logoColor=white)](docs/wiki/usage/Version-Support.md)
+[![Laravel 5.5 to 13](https://img.shields.io/badge/Laravel-5.5%20to%2013-ff2d20?logo=laravel&logoColor=white)](docs/wiki/usage/Version-Support.md#laravel-and-php)
+[![License: MIT](https://img.shields.io/github/license/shibbirweb/peep)](LICENSE)
+
 Debug any PHP app in a separate window. Call `peep($value)` anywhere and watch values, database queries, jobs, logs and exceptions arrive live, in your browser or in a desktop app. Peep also catches the mail and SMS your app sends, and can call your app back with signed provider webhooks.
 
 ![The Peep viewer showing cards from a shop app, grouped by request](https://raw.githubusercontent.com/shibbirweb/peep/main/docs/wiki/images/viewer.png)
