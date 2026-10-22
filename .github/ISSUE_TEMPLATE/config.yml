@@ -1,0 +1,9 @@
+# The "New issue" page: the two forms above, and these links instead of a blank issue.
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security problem
+    url: https://github.com/shibbirweb/peep/security/advisories/new
+    about: Please report vulnerabilities privately, not in a public issue.
+  - name: Read the documentation
+    url: https://github.com/shibbirweb/peep/wiki
+    about: Installation, every peep() method, Laravel, mail, webhooks, the desktop app and troubleshooting.

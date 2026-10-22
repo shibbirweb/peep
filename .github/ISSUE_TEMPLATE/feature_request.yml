@@ -1,0 +1,60 @@
+name: Feature request
+description: An idea that would make Peep more useful.
+title: "Feature: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. Describing the problem first, before the solution, helps the most.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would it solve?
+      description: What you are trying to do, and what gets in the way today.
+      placeholder: When I debug queued jobs, I cannot tell which cards came from which retry.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like?
+      description: How it could work, with example code or a sketch of the screen if that helps.
+      placeholder: peep()->label() could include the attempt number on job cards.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: part
+    attributes:
+      label: Which part of Peep?
+      options:
+        - Client (peep() in my app)
+        - Laravel integration
+        - Viewer (cards, filters, settings)
+        - Mail or SMS catching
+        - Webhooks
+        - Desktop app
+        - Another framework or PHP version
+        - Documentation
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Anything you tried instead?
+      description: Workarounds, or how other tools handle it.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checked
+    attributes:
+      label: Before you send it
+      options:
+        - label: I searched the existing issues and this has not been asked for.
+          required: true
