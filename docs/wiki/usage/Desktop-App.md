@@ -15,7 +15,7 @@ flowchart TD
 
 ## Install
 
-Download it from the [releases page](https://github.com/shibbirweb/peep/releases): `.dmg` for macOS, `.msi` or `-setup.exe` for Windows, `.AppImage`, `.deb` or `.rpm` for Linux. Open it; Peep then lives in the tray (the menu bar on macOS).
+Download it from the [releases page](https://github.com/shibbirweb/peep/releases): `.dmg` for macOS, `.msi` or `-setup.exe` for Windows, `.AppImage`, `.deb` or `.rpm` for Linux (betas have no `.rpm`, because RPM versions cannot contain `-beta`). Open it; Peep then lives in the tray (the menu bar on macOS).
 
 ## Window or browser
 

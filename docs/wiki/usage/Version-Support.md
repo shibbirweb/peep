@@ -59,7 +59,7 @@ The viewer page works in current Chrome, Edge, Firefox and Safari.
 |--------|--------|
 | macOS 11 Big Sur or newer | Apple silicon and Intel |
 | Windows 10 and 11 | x64 |
-| Linux with WebKitGTK 4.1, such as Ubuntu 22.04 or newer | x64 and arm64 (AppImage, deb, rpm) |
+| Linux with WebKitGTK 4.1, such as Ubuntu 22.04 or newer | x64 and arm64 (AppImage, deb, and rpm for stable releases) |
 
 ## Releases
 

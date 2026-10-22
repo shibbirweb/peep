@@ -167,6 +167,11 @@ jobs:
           if (process.env.WINDOWS_THUMBPRINT) {
             config.bundle = { ...config.bundle, windows: { certificateThumbprint: process.env.WINDOWS_THUMBPRINT, digestAlgorithm: 'sha256', timestampUrl: 'http://timestamp.digicert.com' } };
           }
+          // RPM versions cannot contain '-', so a beta such as 0.1.0-beta.1 ships without the .rpm.
+          const { version } = await Bun.file('tauri.conf.json').json();
+          if (process.platform === 'linux' && version.includes('-')) {
+            config.bundle = { ...config.bundle, targets: ['deb', 'appimage'] };
+          }
           await Bun.write('tauri.release.conf.json', JSON.stringify(config, null, 2));
           JS
           bun release.conf.js
