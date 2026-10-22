@@ -1,47 +1,124 @@
+# Builds a published release: the PHARs, the desktop apps, and (when switched on) Packagist.
+#
+# Releases are not cut by hand. "Beta release" (beta.yml) and "Stable release" (stable.yml) work out the
+# version and open a release pull request; once it is merged and CI passes, beta-publish.yml or
+# stable-publish.yml publishes the GitHub release and calls this to build it. See the Releasing page of
+# the wiki (docs/wiki/developer/Releasing.md).
+#
+# It also runs for a release somebody publishes by hand, and "Run workflow" rebuilds an existing release
+# (for example after a failed build) from its tag.
+#
+# The version comes from the code, never from the tag: a tag that disagreed with src/Version.php would
+# ship a client reporting the wrong version. So the tag, the pre-release flag and the code must agree.
+#
+# Packagist: with the repository variable PACKAGIST_AUTO_PUBLISH set to "true" and the secrets
+# PACKAGIST_USERNAME and PACKAGIST_TOKEN (an API token from packagist.org/profile), the package is created
+# on the first release and updated on every one after. Without them Packagist's own GitHub hook, if set up,
+# picks the tag up.
 name: Release
+run-name: Release ${{ inputs.tag || github.event.release.tag_name }}
 
-# One tag releases everything (RL-03): push "v1.2.3" after scripts/set-version.sh 1.2.3.
 on:
-  push:
-    tags: ['v*']
-
-concurrency:
-  group: release-${{ github.ref }}
-  cancel-in-progress: false
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published release to (re)build, for example v1.0.0 or v1.1.0-beta.1
+        required: true
+  # How beta-publish.yml and stable-publish.yml hand over the release they just published. GitHub starts
+  # no workflow for anything done with the built in token, so they call this instead.
+  workflow_call:
+    inputs:
+      tag:
+        description: The already published release to build and attach files to, like v1.1.0-beta.1
+        type: string
+        required: true
+      tested:
+        description: CI already passed on the tag's commit, so the tests are not run again
+        type: boolean
+        default: false
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.tag || github.event.release.tag_name }}
+  cancel-in-progress: false
 
 jobs:
   version:
-    name: Versions match the tag
+    name: Check version and notes
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.resolve.outputs.tag }}
+      version: ${{ steps.resolve.outputs.version }}
+      beta: ${{ steps.resolve.outputs.beta }}
+    env:
+      TAG: ${{ inputs.tag || github.event.release.tag_name }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
 
-      - name: Check every version and the changelog
-        run: bash scripts/set-version.sh --check "${GITHUB_REF_NAME#v}"
+      - uses: oven-sh/setup-bun@v2
 
-  client:
+      - name: The tag, the code and the release agree
+        id: resolve
+        run: |
+          version="${TAG#v}"
+          bun scripts/version.ts check "$version"
+
+          prerelease="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq .isPrerelease)"
+          case "$version" in
+            *-*) beta=true ;;
+            *) beta=false ;;
+          esac
+          if [ "$prerelease" != "$beta" ]; then
+            echo "::error::$TAG is $([ "$beta" = true ] && echo a beta || echo stable) but the GitHub release is marked pre-release=$prerelease. Fix the release's pre-release box and run this again."
+            exit 1
+          fi
+
+          {
+            echo "tag=$TAG"
+            echo "version=$version"
+            echo "beta=$beta"
+          } >> "$GITHUB_OUTPUT"
+
+      # A release published by hand often carries GitHub's generated notes. CHANGELOG.md is the
+      # source of release notes, so they are replaced.
+      - name: Release notes from the changelog
+        run: |
+          body="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body --jq .body)"
+          if [ -z "$(echo "$body" | tr -d '[:space:]')" ] || echo "$body" | grep -qE "^## What's Changed|^\*\*Full Changelog\*\*"; then
+            section="${TAG#v}"
+            case "$section" in *-*) section="" ;; esac
+            if bun scripts/version.ts notes $section > "$RUNNER_TEMP/notes.md"; then
+              gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file "$RUNNER_TEMP/notes.md"
+              echo "Release notes taken from CHANGELOG.md" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+
+  tests:
+    name: Tests
     needs: version
-    uses: ./.github/workflows/client.yml
-
-  laravel:
-    needs: version
-    uses: ./.github/workflows/laravel.yml
-
-  viewer:
-    needs: version
-    uses: ./.github/workflows/server.yml
+    if: ${{ !inputs.tested }}
+    uses: ./.github/workflows/ci.yml
 
   phars:
-    name: PHARs and the draft release
-    needs: [client, laravel, viewer]
+    name: PHARs
+    needs: [version, tests]
+    # "tests" is skipped when CI already passed on this commit; skipped is fine, failed is not.
+    if: ${{ always() && needs.version.result == 'success' && (needs.tests.result == 'success' || needs.tests.result == 'skipped') }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    env:
+      TAG: ${{ needs.version.outputs.tag }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
 
       - uses: oven-sh/setup-bun@v2
 
@@ -65,30 +142,57 @@ jobs:
           composer install --no-dev --classmap-authoritative --prefer-dist --no-interaction --no-progress
           ../tools/vendor/bin/box compile --no-interaction
 
-      - name: Checksums
+      - name: Attach to the release
         run: |
           mkdir -p dist
           cp build/peep.phar server/build/peep-server.phar dist/
-          (cd dist && sha256sum peep.phar peep-server.phar > SHA256SUMS)
-          cat dist/SHA256SUMS
-
-      - name: Notes from the changelog
-        run: |
-          version="${GITHUB_REF_NAME#v}"
-          awk -v heading="## [$version]" 'index($0, heading) == 1 { found = 1; next } /^## \[/ && found { exit } found { print }' CHANGELOG.md > dist/NOTES.md
-          test -s dist/NOTES.md
-
-      - name: Draft release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "$GITHUB_REF_NAME" --draft --verify-tag \
-            --title "Peep $GITHUB_REF_NAME" --notes-file dist/NOTES.md \
-            dist/peep.phar dist/peep-server.phar dist/SHA256SUMS
+          (cd dist && sha256sum peep.phar peep-server.phar > SHA256SUMS && cat SHA256SUMS)
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber dist/peep.phar dist/peep-server.phar dist/SHA256SUMS
 
   desktop:
-    needs: phars
+    name: Desktop apps
+    needs: [version, phars]
+    if: ${{ always() && needs.phars.result == 'success' }}
     permissions:
       contents: write
     uses: ./.github/workflows/desktop.yml
     secrets: inherit
+    with:
+      tag: ${{ needs.version.outputs.tag }}
+
+  packagist:
+    name: Packagist
+    needs: [version, phars]
+    if: ${{ always() && needs.phars.result == 'success' && vars.PACKAGIST_AUTO_PUBLISH == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update the package (create it on the first release)
+        env:
+          PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
+          PACKAGIST_TOKEN: ${{ secrets.PACKAGIST_TOKEN }}
+        run: |
+          if [ -z "$PACKAGIST_USERNAME" ] || [ -z "$PACKAGIST_TOKEN" ]; then
+            echo "::error::PACKAGIST_AUTO_PUBLISH is on, but the PACKAGIST_USERNAME and PACKAGIST_TOKEN secrets are missing."
+            exit 1
+          fi
+          body="{\"repository\":{\"url\":\"https://github.com/$GITHUB_REPOSITORY\"}}"
+          query="username=$PACKAGIST_USERNAME&apiToken=$PACKAGIST_TOKEN"
+
+          status="$(curl -s -o "$RUNNER_TEMP/update.json" -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
+            "https://packagist.org/api/update-package?$query" -d "$body")"
+          if [ "$status" -ge 200 ] && [ "$status" -lt 300 ]; then
+            echo "Packagist is updating shibbirweb/peep: https://packagist.org/packages/shibbirweb/peep" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # Not on Packagist yet: the first release creates it.
+          status="$(curl -s -o "$RUNNER_TEMP/create.json" -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
+            "https://packagist.org/api/create-package?$query" -d "$body")"
+          if [ "$status" -ge 200 ] && [ "$status" -lt 300 ]; then
+            echo "Created shibbirweb/peep on Packagist: https://packagist.org/packages/shibbirweb/peep" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo "::error::Packagist answered $status:"
+          cat "$RUNNER_TEMP/update.json" "$RUNNER_TEMP/create.json" 2>/dev/null
+          exit 1

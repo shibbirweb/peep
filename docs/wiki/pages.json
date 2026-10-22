@@ -1,0 +1,30 @@
+{
+  "$comment": "The map of the wiki: every page with a one-line summary, in sidebar order. scripts/build-wiki.ts fails CI when a page, an image or a link is missing, or a page is not listed here.",
+  "usage": [
+    { "page": "usage/Getting-Started.md", "summary": "What Peep is, how it fits together, and your first card in five minutes." },
+    { "page": "usage/Installation.md", "summary": "Install the viewer and the client, turn Peep on, and connect apps in Docker or on other machines." },
+    { "page": "usage/Version-Support.md", "summary": "Which PHP, Laravel, packages and operating systems each part supports and CI tests." },
+    { "page": "usage/Configuration.md", "summary": "peep.php, environment variables, Docker paths, and the bridges for apps without Laravel." },
+    { "page": "usage/The-Viewer.md", "summary": "Cards, request groups, projects, filters, search, screens, pausing and settings." },
+    { "page": "usage/API-Reference.md", "summary": "Every method of peep(), and the Laravel additions." },
+    { "page": "usage/Laravel.md", "summary": "What Laravel shows with no code, the config, macros, Blade, mail and SMS." },
+    { "page": "usage/Query-Debugging.md", "summary": "Queries with bindings, slow and duplicate badges, and switching capture from the viewer." },
+    { "page": "usage/Plain-PHP.md", "summary": "Scripts and apps without a framework: errors, logs and dump()." },
+    { "page": "usage/Symfony.md", "summary": "Monolog, dump() and VarDumper casters in a Symfony app." },
+    { "page": "usage/Slim.md", "summary": "Slim 3 and 4: the error middleware and loggers." },
+    { "page": "usage/WordPress.md", "summary": "Themes and plugins, with a must-use plugin for errors." },
+    { "page": "usage/Global-Install.md", "summary": "peep() in every script of a PHP install, without Composer." },
+    { "page": "usage/Mail-and-SMS.md", "summary": "Catch the mail and SMS your app sends: SMTP, the peep mailer, Mailgun, Twilio and Vonage." },
+    { "page": "usage/Webhooks.md", "summary": "Call your app back with signed Mailgun, Twilio and Vonage events." },
+    { "page": "usage/Desktop-App.md", "summary": "The viewer in its own window: display mode, tray, hotkey, notifications and updates." },
+    { "page": "usage/Finding-Leftover-Calls.md", "summary": "peep-clean, artisan peep:clean and the PHPStan rule." },
+    { "page": "usage/Troubleshooting.md", "summary": "No cards, Docker, editor links, ports and failing webhooks." }
+  ],
+  "developer": [
+    { "page": "developer/Architecture.md", "summary": "The client, the viewer, the UI and the desktop app, and one peep() call through them." },
+    { "page": "developer/Protocol.md", "summary": "The HTTP and JSON protocol between the client and the viewer, and its safety rules." },
+    { "page": "developer/Contributing.md", "summary": "Setting up, the rules that matter, running the tests, and what CI runs." },
+    { "page": "developer/Releasing.md", "summary": "Betas from develop, stable releases on main, version.ts, and the repository settings." },
+    { "page": "developer/Wiki-and-Screenshots.md", "summary": "Writing these pages, taking the screenshots, and how the wiki is published." }
+  ]
+}

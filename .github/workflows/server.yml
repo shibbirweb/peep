@@ -1,22 +1,8 @@
 name: Viewer
 
+# Called by ci.yml, which runs on every push to develop and main and on every pull request.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'server/**'
-      - 'tools/**'
-      - '.github/workflows/server.yml'
-  pull_request:
-    paths:
-      - 'server/**'
-      - 'tools/**'
-      - '.github/workflows/server.yml'
   workflow_call:
-
-concurrency:
-  group: server-${{ github.ref }}
-  cancel-in-progress: true
 
 permissions:
   contents: read

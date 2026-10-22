@@ -1,14 +1,8 @@
 name: Client
 
+# Called by ci.yml, which runs on every push to develop and main and on every pull request.
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_call:
-
-concurrency:
-  group: client-${{ github.ref }}
-  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -31,6 +25,16 @@ jobs:
           ini-values: error_reporting=-1, display_errors=On, zend.assertions=1
           # Composer 2.3+ needs PHP 7.2.5; PHP 7.1 and 7.2 get the 2.2 LTS line.
           tools: composer:${{ (matrix.php == '7.1' || matrix.php == '7.2') && '2.2' || 'v2' }}
+
+      - name: Composer cache
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-client-php${{ matrix.php }}-${{ hashFiles('composer.json') }}
+          restore-keys: composer-client-php${{ matrix.php }}-
 
       - name: Install dependencies
         run: composer update --prefer-dist --no-interaction --no-progress

@@ -64,6 +64,18 @@ final class SettingsTest extends TestCase
         $this->assertSame('phpstorm', $settings->ide, 'Nothing changes when one value is invalid.');
     }
 
+    public function testTheUpdateChannelIsStableOrBeta(): void
+    {
+        $settings = new Settings();
+
+        $this->assertSame('stable', $settings->updateChannel);
+        $settings->update(['update_channel' => 'beta', 'check_updates' => false]);
+        $this->assertSame(['beta', false], [$settings->updateChannel, $settings->checkUpdates]);
+
+        $this->expectException(InvalidSettingException::class);
+        $settings->update(['update_channel' => 'nightly']);
+    }
+
     public function testTheHooksRejectInvalidValuesSetDirectly(): void
     {
         $settings = new Settings();

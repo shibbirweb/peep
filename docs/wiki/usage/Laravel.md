@@ -48,7 +48,7 @@ User::where('active', true)->peep()->get();             // the SQL with bindings
 $this->get('/orders')->peep()->assertOk();              // a test response
 ```
 
-The full list is in the [API reference](../api.md#laravel).
+The full list is in the [API reference](API-Reference.md#laravel).
 
 ## Blade
 
@@ -65,7 +65,7 @@ MAIL_MAILER=peep      # Laravel 7+ (MAIL_DRIVER=peep on 5.5 to 6): every mail go
 PEEP_BLOCK_SMS=true   # SMS notifications go to the inbox only, never to a phone (never in production)
 ```
 
-See [Mail and SMS](mail-and-sms.md) and, to simulate delivery webhooks back to your app, [Webhooks](webhooks.md).
+See [Mail and SMS](Mail-and-SMS.md) and, to simulate delivery webhooks back to your app, [Webhooks](Webhooks.md).
 
 ## Docker (Sail)
 
@@ -75,7 +75,7 @@ PEEP_REMOTE_PATH=/var/www/html
 PEEP_LOCAL_PATH=/Users/you/code/shop
 ```
 
-On Linux, also see [Docker and other machines](installation.md#docker-and-other-machines).
+On Linux, also see [Docker and other machines](Installation.md#docker-and-other-machines).
 
 ## Before you ship
 

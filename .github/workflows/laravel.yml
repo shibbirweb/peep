@@ -1,14 +1,11 @@
 name: Laravel
 
+# Called by ci.yml, which runs on every push to develop and main and on every pull request.
+#
+# Every Laravel version Peep supports, on every PHP version that Laravel version supports (from PHP 7.1,
+# Peep's own minimum). Each pair is its own job, so they all run at the same time.
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_call:
-
-concurrency:
-  group: laravel-${{ github.ref }}
-  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -22,16 +19,44 @@ jobs:
       matrix:
         include:
           - { laravel: '5.5', php: '7.1', testbench: '3.5.*', extra: '' }
+          - { laravel: '5.5', php: '7.2', testbench: '3.5.*', extra: '' }
+          - { laravel: '5.5', php: '7.3', testbench: '3.5.*', extra: '' }
           - { laravel: '5.6', php: '7.1', testbench: '3.6.*', extra: '' }
+          - { laravel: '5.6', php: '7.2', testbench: '3.6.*', extra: '' }
+          - { laravel: '5.6', php: '7.3', testbench: '3.6.*', extra: '' }
           - { laravel: '5.7', php: '7.1', testbench: '3.7.*', extra: '' }
+          - { laravel: '5.7', php: '7.2', testbench: '3.7.*', extra: '' }
+          - { laravel: '5.7', php: '7.3', testbench: '3.7.*', extra: '' }
           - { laravel: '5.8', php: '7.1', testbench: '3.8.*', extra: '' }
+          - { laravel: '5.8', php: '7.2', testbench: '3.8.*', extra: '' }
+          - { laravel: '5.8', php: '7.3', testbench: '3.8.*', extra: '' }
           - { laravel: '6', php: '7.2', testbench: '^4.0', extra: '' }
+          - { laravel: '6', php: '7.3', testbench: '^4.0', extra: '' }
+          - { laravel: '6', php: '7.4', testbench: '^4.0', extra: '' }
+          - { laravel: '6', php: '8.0', testbench: '^4.0', extra: '' }
+          - { laravel: '7', php: '7.2', testbench: '^5.0', extra: '' }
           - { laravel: '7', php: '7.3', testbench: '^5.0', extra: '' }
+          - { laravel: '7', php: '7.4', testbench: '^5.0', extra: '' }
+          - { laravel: '7', php: '8.0', testbench: '^5.0', extra: '' }
+          - { laravel: '8', php: '7.3', testbench: '^6.0', extra: 'guzzlehttp/guzzle:^7.2' }
           - { laravel: '8', php: '7.4', testbench: '^6.0', extra: 'guzzlehttp/guzzle:^7.2' }
+          - { laravel: '8', php: '8.0', testbench: '^6.0', extra: 'guzzlehttp/guzzle:^7.2' }
+          - { laravel: '8', php: '8.1', testbench: '^6.0', extra: 'guzzlehttp/guzzle:^7.2' }
           - { laravel: '9', php: '8.0', testbench: '^7.0', extra: 'guzzlehttp/guzzle:^7.2' }
+          - { laravel: '9', php: '8.1', testbench: '^7.0', extra: 'guzzlehttp/guzzle:^7.2' }
+          - { laravel: '9', php: '8.2', testbench: '^7.0', extra: 'guzzlehttp/guzzle:^7.2' }
           - { laravel: '10', php: '8.1', testbench: '^8.0', extra: 'guzzlehttp/guzzle:^7.2' }
+          - { laravel: '10', php: '8.2', testbench: '^8.0', extra: 'guzzlehttp/guzzle:^7.2' }
+          - { laravel: '10', php: '8.3', testbench: '^8.0', extra: 'guzzlehttp/guzzle:^7.2' }
           - { laravel: '11', php: '8.2', testbench: '^9.0', extra: 'guzzlehttp/guzzle:^7.8' }
+          - { laravel: '11', php: '8.3', testbench: '^9.0', extra: 'guzzlehttp/guzzle:^7.8' }
+          - { laravel: '11', php: '8.4', testbench: '^9.0', extra: 'guzzlehttp/guzzle:^7.8' }
+          - { laravel: '12', php: '8.2', testbench: '^10.0', extra: 'guzzlehttp/guzzle:^7.8' }
           - { laravel: '12', php: '8.3', testbench: '^10.0', extra: 'guzzlehttp/guzzle:^7.8' }
+          - { laravel: '12', php: '8.4', testbench: '^10.0', extra: 'guzzlehttp/guzzle:^7.8' }
+          - { laravel: '12', php: '8.5', testbench: '^10.0', extra: 'guzzlehttp/guzzle:^7.8' }
+          - { laravel: '13', php: '8.3', testbench: '^11.0', extra: 'guzzlehttp/guzzle:^7.8' }
+          - { laravel: '13', php: '8.4', testbench: '^11.0', extra: 'guzzlehttp/guzzle:^7.8' }
           - { laravel: '13', php: '8.5', testbench: '^11.0', extra: 'guzzlehttp/guzzle:^7.8' }
     steps:
       - uses: actions/checkout@v4
@@ -44,6 +69,17 @@ jobs:
           ini-values: error_reporting=-1
           # Composer 2.3+ needs PHP 7.2.5.
           tools: composer:${{ (matrix.php == '7.1' || matrix.php == '7.2') && '2.2' || 'v2' }}
+
+      # Downloads only: each job still resolves its own versions.
+      - name: Composer cache
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-laravel-${{ matrix.laravel }}-php${{ matrix.php }}-${{ hashFiles('composer.json') }}
+          restore-keys: composer-laravel-${{ matrix.laravel }}-php${{ matrix.php }}-
 
       # The Laravel suite does not use the PHPUnit polyfills; removing them lets Testbench
       # pick the PHPUnit it needs (6.x for Laravel 5.5). Old Laravel versions have security

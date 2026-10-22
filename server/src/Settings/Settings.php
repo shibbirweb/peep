@@ -122,6 +122,24 @@ final class Settings
     public bool $notifications = false;
 
     /**
+     * The desktop app's updates: "stable" (releases from main) or "beta" (pre-releases from develop too).
+     */
+    public string $updateChannel = 'stable' {
+        set {
+            if (! in_array($value, ['stable', 'beta'], true)) {
+                throw new InvalidSettingException('update_channel', 'The update channel must be stable or beta.');
+            }
+
+            $this->updateChannel = $value;
+        }
+    }
+
+    /**
+     * The desktop app checks for updates a little after start and then daily.
+     */
+    public bool $checkUpdates = true;
+
+    /**
      * Webhook rules (validated by Webhook\Rule when loaded).
      *
      * @var list<array<mixed>>
@@ -186,7 +204,7 @@ final class Settings
     }
 
     /**
-     * @return array{display_mode: string, ide: string, path_mappings: list<array{from: string, to: string}>, host: string, port: int, theme: string, smtp: bool, smtp_port: int, token: string|null, max_cards: int, history: bool, notifications: bool, switches: array<string, array<string, string|int|null>>, webhooks: list<array<mixed>>}
+     * @return array{display_mode: string, ide: string, path_mappings: list<array{from: string, to: string}>, host: string, port: int, theme: string, smtp: bool, smtp_port: int, token: string|null, max_cards: int, history: bool, notifications: bool, update_channel: string, check_updates: bool, switches: array<string, array<string, string|int|null>>, webhooks: list<array<mixed>>}
      */
     public function toArray(): array
     {
@@ -203,6 +221,8 @@ final class Settings
             'max_cards' => $this->maxCards,
             'history' => $this->history,
             'notifications' => $this->notifications,
+            'update_channel' => $this->updateChannel,
+            'check_updates' => $this->checkUpdates,
             'switches' => $this->switches,
             'webhooks' => $this->webhooks,
         ];
@@ -227,6 +247,8 @@ final class Settings
                 'max_cards' => $this->maxCards = is_int($value) ? $value : throw new InvalidSettingException($key, 'Max cards must be a number.'),
                 'history' => $this->history = is_bool($value) ? $value : throw new InvalidSettingException($key, 'History must be true or false.'),
                 'notifications' => $this->notifications = is_bool($value) ? $value : throw new InvalidSettingException($key, 'Notifications must be true or false.'),
+                'update_channel' => $this->updateChannel = self::string($key, $value),
+                'check_updates' => $this->checkUpdates = is_bool($value) ? $value : throw new InvalidSettingException($key, 'Check updates must be true or false.'),
                 'switches' => $this->switches = self::switches($value),
                 'webhooks' => $this->webhooks = is_array($value) ? array_values(array_filter($value, is_array(...))) : throw new InvalidSettingException($key, 'Webhooks must be a list.'),
                 default => throw new InvalidSettingException($key, 'Unknown setting: ' . $key . '.'),

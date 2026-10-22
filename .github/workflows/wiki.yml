@@ -1,0 +1,70 @@
+# Publishes docs/wiki to the GitHub wiki.
+#
+# A wiki is a separate git repository, <repo>.wiki.git, so nothing in docs/wiki reaches it by being
+# merged. This carries it across whenever main (what stable users run) changes the docs, and "Run
+# workflow" publishes from any branch, for example develop, to seed the wiki or preview beta docs.
+#
+# The wiki has to exist first: open the Wiki tab once and save any page, which creates its repository.
+# After that the placeholder page is replaced by the generated Home page.
+#
+# CI checks the docs on every push and pull request (bun scripts/build-wiki.ts --check), so by the time
+# they reach main every page, screenshot and link is known to be there.
+name: Wiki
+run-name: Publish the wiki from ${{ github.ref_name }}
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/wiki/**'
+      - 'scripts/build-wiki.ts'
+      - 'scripts/wiki.ts'
+      - '.github/workflows/wiki.yml'
+  workflow_dispatch:
+
+# Two runs pushing to the same wiki would race and one would be rejected.
+concurrency:
+  group: wiki
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Publish to the wiki
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Build the pages
+        run: bun scripts/build-wiki.ts "$RUNNER_TEMP/wiki-pages"
+
+      - name: Clone the wiki
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! git clone "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" "$RUNNER_TEMP/wiki"; then
+            echo "::error::Could not clone the wiki. Open the Wiki tab on GitHub and save any page once to create it, then run this again."
+            exit 1
+          fi
+
+      - name: Publish
+        working-directory: ${{ runner.temp }}/wiki
+        run: |
+          # Mirror rather than merge: a page deleted from docs/wiki disappears from the wiki too.
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -R "$RUNNER_TEMP/wiki-pages"/. .
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "The wiki already matches docs/wiki, nothing to publish."
+            exit 0
+          fi
+          git commit -q -m "docs: publish ${GITHUB_SHA:0:7} from docs/wiki"
+          git push origin HEAD
+          echo "Published to https://github.com/${GITHUB_REPOSITORY}/wiki" >> "$GITHUB_STEP_SUMMARY"

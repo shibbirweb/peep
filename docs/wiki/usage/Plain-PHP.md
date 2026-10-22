@@ -6,7 +6,7 @@ For scripts and apps without a framework. With Composer:
 composer require shibbirweb/peep --dev
 ```
 
-Without Composer, use the [global install](global-install.md) instead.
+Without Composer, use the [global install](Global-Install.md) instead.
 
 ## Send values
 
@@ -19,7 +19,7 @@ peep()->table($rows, 'Rows');
 peep()->measure();            // time since the last measure() call
 ```
 
-Turn Peep on with `PEEP_ENABLED=true` or a `peep.php` file (see the [guides index](README.md)).
+Turn Peep on with `PEEP_ENABLED=true` or a `peep.php` file (see the [guides index](Configuration.md)).
 
 ## Errors, uncaught exceptions and fatal errors
 

@@ -1,26 +1,10 @@
-# Setup guides
+# Configuration
 
-Peep works in any PHP app from PHP 7.1 to 8.5. Start with [Installation](installation.md), then pick a guide:
+How the client finds the viewer, when it is on, and the bridges for apps without Laravel. Every option is also listed in [Installation](Installation.md#all-client-options).
 
-- [Laravel](laravel.md): watchers, query switches, macros, Blade, mail and SMS.
-- [Plain PHP](plain-php.md): scripts and apps without a framework.
-- [Symfony](symfony.md): Monolog, `dump()` and errors in a Symfony app.
-- [Slim](slim.md): Slim 3 and 4.
-- [WordPress](wordpress.md): themes and plugins.
-- [Global install](global-install.md): `peep()` in every script of a PHP install, without Composer.
-- [Mail and SMS](mail-and-sms.md): catch the mail and SMS your app sends, in any framework.
-- [Webhooks](webhooks.md): have the viewer call your app back with signed provider events.
-- [Desktop app](desktop.md): the viewer in its own window, window or browser mode, tray and hotkey.
+## Turning it on
 
-Every method of `peep()` is in the [API reference](../api.md).
-
-In every case, start the viewer first:
-
-```bash
-php peep-server.phar serve
-```
-
-Peep is off until you turn it on, so it never runs by accident in production. Turn it on with the `PEEP_ENABLED=true` environment variable or a `peep.php` file in your project root:
+Peep is off until you turn it on, so it never runs by accident in production (Laravel turns it on outside `production` for you). Turn it on with the `PEEP_ENABLED=true` environment variable or a `peep.php` file in your project root:
 
 ```php
 <?php
@@ -34,6 +18,8 @@ return [
 `peep.php` is found by walking up from the working directory and from the directory of the script PHP runs. Environment variables (`PEEP_ENABLED`, `PEEP_HOST`, `PEEP_PORT`, `PEEP_PROJECT`, `PEEP_REMOTE_PATH`, `PEEP_LOCAL_PATH`, `PEEP_SERIALIZER`, `PEEP_TOKEN`) win over the file.
 
 ## Apps in Docker or a VM
+
+See also [Installation](Installation.md#docker-and-other-machines) for the token that apps on other machines need.
 
 Point the app at your machine and map the paths, so "open in editor" links work:
 
@@ -53,7 +39,7 @@ On Linux, `--add-host=host.docker.internal:host-gateway` points at the Docker br
 
 Other machines (and containers) can then only send to the viewer; the viewer page itself still opens only on your machine. The same steps work for an app on another computer, with `PEEP_HOST` set to your machine's address.
 
-## The bridges at a glance
+## Bridges for other apps
 
 | You want | Use |
 |----------|-----|

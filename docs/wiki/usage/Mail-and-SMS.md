@@ -2,6 +2,22 @@
 
 The viewer catches the mail and SMS your app sends, so nothing reaches real people while you develop, and shows them in the Mail and SMS tabs. Each message links back to the request or job that sent it when the app tells Peep which one that was (Laravel does this for you).
 
+```mermaid
+flowchart LR
+    SMTP["SMTP, port 23525"] --> Mail["Mail inbox"]
+    Mailer["Laravel peep mailer"] --> Mail
+    Mailgun["Mailgun API<br/>/v3/{domain}/messages"] --> Mail
+    HttpMail["/_peep/mail"] --> Mail
+    Notifications["Laravel SMS notifications"] --> Sms["SMS inbox"]
+    Twilio["Twilio API"] --> Sms
+    Vonage["Vonage API"] --> Sms
+    HttpSms["/_peep/sms, peep()->sms()"] --> Sms
+    Mail --> Hooks["Webhook rules"]
+    Sms --> Hooks
+```
+
+![A caught order confirmation in the Mail tab](../images/mail.png)
+
 ## Mail
 
 Pick whichever fits your app.
@@ -99,4 +115,14 @@ curl -X POST http://127.0.0.1:23517/_peep/sms -H 'Content-Type: application/json
   -d '{"to": "+15551230001", "from": "Shop", "body": "Your code is 482913", "project": "shop"}'
 ```
 
+![SMS threads per phone number, with parts and encoding](../images/sms.png)
+
 The SMS tab shows each number as a thread, with the number of parts the text needs and whether it fits GSM-7 or needs UCS-2 (any emoji or non-Latin letter makes a text UCS-2, which fits 70 characters per part instead of 160).
+
+## The mail inbox
+
+Each mail shows its sender, recipients (Bcc included, from the SMTP envelope), size and how it arrived. **HTML** shows the mail in a sandboxed frame where scripts never run, at desktop width or at a phone's 375 pixels; **Text**, **Source** and **Headers** show the rest, and **Attachments** downloads them. **Show request** opens the cards of the request or job that sent the mail, so you see its queries and logs next to it. **Send webhook** calls a [webhook](Webhooks.md) rule for this mail.
+
+![The same mail at a phone's width](../images/mail-mobile.png)
+
+The inbox keeps the last 1,000 mails and 2,000 SMS in memory; a viewer restart empties it.

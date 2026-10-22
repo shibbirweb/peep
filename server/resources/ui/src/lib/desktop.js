@@ -35,6 +35,13 @@ export function nativeNotify(title, body) {
 }
 
 /**
+ * Checks GitHub for a newer desktop app now, on the channel in the settings; the app says what it found.
+ */
+export function checkUpdates() {
+  return invoke('check_updates');
+}
+
+/**
  * peep()->showApp() and peep()->hideApp().
  *
  * @param {string} command "show_app" or "hide_app"

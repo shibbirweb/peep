@@ -4,9 +4,11 @@
 
 mod server;
 mod settings;
+mod updates;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
+use std::time::Duration;
 
 use serde::Serialize;
 use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem};
@@ -32,6 +34,8 @@ struct Viewer {
     sidecar: Mutex<Option<server::Sidecar>>,
     pinned: AtomicBool,
     pin_item: Mutex<Option<CheckMenuItem<Wry>>>,
+    update_item: Mutex<Option<MenuItem<Wry>>>,
+    found_update: Mutex<Option<updates::Release>>,
 }
 
 impl Viewer {
@@ -177,6 +181,7 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
         app.autolaunch().is_enabled().unwrap_or(false),
         None::<&str>,
     )?;
+    let update = MenuItem::with_id(app, "update", "Check for Updates...", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit Peep", true, Some("CmdOrCtrl+Q"))?;
     let menu = Menu::with_items(
         app,
@@ -186,6 +191,7 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
             &PredefinedMenuItem::separator(app)?,
             &pinned,
             &login,
+            &update,
             &PredefinedMenuItem::separator(app)?,
             &quit,
         ],
@@ -193,6 +199,10 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
 
     if let Ok(mut item) = app.state::<Viewer>().pin_item.lock() {
         *item = Some(pinned);
+    }
+
+    if let Ok(mut item) = app.state::<Viewer>().update_item.lock() {
+        *item = Some(update);
     }
 
     let login_item = login.clone();
@@ -222,6 +232,19 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
                     autolaunch.enable()
                 };
                 let _ = login_item.set_checked(autolaunch.is_enabled().unwrap_or(!enabled));
+            }
+            "update" => {
+                // A found update is offered at once; otherwise this checks now and says what it found.
+                let found = app
+                    .state::<Viewer>()
+                    .found_update
+                    .lock()
+                    .ok()
+                    .and_then(|found| found.clone());
+                match found {
+                    Some(release) => updates::offer(app, release),
+                    None => updates::check_now(app, channel()),
+                }
             }
             "quit" => app.exit(0),
             _ => {}
@@ -280,43 +303,58 @@ fn fail(window: &WebviewWindow, message: String, log: String) {
     let _ = window.emit("startup-failed", StartupFailed { message, log });
 }
 
-/// Checks GitHub Releases for a newer version, when the build has an update key.
-fn check_for_update(app: &AppHandle) {
-    use tauri_plugin_updater::UpdaterExt;
+/// The settings file is read again for each check: the channel may have changed in the viewer.
+fn channel() -> updates::Channel {
+    settings::read().update_channel
+}
 
-    let has_key = app
-        .config()
-        .plugins
-        .0
-        .get("updater")
-        .and_then(|updater| updater.get("pubkey"))
-        .and_then(serde_json::Value::as_str)
-        .is_some_and(|key| !key.is_empty());
-
-    if !has_key || cfg!(debug_assertions) {
+/// Checks a little after start, then once a day, when "check_updates" is on. A found update
+/// turns the tray item into "Update to Peep x.y.z...".
+fn check_for_updates_daily(app: &AppHandle) {
+    if cfg!(debug_assertions) {
         return;
     }
 
     let app = app.clone();
-    tauri::async_runtime::spawn(async move {
-        let Ok(updater) = app.updater() else {
-            return;
-        };
+    std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_secs(10));
 
-        if let Ok(Some(update)) = updater.check().await {
-            let version = update.version.clone();
-            if update.download_and_install(|_, _| {}, || {}).await.is_ok() {
-                let _ = app
-                    .notification()
-                    .builder()
-                    .title("Peep update installed")
-                    .body(format!(
-                        "Peep {version} is ready. It starts the next time you open Peep."
-                    ))
-                    .show();
+        loop {
+            let current = settings::read();
+            if current.check_updates {
+                let found = tauri::async_runtime::block_on(updates::check_quietly(
+                    &app,
+                    current.update_channel,
+                ));
+                if let Some(release) = found {
+                    let item = app
+                        .state::<Viewer>()
+                        .update_item
+                        .lock()
+                        .ok()
+                        .and_then(|item| item.clone());
+                    if let Some(item) = item {
+                        let _ = item.set_text(format!(
+                            "Update to Peep {}...",
+                            release.tag_name.trim_start_matches('v')
+                        ));
+                    }
+                    if let Ok(mut slot) = app.state::<Viewer>().found_update.lock() {
+                        *slot = Some(release);
+                    }
+                }
             }
+
+            std::thread::sleep(Duration::from_secs(24 * 60 * 60));
         }
     });
+}
+
+/// "Check for updates" from the viewer's settings page.
+#[tauri::command]
+fn check_updates(app: AppHandle) {
+    trace("check_updates");
+    updates::check_now(&app, channel());
 }
 
 pub fn run() {
@@ -336,6 +374,7 @@ pub fn run() {
             None,
         ))
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, _shortcut, event| {
@@ -350,13 +389,16 @@ pub fn run() {
             sidecar: Mutex::new(None),
             pinned: AtomicBool::new(false),
             pin_item: Mutex::new(None),
+            update_item: Mutex::new(None),
+            found_update: Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![
             set_unread,
             notify,
             show_window,
             hide_window,
-            set_pinned
+            set_pinned,
+            check_updates
         ])
         .setup(move |app| {
             let handle = app.handle().clone();
@@ -392,7 +434,7 @@ pub fn run() {
             }
 
             start_viewer(handle.clone(), window, open_in_browser);
-            check_for_update(&handle);
+            check_for_updates_daily(&handle);
 
             Ok(())
         })

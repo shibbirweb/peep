@@ -45,6 +45,15 @@ When the viewer is not running, each script pays a few milliseconds once and the
 
 A project that requires `shibbirweb/peep` uses its own version, not the PHAR. The PHAR registers its autoloader last, so Composer's autoloader loads Peep's classes first.
 
+```mermaid
+flowchart LR
+    Script["Any PHP script"] --> Prepend["auto_prepend_file:<br/>peep.phar"]
+    Prepend --> Fn["peep() is defined"]
+    Script --> Composer{"Does the project<br/>require shibbirweb/peep?"}
+    Composer -- yes --> Own["Composer's autoloader<br/>(registered first) loads its version"]
+    Composer -- no --> Phar["The PHAR's autoloader<br/>loads Peep from the PHAR"]
+```
+
 ## Docker
 
 Mount the PHAR into the container and load it there:

@@ -15,6 +15,8 @@ pub enum DisplayMode {
 pub struct Settings {
     pub port: u16,
     pub display_mode: DisplayMode,
+    pub update_channel: crate::updates::Channel,
+    pub check_updates: bool,
 }
 
 impl Default for Settings {
@@ -22,6 +24,8 @@ impl Default for Settings {
         Self {
             port: DEFAULT_PORT,
             display_mode: DisplayMode::Window,
+            update_channel: crate::updates::Channel::Stable,
+            check_updates: true,
         }
     }
 }
@@ -84,7 +88,25 @@ pub fn parse(text: &str) -> Settings {
         _ => DisplayMode::Window,
     };
 
-    Settings { port, display_mode }
+    let update_channel = match value
+        .get("update_channel")
+        .and_then(serde_json::Value::as_str)
+    {
+        Some("beta") => crate::updates::Channel::Beta,
+        _ => crate::updates::Channel::Stable,
+    };
+
+    let check_updates = value
+        .get("check_updates")
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(true);
+
+    Settings {
+        port,
+        display_mode,
+        update_channel,
+        check_updates,
+    }
 }
 
 #[cfg(test)]
@@ -97,6 +119,16 @@ mod tests {
 
         assert_eq!(settings.port, 9000);
         assert_eq!(settings.display_mode, DisplayMode::Browser);
+        assert_eq!(settings.update_channel, crate::updates::Channel::Stable);
+        assert!(settings.check_updates);
+    }
+
+    #[test]
+    fn reads_the_update_settings() {
+        let settings = parse(r#"{"update_channel": "beta", "check_updates": false}"#);
+
+        assert_eq!(settings.update_channel, crate::updates::Channel::Beta);
+        assert!(!settings.check_updates);
     }
 
     #[test]

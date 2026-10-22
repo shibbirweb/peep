@@ -11,6 +11,7 @@
     "allow-notify",
     "allow-show-window",
     "allow-hide-window",
-    "allow-set-pinned"
+    "allow-set-pinned",
+    "allow-check-updates"
   ]
 }

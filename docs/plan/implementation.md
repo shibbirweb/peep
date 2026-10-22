@@ -519,7 +519,7 @@ The `QueryExecuted` listener is always registered while Peep is enabled; when th
 | `VarDumperSerializer` [BR-04] | Opt-in (`serializer: var-dumper`), because casters can call code on values. `VarCloner` data is walked by `TreeDumper` (a `DumperInterface`) into the value tree; any failure falls back to Peep's own serializer. Works with VarDumper 3.4 to 8.x |
 | `ErrorHandler` [BR-05] | `set_error_handler` and `set_exception_handler`, both chaining previous handlers (errors silenced by `error_reporting` or `@` are sent, marked `silenced`); `register_shutdown_function` reads `error_get_last()` for `E_ERROR`, `E_PARSE`, `E_CORE_ERROR`, `E_COMPILE_ERROR`, `E_USER_ERROR` and sends an exception card. PHP 8.5 adds a `trace` key there (`fatal_error_backtraces`), used as the card's frames; older versions get no frames rather than the shutdown handler's own |
 | Global install [BR-06] | A client PHAR (`build/peep.phar`, PHP 7.1+, built with Box from `box.json.dist`, `composer build:phar`). Its stub runs `bin/peep` (install, uninstall, status, version) when executed and the prepend file when loaded through `auto_prepend_file`. `install` copies the PHAR to `~/.peep/peep.phar` and writes `99-peep.ini` (with a marker line) into the ini scan directory; it refuses to replace another `auto_prepend_file` without `--force`; `uninstall` removes only a file with the marker. The `PEEP_GLOBAL_INSTALL` constant makes Peep enabled by default (lowest priority: `peep.php` and `PEEP_ENABLED` still win) |
-| Setup guides [BR-07] | `docs/guides/`: plain PHP, Symfony, Slim, WordPress, global install |
+| Setup guides [BR-07] | `docs/wiki/usage/`: plain PHP, Symfony, Slim, WordPress, global install |
 
 Global install versus a project that also requires `shibbirweb/peep`: the prepend file registers a lazy autoloader for `ShibbirWeb\Peep\` classes (appended), and Composer registers its own with `prepend = true`, so the project's version of the classes wins. `peep()` from the PHAR is defined first but only calls `PeepFactory`, so it works with either version.
 
@@ -659,14 +659,22 @@ static-php-cli's published "common" builds of PHP 8.5.8 (Windows: the "spc-max" 
 
 ## 13. Release pipeline (Phase 9)
 
-One tag `vX.Y.Z` releases everything [RL-03] (`.github/workflows/release.yml`):
+Releases follow two branches [RL-03, RL-13]: `develop` is the beta line, `main` is stable, and every change reaches `develop` by pull request. The workflows, adapted from the nibtree repository:
 
-1. `scripts/set-version.sh --check X.Y.Z`: the client and viewer `Version` constants, `tauri.conf.json` and `Cargo.toml` all say X.Y.Z, and `CHANGELOG.md` has a `## [X.Y.Z]` section. `scripts/set-version.sh X.Y.Z` (without `--check`) writes them before tagging.
-2. The client, Laravel and viewer workflows run as reusable workflows; all must pass.
-3. Build `peep.phar` (client, global install) and `peep-server.phar` (viewer, after the UI build) with Box, with `SHA256SUMS`.
-4. Create a draft GitHub Release with both PHARs, the sums and the changelog section as notes.
-5. The desktop workflow (reusable) builds the static-PHP bundles for every target, signed when the certificates are set [DT-13, DT-14], and attaches them and `latest.json` to the same draft.
-6. The owner reviews and publishes the draft. Packagist updates from its GitHub webhook [RL-02]; Composer installs the tag's archive, which `.gitattributes` keeps to client files (plus `bin/peep-clean` and `phpstan/rules.neon`).
+| Workflow | Starts | Does |
+|----------|--------|------|
+| `ci.yml` | push to `develop` or `main`, pull requests, called | Calls `client.yml` (PHP 7.1 to 8.5), `laravel.yml` (40 Laravel and PHP pairs), `server.yml`, and checks the versions, the release scripts and the wiki |
+| `beta.yml` | by hand on `develop` | CI passed, no release under way: `bun scripts/version.ts bump beta`, opens `chore:[REL-n] release x.y.z-beta.n` into `develop` with the Unreleased notes, and dispatches CI on it |
+| `beta-publish.yml` | CI passed on a push to `develop` | `develop` at an untagged beta: `gh release create --prerelease` with the Unreleased notes, then calls `release.yml` |
+| `stable.yml` | by hand on `develop` | A published beta with nothing untried since: `bump release`, dates the changelog, opens the release pull request into `develop` |
+| `stable-promote.yml` | CI passed on a push to `develop` | `develop` at an untagged stable version: opens the `develop` to `main` pull request |
+| `stable-publish.yml` | CI passed on a push to `main` | `main` at an untagged stable version: `gh release create --latest` with the dated section, then calls `release.yml` |
+| `release.yml` | called, a release published by hand, or by hand with a tag | `version.ts check` against the tag and the pre-release flag, changelog notes instead of GitHub's generated ones, CI unless it already passed, `peep.phar` and `peep-server.phar` with `SHA256SUMS`, `desktop.yml` for the apps and `latest.json`, and Packagist when `PACKAGIST_AUTO_PUBLISH` is `true` [RL-12] |
+| `wiki.yml` | push to `main` touching the wiki, or by hand | `bun scripts/build-wiki.ts` and a mirror push to the wiki repository [RL-11] |
+
+`scripts/version.ts` (Bun, helpers in `versioning.ts` with tests) keeps the version in `src/Version.php` (the source of truth), `server/src/Version.php`, `tauri.conf.json`, `desktop/package.json`, `Cargo.toml` and `Cargo.lock`. `bump` works the next version out from the commits since the last tag (feat: minor, fix: patch, `feat!:` major) and refuses when `[Unreleased]` is empty; `untried` lists the commits a stable release would ship without a beta. Release commits use `REL-n` tickets. Release notes always come from `CHANGELOG.md` [RL-14].
+
+Packagist [RL-12]: `POST https://packagist.org/api/update-package` with the repository URL; when the package does not exist yet, `create-package`. Composer installs the tag's archive, which `.gitattributes` keeps to client files (plus `bin/peep-clean` and `phpstan/rules.neon`).
 
 ### Leftover calls [RL-09]
 

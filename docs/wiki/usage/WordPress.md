@@ -1,6 +1,6 @@
 # WordPress
 
-WordPress sites usually have no Composer setup, so the easiest way is the [global install](global-install.md): `peep()` then works in every theme and plugin file without changes.
+WordPress sites usually have no Composer setup, so the easiest way is the [global install](Global-Install.md): `peep()` then works in every theme and plugin file without changes.
 
 With Composer (for example in a Bedrock site, or a plugin that has its own `vendor/`):
 

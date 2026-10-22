@@ -59,16 +59,20 @@ collect($rows)->peep()->map(...);
 
 Logs, reported exceptions, `dump()` and sent mail show up without any call. Publish the config with `php artisan vendor:publish --tag=peep-config`.
 
-Any other PHP app: see the [setup guides](docs/guides/README.md) for plain PHP, Symfony, Slim, WordPress and the global install (`peep()` in every script, no Composer).
+Any other PHP app: see the [wiki](docs/wiki/usage/Configuration.md) for plain PHP, Symfony, Slim, WordPress and the global install (`peep()` in every script, no Composer).
 
-The desktop app (macOS, Windows, Linux) shows the viewer in its own window and needs no PHP install: see [desktop/README.md](desktop/README.md).
+The desktop app (macOS, Windows, Linux) shows the viewer in its own window and needs no PHP install: see [Desktop app](docs/wiki/usage/Desktop-App.md).
 
 ## Documentation
 
-- [Installation](docs/guides/installation.md)
-- [API reference](docs/api.md)
-- [Laravel](docs/guides/laravel.md)
-- [Setup guides](docs/guides/README.md): plain PHP, Symfony, Slim, WordPress, global install, mail and SMS, webhooks, desktop app
+The [wiki](https://github.com/shibbirweb/peep/wiki) has everything, with screenshots; it is written in [docs/wiki](docs/wiki) and published by CI.
+
+- [Getting started](docs/wiki/usage/Getting-Started.md)
+- [Installation](docs/wiki/usage/Installation.md)
+- [Version support](docs/wiki/usage/Version-Support.md): PHP 7.1 to 8.5, Laravel 5.5 to 13
+- [API reference](docs/wiki/usage/API-Reference.md)
+- [Laravel](docs/wiki/usage/Laravel.md), [other frameworks and plain PHP](docs/wiki/usage/Configuration.md), [mail and SMS](docs/wiki/usage/Mail-and-SMS.md), [webhooks](docs/wiki/usage/Webhooks.md), [desktop app](docs/wiki/usage/Desktop-App.md)
+- [Releasing](docs/wiki/developer/Releasing.md): betas from `develop`, stable releases from `main`
 - [Protocol](docs/protocol.md)
 - [Roadmap](docs/plan/roadmap.md)
 - [Feature list](docs/plan/features.md)

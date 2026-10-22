@@ -17,19 +17,20 @@ This is not a clearance search. Before 1.0, search the official databases for th
 | Step | Where | For |
 |------|-------|-----|
 | Push the repository and check that every workflow passes on `main` | GitHub | SU-12, SU-13, DT-15 |
-| Submit `https://github.com/shibbirweb/peep` on Packagist and enable the GitHub hook (Packagist shows the webhook URL and token) | packagist.org | RL-02 |
+| Either set the variable `PACKAGIST_AUTO_PUBLISH` to `true` with the secrets `PACKAGIST_USERNAME` and `PACKAGIST_TOKEN` (the Release workflow creates the package on the first release and updates it on every one after), or submit the repository on packagist.org and enable its GitHub hook | packagist.org, GitHub | RL-02, RL-12 |
+| Open the Wiki tab once and save any page, so the Wiki workflow can publish `docs/wiki` | GitHub | RL-11 |
 | Add the Apple secrets (`APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`) | GitHub repository secrets | DT-13 |
 | Add `WINDOWS_CERTIFICATE`, `WINDOWS_CERTIFICATE_PASSWORD` (secrets) and `WINDOWS_CERTIFICATE_THUMBPRINT` (variable) | GitHub | DT-14 |
 | Generate the update key (`cd desktop && bun run tauri signer generate`); add the private key and its password as `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (secrets) and the public key as `TAURI_UPDATER_PUBKEY` (variable) | GitHub | DT-12 in release builds |
 | Create the tap repository `shibbirweb/homebrew-tap` with `Casks/peep.rb` from `packaging/homebrew/peep.rb`, filled in after the first release | GitHub | RL-10 |
 
-## Cutting a release (RL-03)
+## Cutting a release (RL-03, RL-13)
 
-```bash
-scripts/set-version.sh 1.0.0          # client, viewer, desktop app, and a CHANGELOG section
-git commit -am "chore: release 1.0.0"
-git tag v1.0.0
-git push origin main v1.0.0
-```
+Releases follow nibtree's model: `develop` is the beta line, `main` is stable, and workflows do the bumping, tagging and publishing. The full description, with diagrams, is the wiki's [Releasing](../wiki/developer/Releasing.md) page.
 
-The tag starts `.github/workflows/release.yml`: it checks that every version is 1.0.0 and the changelog has a 1.0.0 section, runs the client, Laravel and viewer workflows, builds `peep.phar` and `peep-server.phar` with `SHA256SUMS`, creates a draft GitHub Release with the changelog notes, then builds and attaches the desktop apps (and `latest.json` for updates). Review the draft and publish it; Packagist picks the tag up from its hook.
+1. Create the `develop` branch from `main` (done) and protect both: pull requests and passing CI.
+2. Tick Settings, Actions, General, "Allow GitHub Actions to create and approve pull requests".
+3. Actions, **Beta release** on `develop`: opens `chore:[REL-n] release 0.1.0-beta.1`. Merge it; **Publish beta** publishes the pre-release and **Release** attaches the PHARs and desktop apps.
+4. Actions, **Stable release** on `develop`, merge its pull request, then merge the develop to main pull request that **Promote stable** opens. **Publish stable** publishes the release; **Release** builds it and, with `PACKAGIST_AUTO_PUBLISH`, creates or updates the Packagist package.
+
+`bun scripts/version.ts pending` says what the next release would be at any time.

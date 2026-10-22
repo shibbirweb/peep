@@ -6,7 +6,7 @@ Peep has two parts: the **client** you add to your app, and the **viewer** where
 
 Pick one:
 
-- **Desktop app** (macOS, Windows, Linux): download it from the [releases page](https://github.com/shibbirweb/peep/releases) and open it. It brings its own PHP; nothing else is needed. See [Desktop app](desktop.md).
+- **Desktop app** (macOS, Windows, Linux): download it from the [releases page](https://github.com/shibbirweb/peep/releases) and open it. It brings its own PHP; nothing else is needed. See [Desktop app](Desktop-App.md).
 - **`peep-server.phar`** (needs PHP 8.5): download it from the releases page and run
 
   ```bash
@@ -29,7 +29,7 @@ The client runs on PHP 7.1 to 8.5. Laravel (5.5 to 13) picks it up on its own. E
 
 ### Without Composer
 
-The [global install](global-install.md) loads Peep into every script a PHP install runs:
+The [global install](Global-Install.md) loads Peep into every script a PHP install runs:
 
 ```bash
 php peep.phar install

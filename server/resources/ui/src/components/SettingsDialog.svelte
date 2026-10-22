@@ -2,6 +2,7 @@
   // VF-15 to VF-20: the settings page. The viewer validates and saves settings.json.
   import { onMount } from 'svelte';
   import { loadSettings, saveSettings } from '../lib/api.js';
+  import { checkUpdates, isDesktop } from '../lib/desktop.js';
   import { IDES } from '../lib/ide.js';
   import { askPermission } from '../lib/notify.js';
   import { applySettings } from '../lib/stream.svelte.js';
@@ -97,6 +98,26 @@
           <input type="checkbox" bind:checked={form.notifications} />
           <span>Desktop notifications for <code>notify()</code> and exceptions while the viewer is in the background</span>
         </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Updates</legend>
+        <label class="row">
+          <span>Update channel</span>
+          <select bind:value={form.update_channel}>
+            <option value="stable">Stable</option>
+            <option value="beta">Beta (pre-releases too)</option>
+          </select>
+        </label>
+        <label class="row check">
+          <input type="checkbox" bind:checked={form.check_updates} />
+          <span>Check for updates at start and once a day</span>
+        </label>
+        {#if isDesktop()}
+          <button type="button" class="small" onclick={() => checkUpdates()}>Check now</button>
+        {:else}
+          <p class="hint">For the Peep desktop app. In a browser, new versions are on the <a href="https://github.com/shibbirweb/peep/releases" target="_blank" rel="noreferrer">releases page</a>.</p>
+        {/if}
       </fieldset>
 
       <fieldset>

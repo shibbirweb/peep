@@ -1,0 +1,180 @@
+# Starts the next beta from develop: Actions, "Beta release", Run workflow, on develop.
+#
+# develop only takes changes by pull request, so this does not push the version bump itself. It opens a
+# release pull request carrying it, like `chore:[REL-4] release 1.1.0-beta.1`, with the release notes
+# (the [Unreleased] section of CHANGELOG.md) in its description. Merging that pull request is the
+# decision to release. Once CI passes on develop after the merge, beta-publish.yml sees an unpublished
+# beta version there, publishes it as a GitHub pre-release and builds it (release.yml).
+#
+# The version is worked out, never typed: from a stable version the first beta of the next minor
+# release (patch when only fixes landed, major for a `feat!:` commit), from a beta the next beta.
+#
+# Tick "dry run" to see the version, commit and notes it would use, with nothing pushed or opened.
+#
+# Needs one repository setting: Settings, Actions, General, Workflow permissions, "Allow GitHub Actions to
+# create and approve pull requests". Without it GitHub refuses to open the pull request, and says so.
+name: Beta release
+run-name: Beta release${{ inputs.dry_run && ' (dry run)' || '' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Dry run, only show what would happen and push or open nothing
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  # Read CI's result on develop, and start CI on the release branch.
+  actions: write
+
+# Two runs at once would race for the same version number. Shared with stable.yml: one release at a time.
+concurrency:
+  group: release-pull-request
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Open the release pull request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Only from develop
+        if: github.ref != 'refs/heads/develop'
+        run: |
+          echo "::error::Betas are cut from develop, and this was started on ${GITHUB_REF#refs/heads/}. Choose develop under 'Use workflow from'."
+          exit 1
+
+      # Full history and tags: version.ts reads the release tags and the commits since them.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+
+      # A beta is something people install, so it only starts from a commit CI has passed on.
+      - name: Check CI passed on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha="$(git rev-parse HEAD)"
+          conclusion="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$sha&per_page=1" \
+            --jq '.workflow_runs[0] | if . == null then "none" else (.conclusion // .status) end')"
+          if [ "$conclusion" != "success" ]; then
+            echo "::error::CI on ${sha:0:7} is '$conclusion', not a pass. Wait for it to pass on develop, then run this again."
+            exit 1
+          fi
+          echo "CI passed on ${sha:0:7}"
+
+      # One release at a time: an open release pull request, or a merged beta not published yet, goes first.
+      - name: Check no release is already under way
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          current="$(bun scripts/version.ts show)"
+          case "$current" in
+            *-beta.*)
+              if ! git rev-parse --verify --quiet "refs/tags/v$current" > /dev/null; then
+                echo "::error::develop is already at $current, which has not been published. Once CI passes on develop, Publish beta publishes it; if that failed, re-run it from Actions."
+                exit 1
+              fi
+              ;;
+          esac
+          open="$(gh pr list --repo "$GITHUB_REPOSITORY" --base develop --state open --json headRefName,url \
+            --jq '[.[] | select(.headRefName | startswith("release/"))][0].url // ""')"
+          if [ -n "$open" ]; then
+            echo "::error::A release pull request is already open: $open. Merge or close it first."
+            exit 1
+          fi
+
+      - name: Bump to the next beta
+        id: bump
+        run: |
+          before="$(bun scripts/version.ts show)"
+          if ! bun scripts/version.ts bump beta; then
+            echo "::error::Could not bump to the next beta; the reason is above. Usually CHANGELOG.md has nothing under [Unreleased]: describe the changes there, merge that, and run this again."
+            exit 1
+          fi
+          version="$(bun scripts/version.ts show)"
+          if [ "$version" = "$before" ]; then
+            echo "::error::Nothing has landed on develop since $before was released, so there is nothing for a new beta to hold."
+            exit 1
+          fi
+          case "$version" in
+            *-beta.*) ;;
+            *) echo "::error::Expected a beta version, got $version."; exit 1 ;;
+          esac
+          {
+            echo "version=$version"
+            echo "tag=v$version"
+            echo "ticket=$(bun scripts/version.ts next-ticket)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Release notes from the changelog
+        env:
+          TAG: ${{ steps.bump.outputs.tag }}
+          COMMIT: chore:[REL-${{ steps.bump.outputs.ticket }}] release ${{ steps.bump.outputs.version }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          bun scripts/version.ts notes > "$RUNNER_TEMP/notes.md"
+          {
+            echo "Merging this releases **$TAG** as a beta: once CI passes on develop, the Publish beta"
+            echo "workflow publishes it as a GitHub pre-release with the PHARs and the desktop apps. Only desktop"
+            echo "installs on the beta channel are offered it; Composer installs it only with a beta stability."
+            echo "It changes only the version, in the files that carry it."
+            echo ''
+            echo 'Close it instead to cancel this beta; nothing is published until it is merged.'
+            echo ''
+            echo '## Release notes'
+            echo ''
+            cat "$RUNNER_TEMP/notes.md"
+          } > "$RUNNER_TEMP/body.md"
+          {
+            if [ "$DRY_RUN" = true ]; then
+              echo "### $TAG (dry run, nothing pushed or opened)"
+            else
+              echo "### $TAG"
+            fi
+            echo ''
+            echo "Commit: \`$COMMIT\`"
+            echo ''
+            cat "$RUNNER_TEMP/notes.md"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Push the release branch
+        if: ${{ !inputs.dry_run }}
+        env:
+          BRANCH: release/${{ steps.bump.outputs.tag }}
+          COMMIT: chore:[REL-${{ steps.bump.outputs.ticket }}] release ${{ steps.bump.outputs.version }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$BRANCH"
+          git commit -am "$COMMIT"
+          git push origin "$BRANCH"
+
+      - name: Open the release pull request
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: release/${{ steps.bump.outputs.tag }}
+          TITLE: chore:[REL-${{ steps.bump.outputs.ticket }}] release ${{ steps.bump.outputs.version }}
+        run: |
+          if ! url="$(gh pr create --repo "$GITHUB_REPOSITORY" --base develop \
+                --head "$BRANCH" --title "$TITLE" --body-file "$RUNNER_TEMP/body.md" 2>&1)"; then
+            echo "$url"
+            echo "::error::GitHub would not open the pull request. If it says Actions may not create pull requests, tick Settings, Actions, General, 'Allow GitHub Actions to create and approve pull requests', delete the $BRANCH branch, and run this again."
+            exit 1
+          fi
+          echo "Opened $url"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Release pull request: $url" >> "$GITHUB_STEP_SUMMARY"
+
+      # A pull request opened with the built in token starts no workflow, so its checks would never run.
+      - name: Run CI on the release branch
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: release/${{ steps.bump.outputs.tag }}
+        run: gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"

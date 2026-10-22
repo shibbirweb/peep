@@ -19,6 +19,8 @@ export const DEFAULT_SETTINGS = {
   max_cards: 10000,
   history: true,
   notifications: false,
+  update_channel: 'stable',
+  check_updates: true,
   token_set: false,
 };
 

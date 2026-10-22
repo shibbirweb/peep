@@ -1,0 +1,52 @@
+# Tests every push to develop (the beta line) and main (stable), and every pull request.
+#
+# Passing CI on a push is also what moves a release along: beta-publish.yml, stable-promote.yml and
+# stable-publish.yml each start when this finishes, and only act on a run that passed.
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+  # release.yml calls this before building a release it was handed by hand.
+  workflow_call:
+  # beta.yml and stable.yml start this on the release branch they push. A pull request opened with the
+  # built in token starts no workflow, so without it the release pull request would have no checks.
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  client:
+    name: Client
+    uses: ./.github/workflows/client.yml
+
+  laravel:
+    name: Laravel
+    uses: ./.github/workflows/laravel.yml
+
+  viewer:
+    name: Viewer
+    uses: ./.github/workflows/server.yml
+
+  docs:
+    name: Docs and release scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Release script tests
+        run: bun test scripts
+
+      - name: Every file carries the same version
+        run: bun scripts/version.ts check
+
+      - name: Wiki pages, screenshots and links
+        run: bun scripts/build-wiki.ts --check

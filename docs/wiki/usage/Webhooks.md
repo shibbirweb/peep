@@ -2,7 +2,21 @@
 
 Providers call your app back after they send something: Mailgun reports a mail as delivered or opened, Twilio reports an SMS as sent and delivered. When Peep catches the mail or SMS instead, the webhook simulator makes those calls, signed the way the provider signs them, so your webhook code runs and its signature check passes.
 
+```mermaid
+sequenceDiagram
+    participant App as Your app
+    participant Viewer
+    App->>Viewer: sends a mail (SMTP, API or the peep mailer)
+    Note over Viewer: the mail lands in the inbox
+    Viewer->>App: POST /webhooks/mailgun "accepted" (signed)
+    Note over Viewer: 2 seconds later
+    Viewer->>App: POST /webhooks/mailgun "delivered" (signed)
+    App-->>Viewer: 200 OK, shown in the delivery log
+```
+
 Open the **Webhooks** tab.
+
+![A Mailgun rule in the webhook editor](../images/webhooks.png)
 
 ## A first rule
 
@@ -49,6 +63,8 @@ X-Signature: {{ hmac_sha256(vars.secret, body) }}
 ```
 
 ## Delivery log, retries, sharing rules
+
+![The delivery log with a request and your app's answer](../images/delivery-log.png)
 
 - Each call is logged with its request, the response (up to 64 KB), the time it took and any template warnings. **Resend** sends the same request again.
 - Turn on **Retry** to repeat calls that failed with a network error or a 5xx answer, after 1, 2, 4... seconds.

@@ -25,6 +25,9 @@ tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-updater = "2"
+tauri-plugin-dialog = "2"
+reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
+semver = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 

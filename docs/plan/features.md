@@ -16,8 +16,8 @@ How each feature works is described in [implementation.md](implementation.md). T
 | VF: Full viewer | 6 | 23 / 23 (2 dropped) |
 | MS: Mail and SMS catching | 7 | 15 / 15 |
 | WH: Webhook simulator | 7 | 13 / 13 |
-| DT: Desktop app (Tauri) | 8 | 12 / 15 |
-| RL: Release | 9 | 7 / 10 |
+| DT: Desktop app (Tauri) | 8 | 13 / 16 |
+| RL: Release | 9 | 12 / 15 |
 
 ## SU: Project setup (Phase 0)
 
@@ -179,7 +179,7 @@ Objects and helpers:
 - [x] BR-04 `VarDumperSerializer`: values shown with VarDumper's casters, opt-in with `serializer: var-dumper` (casters may call code on values)
 - [x] BR-05 Error handler for plain PHP: errors, uncaught exceptions, fatal errors on shutdown (with PHP 8.5 fatal error backtraces when available)
 - [x] BR-06 Global install through `auto_prepend_file` (`peep.phar` with `install`, `uninstall`, `status`; on by default; Composer projects keep their own version)
-- [x] BR-07 Setup guides: plain PHP, Symfony, Slim, WordPress, global install (`docs/guides/`)
+- [x] BR-07 Setup guides: plain PHP, Symfony, Slim, WordPress, global install (now in `docs/wiki/usage/`)
 
 ## VF: Full viewer (Phase 6)
 
@@ -275,6 +275,7 @@ After the viewer catches a mail or SMS, it can call back a URL the user sets up,
 - [x] DT-12 Auto-update (from GitHub Releases; active in builds made with the update key)
 - [ ] DT-13 macOS signing and notarization (in progress: wired in CI, waits for an Apple Developer ID certificate)
 - [ ] DT-14 Windows signing (in progress: wired in CI, waits for a code signing certificate)
+- [x] DT-16 Update checker: automatic check after start and daily, Check for Updates in the tray and Settings, Stable or Beta channel, install and restart (or the download page without an update key)
 - [ ] DT-15 CI builds for macOS, Windows, Linux attached to the GitHub Release (in progress: workflow written, first run pending)
 
 ## RL: Release (Phase 9)
@@ -282,10 +283,15 @@ After the viewer catches a mail or SMS, it can call back a URL the user sets up,
 - [ ] RL-01 Trademark search for "Peep" (USPTO, EUIPO, class 9) (in progress: preliminary search done, see release-checklist.md; the official database searches are left)
 - [ ] RL-02 Packagist package `shibbirweb/peep` registered with GitHub webhook (waits for the push; steps in release-checklist.md)
 - [x] RL-03 Release workflow: one tag releases the client, PHAR and desktop builds
-- [x] RL-04 Docs: installation (Composer, global, Docker) (`docs/guides/installation.md`)
-- [x] RL-05 Docs: API reference (`docs/api.md`)
-- [x] RL-06 Docs: Laravel guide (`docs/guides/laravel.md`)
+- [x] RL-04 Docs: installation (Composer, global, Docker) (`docs/wiki/usage/Installation.md`)
+- [x] RL-05 Docs: API reference (`docs/wiki/usage/API-Reference.md`)
+- [x] RL-06 Docs: Laravel guide (`docs/wiki/usage/Laravel.md`)
 - [x] RL-07 Docs: other frameworks and plain PHP
-- [x] RL-08 Docs: desktop app and display mode (`docs/guides/desktop.md`)
+- [x] RL-08 Docs: desktop app and display mode (`docs/wiki/usage/Desktop-App.md`)
 - [x] RL-09 Detect leftover calls: PHPStan rule (`phpstan/rules.neon`), `vendor/bin/peep-clean [--fix]` and `php artisan peep:clean`
+- [x] RL-11 Wiki in `docs/wiki` (usage and developer pages, screenshots taken by `scripts/screenshots.ts`, Mermaid diagrams), checked by CI and published to the GitHub wiki by the Wiki workflow
+- [x] RL-12 Packagist created and updated by the Release workflow when `PACKAGIST_AUTO_PUBLISH` is on
+- [x] RL-13 Beta line on `develop`, stable on `main`: Beta release, Publish beta, Stable release, Promote stable and Publish stable workflows, `scripts/version.ts` (show, check, set, notes, pending, bump, untried, next-ticket)
+- [x] RL-14 Release notes from `CHANGELOG.md` (Unreleased for betas, the dated section for stable releases)
+- [x] RL-15 CI: every Laravel version on every PHP version it supports, and the client on PHP 7.1 to 8.5, as parallel jobs
 - [ ] RL-10 Homebrew cask `peep` (in progress: the name is free; cask in `packaging/homebrew/peep.rb`, published to a tap after the first release)

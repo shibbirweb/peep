@@ -1,16 +1,24 @@
 # Changelog
 
-All notable changes to this project are documented in this file.
+All notable changes to Peep are documented in this file.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and the project follows [Semantic Versioning](https://semver.org/).
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+Write every user-visible change under **Unreleased** as it lands, in the pull request that makes it.
+The "Beta release" workflow publishes those notes as they are with each beta; the "Stable release"
+workflow dates them into a `## [x.y.z] - YYYY-MM-DD` section. That section becomes the GitHub release
+notes, and `bun scripts/version.ts notes` prints it. See the Releasing page of the wiki.
 
 ## [Unreleased]
 
 ### Added
 
 - Leftover calls: `vendor/bin/peep-clean [--fix]` and `php artisan peep:clean` list `peep()`, `pd()`, `->peep()` and `@peep` calls and remove the safe ones; a PHPStan rule (`phpstan/rules.neon`) reports them.
-- Release workflow: one `v*` tag checks the versions, runs every test, and drafts a GitHub Release with `peep.phar`, `peep-server.phar`, checksums and the desktop apps. `scripts/set-version.sh` sets the version everywhere.
-- Documentation: installation, API reference, Laravel and desktop app guides.
+- Releases: betas from `develop` and stable releases from `main`, cut by the Beta release and Stable release workflows (version worked out from the commits, release pull request, then publish), with the PHARs, checksums and desktop apps attached. Release notes come from this changelog. `bun scripts/version.ts` shows, checks, bumps and sets the version everywhere it is written.
+- Packagist: the Release workflow can create and update the package itself (`PACKAGIST_AUTO_PUBLISH`).
+- Desktop app: an update checker. It checks after start and daily, offers the update with its notes and installs it, has **Check for Updates...** in the tray and Settings, and a Stable or Beta update channel.
+- A wiki, written in `docs/wiki` and published by CI: getting started, installation, version support, the viewer, the API reference, Laravel, query debugging, other frameworks, mail and SMS, webhooks, the desktop app, troubleshooting, and pages for contributors, with screenshots and diagrams.
+- CI runs every Laravel version on every PHP version it supports (40 jobs) and the client on PHP 7.1 to 8.5, all at the same time.
 - Desktop app (Tauri 2, `desktop/`) for macOS, Windows and Linux: the viewer in a native window with its own PHP 8.5, reusing a viewer started from the CLI; tray with the unread count, hotkey, always on top, native notifications, start at login, updates, and `peep://open` for `serve --open=window`.
 - `peep-server serve --exit-with=<pid>`: the viewer stops when the process that started it is gone.
 - Webhook simulator: rules that call the app back when a mail or SMS is caught (or by hand from the inbox), with a template language for the body (`{{ mail.message_id }}`, `{{ now.unix_float }}`, `hmac_sha256(...)` and more), JSON, form, XML or raw bodies, timed steps, Mailgun and Twilio signatures that the providers' own checks accept, presets for Mailgun, Twilio and Vonage, optional retries, a delivery log with resend, a Test button, and import and export.
@@ -24,7 +32,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Token for apps on other machines or in Docker on Linux: `PEEP_TOKEN` in the app (`token` in Laravel's config), sent as `X-Peep-Token`; the viewer can then listen beyond loopback, and its page stays local.
 - Bridges for any PHP app: PSR-3 logger (`PeepLogger`, psr/log 1 to 3), Monolog handler (`PeepHandlerFactory::create()`, Monolog 1 to 3), `dump()` and `dd()` to Peep (`DumpHandler`, VarDumper 3.4 to 8.x), opt-in VarDumper casters for values (`serializer: var-dumper`), and an error handler for warnings, uncaught exceptions and fatal errors (with PHP 8.5 fatal error backtraces).
 - Global install: `peep.phar install` loads Peep into every script of a PHP install through `auto_prepend_file`; `uninstall` and `status`; projects with Composer keep their own version.
-- Setup guides for plain PHP, Symfony, Slim, WordPress and the global install (`docs/guides/`).
+- Setup guides for plain PHP, Symfony, Slim, WordPress and the global install (now in `docs/wiki/usage/`).
 
 - Laravel adapter (Laravel 5.5 to 13), auto-discovered: watchers for queries (all, by type, slow, duplicate, conditional, counted), events, jobs, cache, HTTP client, views, requests, logs, reported exceptions, mail, dumps and deprecations; request ids per job and command; `peep()->showQueries()` and the other show/stop methods, `model()`, `mailable()`, `markdown()`, `context()`; `->peep()` on collections, strings, query builders and test responses; Blade `@peep`, `@peepAll`, `@peepMeasure`; disabled in production by default.
 - Query debugging follows the viewer's switch while the app runs (`GET /_peep/switches` and envelope answers).
@@ -53,3 +61,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Peep no longer calls `set_error_handler()` while sending, which on PHP 7 could remove the app's error handler when Peep was called from inside it.
 - The viewer's Host check now covers only the UI and the stream, so apps in Docker can send through `host.docker.internal`.
+
+[Unreleased]: https://github.com/shibbirweb/peep/commits/develop

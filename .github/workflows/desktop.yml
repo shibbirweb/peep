@@ -1,8 +1,13 @@
 name: Desktop
 
-# Tags run this from release.yml, after the checks and the draft release.
+# release.yml calls this for a published release; pull requests touching the app build it as a check.
 on:
   workflow_call:
+    inputs:
+      tag:
+        description: The published release to attach the apps to, like v1.1.0-beta.1
+        type: string
+        required: true
   pull_request:
     paths:
       - 'desktop/**'
@@ -26,6 +31,8 @@ jobs:
         working-directory: desktop/src-tauri
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || '' }}
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -50,6 +57,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || '' }}
 
       - uses: oven-sh/setup-bun@v2
 
@@ -104,6 +113,8 @@ jobs:
       HAS_WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE != '' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || '' }}
 
       - uses: actions/download-artifact@v4
         with:
@@ -192,13 +203,13 @@ jobs:
           projectPath: desktop
           tauriScript: bun run tauri
           args: --target ${{ matrix.target }} --config src-tauri/tauri.release.conf.json
-          tagName: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
-          releaseName: Peep ${{ github.ref_name }}
-          releaseDraft: true
+          # The release already exists (published by beta-publish.yml or stable-publish.yml); the apps
+          # and latest.json, which the desktop updater reads, are added to it.
+          tagName: ${{ inputs.tag || '' }}
           includeUpdaterJson: true
 
       - uses: actions/upload-artifact@v4
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ !inputs.tag }}
         with:
           name: peep-desktop-${{ matrix.target }}
           path: |

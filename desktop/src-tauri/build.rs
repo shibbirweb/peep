@@ -7,6 +7,7 @@ fn main() {
             "show_window",
             "hide_window",
             "set_pinned",
+            "check_updates",
         ]),
     ))
     .expect("failed to run the Tauri build script");
