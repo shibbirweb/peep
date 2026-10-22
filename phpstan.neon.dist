@@ -33,3 +33,5 @@ parameters:
             # The SwiftMailer transport (Laravel 5.5 to 8); the installed Laravel uses Symfony
             # Mailer. Covered by the Laravel 5.5 to 8 test runs.
             - src/Laravel/Mail/PeepSwiftTransport.php
+            # Code with leftover peep() calls on purpose, for the rule's own test.
+            - tests/Fixture/PHPStan

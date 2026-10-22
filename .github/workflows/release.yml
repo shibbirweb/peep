@@ -1,0 +1,94 @@
+name: Release
+
+# One tag releases everything (RL-03): push "v1.2.3" after scripts/set-version.sh 1.2.3.
+on:
+  push:
+    tags: ['v*']
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Versions match the tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check every version and the changelog
+        run: bash scripts/set-version.sh --check "${GITHUB_REF_NAME#v}"
+
+  client:
+    needs: version
+    uses: ./.github/workflows/client.yml
+
+  laravel:
+    needs: version
+    uses: ./.github/workflows/laravel.yml
+
+  viewer:
+    needs: version
+    uses: ./.github/workflows/server.yml
+
+  phars:
+    name: PHARs and the draft release
+    needs: [client, laravel, viewer]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+          ini-values: phar.readonly=0
+          tools: composer:v2
+
+      - name: Box
+        run: composer install --working-dir=tools --prefer-dist --no-interaction --no-progress
+
+      - name: peep.phar (client, global install)
+        run: tools/vendor/bin/box compile --no-interaction
+
+      - name: peep-server.phar (viewer)
+        run: |
+          (cd server/resources/ui && bun install --frozen-lockfile && bun run build)
+          cd server
+          composer install --no-dev --classmap-authoritative --prefer-dist --no-interaction --no-progress
+          ../tools/vendor/bin/box compile --no-interaction
+
+      - name: Checksums
+        run: |
+          mkdir -p dist
+          cp build/peep.phar server/build/peep-server.phar dist/
+          (cd dist && sha256sum peep.phar peep-server.phar > SHA256SUMS)
+          cat dist/SHA256SUMS
+
+      - name: Notes from the changelog
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v heading="## [$version]" 'index($0, heading) == 1 { found = 1; next } /^## \[/ && found { exit } found { print }' CHANGELOG.md > dist/NOTES.md
+          test -s dist/NOTES.md
+
+      - name: Draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --draft --verify-tag \
+            --title "Peep $GITHUB_REF_NAME" --notes-file dist/NOTES.md \
+            dist/peep.phar dist/peep-server.phar dist/SHA256SUMS
+
+  desktop:
+    needs: phars
+    permissions:
+      contents: write
+    uses: ./.github/workflows/desktop.yml
+    secrets: inherit

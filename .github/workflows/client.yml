@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:
 
 concurrency:
   group: client-${{ github.ref }}
@@ -53,6 +54,7 @@ jobs:
         run: |
           find src tests resources -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l bin/peep
+          php -l bin/peep-clean
 
   quality:
     name: Code style, static analysis, compatibility
@@ -79,6 +81,9 @@ jobs:
 
       - name: PHP 7.1+ compatibility
         run: composer compat
+
+      - name: PHPStan rule for leftover calls
+        run: vendor/bin/phpunit --filter PhpStanRuleTest
 
   dist:
     name: Composer archive contains only the client

@@ -10,6 +10,7 @@
     <file>tests</file>
     <file>resources</file>
     <file>bin/peep</file>
+    <file>bin/peep-clean</file>
 
     <arg name="extensions" value="php"/>
     <arg name="colors"/>

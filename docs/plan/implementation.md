@@ -659,13 +659,18 @@ static-php-cli's published "common" builds of PHP 8.5.8 (Windows: the "spc-max" 
 
 ## 13. Release pipeline (Phase 9)
 
-One tag `vX.Y.Z` releases everything [RL-03]:
+One tag `vX.Y.Z` releases everything [RL-03] (`.github/workflows/release.yml`):
 
-1. All CI jobs must pass.
-2. Build `peep-server.phar` (viewer) and `peep.phar` (client, for global install) with Box; `phar.readonly=0` in the build job.
-3. Build static PHP per platform, then Tauri bundles (`.dmg`, `.msi`, `.AppImage`, `.deb`), signed (Apple notarization, Windows code signing) [DT-13, DT-14].
-4. Create the GitHub Release with all artifacts, `latest.json` for the updater, and changelog notes.
-5. Packagist updates from its GitHub webhook [RL-02]; Composer installs the tag's archive, which `.gitattributes` keeps to client files only.
+1. `scripts/set-version.sh --check X.Y.Z`: the client and viewer `Version` constants, `tauri.conf.json` and `Cargo.toml` all say X.Y.Z, and `CHANGELOG.md` has a `## [X.Y.Z]` section. `scripts/set-version.sh X.Y.Z` (without `--check`) writes them before tagging.
+2. The client, Laravel and viewer workflows run as reusable workflows; all must pass.
+3. Build `peep.phar` (client, global install) and `peep-server.phar` (viewer, after the UI build) with Box, with `SHA256SUMS`.
+4. Create a draft GitHub Release with both PHARs, the sums and the changelog section as notes.
+5. The desktop workflow (reusable) builds the static-PHP bundles for every target, signed when the certificates are set [DT-13, DT-14], and attaches them and `latest.json` to the same draft.
+6. The owner reviews and publishes the draft. Packagist updates from its GitHub webhook [RL-02]; Composer installs the tag's archive, which `.gitattributes` keeps to client files (plus `bin/peep-clean` and `phpstan/rules.neon`).
+
+### Leftover calls [RL-09]
+
+`Clean\CallFinder` reads PHP files with `token_get_all()` (PHP 7.1+), so strings, comments, methods named `peep` and other namespaces' functions are never matched. It removes a `peep()` / `pd()` call only when it is a whole statement (`peep($x)->red();`), taking its line with it, and a `->peep()` step in a chain (the macro returns its target); other uses are reported to fix by hand. `Clean\Cleaner` walks paths (skipping `vendor/`, `node_modules/`, `storage/`, `.git/`), handles `@peep`, `@peepAll` and `@peepMeasure` in Blade files, and reports `file:line`. `bin/peep-clean` and `php artisan peep:clean` exit with 1 while calls remain, for CI. `PHPStan\NoPeepCallsRule` (identifier `peep.leftoverCall`) is opt-in through `phpstan/rules.neon`.
 
 ## 14. Testing strategy
 

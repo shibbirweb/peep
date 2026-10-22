@@ -28,7 +28,7 @@ The feature checklist is in [features.md](features.md) and how each part works i
 | 6 | Full viewer | v0.5.0 | Done (CI first run and release pending) |
 | 7 | Mail, SMS and webhook simulator | v0.6.0 | Done (CI first run and release pending) |
 | 8 | Tauri desktop app | v0.7.0 | Done except signing (certificates) and the first CI run |
-| 9 | Public release | v1.0.0 | Not started |
+| 9 | Public release | v1.0.0 | In progress: release workflow, docs and leftover-call tools done; accounts, signing and the official name search are left (release-checklist.md) |
 
 ### Phase 0: Project setup
 

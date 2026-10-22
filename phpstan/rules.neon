@@ -1,0 +1,6 @@
+# Reports peep(), pd() and ->peep() calls. In your phpstan.neon:
+#
+#     includes:
+#         - vendor/shibbirweb/peep/phpstan/rules.neon
+rules:
+    - ShibbirWeb\Peep\PHPStan\NoPeepCallsRule

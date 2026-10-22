@@ -12,6 +12,7 @@ on:
       - 'server/**'
       - 'tools/**'
       - '.github/workflows/server.yml'
+  workflow_call:
 
 concurrency:
   group: server-${{ github.ref }}

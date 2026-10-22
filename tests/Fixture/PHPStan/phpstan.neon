@@ -1,0 +1,8 @@
+includes:
+    - ../../../phpstan/rules.neon
+parameters:
+    level: 0
+    bootstrapFiles:
+        - ../../../vendor/autoload.php
+    scanDirectories:
+        - ../../../tools/vendor/laravel/framework/src

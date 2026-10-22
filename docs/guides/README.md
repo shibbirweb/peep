@@ -1,7 +1,8 @@
 # Setup guides
 
-Peep works in any PHP app from PHP 7.1 to 8.5. Laravel is set up automatically (see the main [README](../../README.md)); for everything else, pick a guide:
+Peep works in any PHP app from PHP 7.1 to 8.5. Start with [Installation](installation.md), then pick a guide:
 
+- [Laravel](laravel.md): watchers, query switches, macros, Blade, mail and SMS.
 - [Plain PHP](plain-php.md): scripts and apps without a framework.
 - [Symfony](symfony.md): Monolog, `dump()` and errors in a Symfony app.
 - [Slim](slim.md): Slim 3 and 4.
@@ -9,6 +10,9 @@ Peep works in any PHP app from PHP 7.1 to 8.5. Laravel is set up automatically (
 - [Global install](global-install.md): `peep()` in every script of a PHP install, without Composer.
 - [Mail and SMS](mail-and-sms.md): catch the mail and SMS your app sends, in any framework.
 - [Webhooks](webhooks.md): have the viewer call your app back with signed provider events.
+- [Desktop app](desktop.md): the viewer in its own window, window or browser mode, tray and hotkey.
+
+Every method of `peep()` is in the [API reference](../api.md).
 
 In every case, start the viewer first:
 

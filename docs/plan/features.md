@@ -17,7 +17,7 @@ How each feature works is described in [implementation.md](implementation.md). T
 | MS: Mail and SMS catching | 7 | 15 / 15 |
 | WH: Webhook simulator | 7 | 13 / 13 |
 | DT: Desktop app (Tauri) | 8 | 12 / 15 |
-| RL: Release | 9 | 0 / 10 |
+| RL: Release | 9 | 7 / 10 |
 
 ## SU: Project setup (Phase 0)
 
@@ -279,13 +279,13 @@ After the viewer catches a mail or SMS, it can call back a URL the user sets up,
 
 ## RL: Release (Phase 9)
 
-- [ ] RL-01 Trademark search for "Peep" (USPTO, EUIPO, class 9)
-- [ ] RL-02 Packagist package `shibbirweb/peep` registered with GitHub webhook
-- [ ] RL-03 Release workflow: one tag releases the client, PHAR and desktop builds
-- [ ] RL-04 Docs: installation (Composer, global, Docker)
-- [ ] RL-05 Docs: API reference
-- [ ] RL-06 Docs: Laravel guide
-- [ ] RL-07 Docs: other frameworks and plain PHP
-- [ ] RL-08 Docs: desktop app and display mode
-- [ ] RL-09 Detect leftover calls: PHPStan rule and a `peep:clean` style command
-- [ ] RL-10 Homebrew cask `peep` (if the name is free)
+- [ ] RL-01 Trademark search for "Peep" (USPTO, EUIPO, class 9) (in progress: preliminary search done, see release-checklist.md; the official database searches are left)
+- [ ] RL-02 Packagist package `shibbirweb/peep` registered with GitHub webhook (waits for the push; steps in release-checklist.md)
+- [x] RL-03 Release workflow: one tag releases the client, PHAR and desktop builds
+- [x] RL-04 Docs: installation (Composer, global, Docker) (`docs/guides/installation.md`)
+- [x] RL-05 Docs: API reference (`docs/api.md`)
+- [x] RL-06 Docs: Laravel guide (`docs/guides/laravel.md`)
+- [x] RL-07 Docs: other frameworks and plain PHP
+- [x] RL-08 Docs: desktop app and display mode (`docs/guides/desktop.md`)
+- [x] RL-09 Detect leftover calls: PHPStan rule (`phpstan/rules.neon`), `vendor/bin/peep-clean [--fix]` and `php artisan peep:clean`
+- [ ] RL-10 Homebrew cask `peep` (in progress: the name is free; cask in `packaging/homebrew/peep.rb`, published to a tap after the first release)

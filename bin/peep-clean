@@ -1,0 +1,55 @@
+#!/usr/bin/env php
+<?php
+
+// Lists peep() calls left in the code, and removes the safe ones with --fix.
+//     vendor/bin/peep-clean [--fix] [path ...]
+// Exit code: 0 when none are left, 1 when some are (for CI), 2 for a usage error.
+
+$autoloaders = [
+    isset($GLOBALS['_composer_autoload_path']) ? $GLOBALS['_composer_autoload_path'] : null,
+    __DIR__ . '/../../../autoload.php',
+    __DIR__ . '/../vendor/autoload.php',
+];
+
+foreach ($autoloaders as $autoloader) {
+    if (is_string($autoloader) && is_file($autoloader)) {
+        require $autoloader;
+        break;
+    }
+}
+
+if (! class_exists('ShibbirWeb\\Peep\\Clean\\Cleaner')) {
+    fwrite(STDERR, "Cannot find Composer's autoloader. Run this from a project that requires shibbirweb/peep.\n");
+    exit(2);
+}
+
+$fix = false;
+$paths = [];
+
+foreach (array_slice($argv, 1) as $argument) {
+    if ($argument === '--fix') {
+        $fix = true;
+    } elseif ($argument === '--help' || $argument === '-h') {
+        fwrite(STDOUT, "Usage: peep-clean [--fix] [path ...]\n\nLists peep(), pd(), ->peep() and @peep calls. --fix removes those that are a statement\non their own or a ->peep() step in a chain. vendor/, node_modules/ and storage/ are skipped.\n");
+        exit(0);
+    } elseif (strpos($argument, '--') === 0) {
+        fwrite(STDERR, "Unknown option: {$argument}\n");
+        exit(2);
+    } else {
+        $paths[] = $argument;
+    }
+}
+
+$cwd = (string) getcwd();
+$result = (new ShibbirWeb\Peep\Clean\Cleaner())->run($paths !== [] ? $paths : [$cwd], $fix);
+
+fwrite(STDOUT, implode("\n", ShibbirWeb\Peep\Clean\Cleaner::report($result, $fix, $cwd)) . "\n");
+
+$left = 0;
+foreach ($result['findings'] as $finding) {
+    if (! $fix || ! $finding->removable) {
+        $left++;
+    }
+}
+
+exit($left > 0 ? 1 : 0);

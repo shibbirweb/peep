@@ -7,6 +7,7 @@ use ShibbirWeb\Peep\Config\Config;
 use ShibbirWeb\Peep\Laravel\Blade\PeepDirectives;
 use ShibbirWeb\Peep\Laravel\Caster\CollectionCaster;
 use ShibbirWeb\Peep\Laravel\Caster\ModelCaster;
+use ShibbirWeb\Peep\Laravel\Console\CleanCommand;
 use ShibbirWeb\Peep\Laravel\Mail\MailTransportRegistrar;
 use ShibbirWeb\Peep\Laravel\Macro\FrameworkMacros;
 use ShibbirWeb\Peep\Laravel\Macro\PeepMacros;
@@ -76,6 +77,11 @@ class PeepServiceProvider extends ServiceProvider
     {
         if (function_exists('config_path')) {
             $this->publishes([self::CONFIG_FILE => config_path('peep.php')], 'peep-config');
+        }
+
+        // Registered even when Peep is off: finding leftover calls matters most in production code.
+        if ($this->app->runningInConsole()) {
+            $this->commands([CleanCommand::class]);
         }
 
         $factory = $this->app->make(PeepFactory::class);

@@ -12,6 +12,7 @@ $finder = PhpCsFixer\Finder::create()
     ])
     ->append([
         __DIR__ . '/bin/peep',
+        __DIR__ . '/bin/peep-clean',
     ]);
 
 return (new PhpCsFixer\Config())

@@ -65,7 +65,10 @@ The desktop app (macOS, Windows, Linux) shows the viewer in its own window and n
 
 ## Documentation
 
-- [Setup guides](docs/guides/README.md)
+- [Installation](docs/guides/installation.md)
+- [API reference](docs/api.md)
+- [Laravel](docs/guides/laravel.md)
+- [Setup guides](docs/guides/README.md): plain PHP, Symfony, Slim, WordPress, global install, mail and SMS, webhooks, desktop app
 - [Protocol](docs/protocol.md)
 - [Roadmap](docs/plan/roadmap.md)
 - [Feature list](docs/plan/features.md)

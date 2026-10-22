@@ -6,7 +6,7 @@
 
 set -euo pipefail
 
-allowed='^(src/|config/|resources/|composer\.json$|LICENSE$|README\.md$|CHANGELOG\.md$)'
+allowed='^(src/|config/|resources/|phpstan/|bin/peep-clean$|composer\.json$|LICENSE$|README\.md$|CHANGELOG\.md$)'
 
 unexpected=$(git archive --format=tar HEAD | tar -t | grep -v '/$' | grep -Ev "$allowed" || true)
 

@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Leftover calls: `vendor/bin/peep-clean [--fix]` and `php artisan peep:clean` list `peep()`, `pd()`, `->peep()` and `@peep` calls and remove the safe ones; a PHPStan rule (`phpstan/rules.neon`) reports them.
+- Release workflow: one `v*` tag checks the versions, runs every test, and drafts a GitHub Release with `peep.phar`, `peep-server.phar`, checksums and the desktop apps. `scripts/set-version.sh` sets the version everywhere.
+- Documentation: installation, API reference, Laravel and desktop app guides.
 - Desktop app (Tauri 2, `desktop/`) for macOS, Windows and Linux: the viewer in a native window with its own PHP 8.5, reusing a viewer started from the CLI; tray with the unread count, hotkey, always on top, native notifications, start at login, updates, and `peep://open` for `serve --open=window`.
 - `peep-server serve --exit-with=<pid>`: the viewer stops when the process that started it is gone.
 - Webhook simulator: rules that call the app back when a mail or SMS is caught (or by hand from the inbox), with a template language for the body (`{{ mail.message_id }}`, `{{ now.unix_float }}`, `hmac_sha256(...)` and more), JSON, form, XML or raw bodies, timed steps, Mailgun and Twilio signatures that the providers' own checks accept, presets for Mailgun, Twilio and Vonage, optional retries, a delivery log with resend, a Test button, and import and export.

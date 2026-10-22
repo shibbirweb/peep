@@ -40,6 +40,9 @@
         "psr/log": "To use Peep as a PSR-3 logger",
         "symfony/var-dumper": "To send dump() and dd() to Peep, and for richer value rendering"
     },
+    "bin": [
+        "bin/peep-clean"
+    ],
     "autoload": {
         "psr-4": {
             "ShibbirWeb\\Peep\\": "src/"

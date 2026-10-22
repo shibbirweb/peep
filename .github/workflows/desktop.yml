@@ -1,8 +1,8 @@
 name: Desktop
 
+# Tags run this from release.yml, after the checks and the draft release.
 on:
-  push:
-    tags: ['v*']
+  workflow_call:
   pull_request:
     paths:
       - 'desktop/**'
