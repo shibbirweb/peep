@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Viewer (`server/`, PHP 8.5, AMPHP v3): `peep-server serve` with `--host`, `--port` and `--open=browser|window|none`; detects an already running viewer and a port used by another program; stops cleanly on Ctrl+C.
+- Viewer endpoints: health, envelope ingest (validated, 8 MB limit), Server-Sent Events stream with snapshot and replay after reconnect, clear.
+- Viewer security: Host header check (DNS rebinding), Origin check and a required UI header for UI actions, Content Security Policy, HTML payloads in sandboxed frames.
+- Viewer UI (Svelte 5, Bun, Vite): live cards with color, label and size, value tree with visibility markers and redaction, text, HTML, JSON and table payloads, project filter, clear, open-in-editor links.
+- `peep-server.phar` built with Box.
 - Protocol v1 specification (`docs/protocol.md`): endpoints, envelope, payload types, value tree, switches, locks.
 - `peep()` helper and `Peep` card API: `send()`, `text()`, `html()`, `json()`, `table()`, colors, `label()`, `small()`, `large()`, `enable()`, `disable()`.
 - Configuration from `peep.php` and `PEEP_*` environment variables; disabled unless enabled.

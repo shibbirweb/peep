@@ -7,6 +7,7 @@
         "php": ">=8.5",
         "dealerdirect/phpcodesniffer-composer-installer": "^1.1",
         "friendsofphp/php-cs-fixer": "^3.95",
+        "humbug/box": "^4.7",
         "phpcompatibility/php-compatibility": "^10.0@alpha",
         "phpstan/phpstan": "^2.3",
         "squizlabs/php_codesniffer": "^4.0"

@@ -2,7 +2,7 @@
 
 Debug any PHP app in a separate window. Call `peep($value)` anywhere and see values, database queries, jobs, logs and exceptions live, in your browser or in a desktop app. Peep also catches the mail and SMS your app sends and can simulate provider webhooks back to it.
 
-> **Status: early development.** Nothing is released yet. The API below is the planned API. Progress is tracked in [docs/plan/features.md](docs/plan/features.md).
+> **Status: early development.** Nothing is released yet. The core client and the browser viewer work; framework integrations, mail and SMS catching and the desktop app are in progress. Progress is tracked in [docs/plan/features.md](docs/plan/features.md).
 
 ## Planned features
 
@@ -21,17 +21,31 @@ Debug any PHP app in a separate window. Call `peep($value)` anywhere and see val
 | Client (`shibbirweb/peep`, the package you install in your app) | 7.1 to 8.5 |
 | Viewer (`peep-server.phar`) | 8.5, or none with the desktop app (it bundles PHP) |
 
-## Planned usage
+## Usage (from source, until the first release)
+
+Start the viewer (PHP 8.5, [Bun](https://bun.sh) for the UI build):
+
+```bash
+cd server
+composer install
+composer build:ui
+php bin/peep-server serve        # opens http://127.0.0.1:23517 in your browser
+```
+
+In your app:
 
 ```bash
 composer require shibbirweb/peep --dev
 ```
 
 ```php
+// Enable with PEEP_ENABLED=true or a peep.php file returning ['enabled' => true].
 peep('Hello');
 peep($user)->green()->label('Signed in user');
-peep()->showQueries();
+peep()->table($rows, 'Users');
 ```
+
+Planned next: `peep()->showQueries()` and the other Laravel watchers.
 
 ## Documentation
 

@@ -12,6 +12,16 @@ composer tools:install          # PHPStan, PHP-CS-Fixer, PHPCompatibility in too
 composer install --working-dir=server
 ```
 
+Viewer UI (Svelte, needs [Bun](https://bun.sh)):
+
+```bash
+composer --working-dir=server build:ui   # build into server/public
+composer --working-dir=server test:ui    # UI unit tests
+cd server/resources/ui && bun run dev    # hot reload; forwards /_peep to a viewer on port 23517
+```
+
+Viewer PHAR: `composer --working-dir=server build:phar` (writes `server/build/peep-server.phar`).
+
 Checks:
 
 ```bash

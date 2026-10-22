@@ -1,0 +1,15 @@
+{
+  "name": "peep-viewer-ui",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --bun vite",
+    "build": "bun --bun vite build",
+    "test": "bun test src"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7",
+    "svelte": "^5",
+    "vite": "^8"
+  }
+}

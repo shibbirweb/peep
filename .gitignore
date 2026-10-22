@@ -21,7 +21,12 @@
 
 # Build output
 /build/
+/server/build/
 *.phar
+
+# Viewer UI: dependencies and build output (built in CI before the PHAR)
+/server/resources/ui/node_modules/
+/server/public/
 
 # Editors and OS
 .idea/

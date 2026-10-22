@@ -1,0 +1,16 @@
+{
+    "main": "bin/peep-server",
+    "output": "build/peep-server.phar",
+    "directories": [
+        "src",
+        "public",
+        "vendor"
+    ],
+    "files": [
+        "composer.json"
+    ],
+    "exclude-composer-files": false,
+    "exclude-dev-files": true,
+    "compression": "GZ",
+    "check-requirements": false
+}

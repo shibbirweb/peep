@@ -21,6 +21,32 @@ permissions:
   contents: read
 
 jobs:
+  ui:
+    name: UI tests and build (Svelte, Bun)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server/resources/ui
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Tests
+        run: bun test src
+
+      - name: Build
+        run: bun run build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: viewer-ui
+          path: server/public
+          if-no-files-found: error
+
   checks:
     name: Tests, code style, static analysis (PHP 8.5)
     runs-on: ubuntu-latest
@@ -50,3 +76,48 @@ jobs:
 
       - name: PHPStan
         run: composer analyse
+
+  phar:
+    name: Build peep-server.phar
+    needs: [ui, checks]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+          ini-values: phar.readonly=0
+          tools: composer:v2
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: viewer-ui
+          path: server/public
+
+      - name: Install production dependencies and Box
+        run: |
+          composer install --no-dev --classmap-authoritative --prefer-dist --no-interaction --no-progress
+          composer install --working-dir=../tools --prefer-dist --no-interaction --no-progress
+
+      - name: Compile
+        run: ../tools/vendor/bin/box compile --no-interaction
+
+      - name: Smoke test
+        run: |
+          php build/peep-server.phar --version
+          php build/peep-server.phar serve --port=23517 --open=none &
+          sleep 2
+          curl --fail --silent http://127.0.0.1:23517/_peep/health
+          curl --fail --silent --output /dev/null http://127.0.0.1:23517/
+          kill %1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: peep-server.phar
+          path: server/build/peep-server.phar
+          if-no-files-found: error

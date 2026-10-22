@@ -9,7 +9,7 @@ How each feature works is described in [implementation.md](implementation.md). T
 | SU: Project setup | 0 | 12 / 14 |
 | PR: Protocol | 1 | 7 / 7 |
 | CL: Core client MVP | 1 | 14 / 14 |
-| VW: Viewer MVP | 2 | 0 / 12 |
+| VW: Viewer MVP | 2 | 12 / 12 |
 | API: Full client API | 3 | 0 / 38 |
 | LV: Laravel adapter | 4 | 0 / 31 |
 | BR: Bridges for any PHP app | 5 | 0 / 7 |
@@ -65,18 +65,18 @@ How each feature works is described in [implementation.md](implementation.md). T
 
 ## VW: Viewer MVP (Phase 2)
 
-- [ ] VW-01 `bin/peep-server serve` command (`--port`, `--host`, `--open=browser|window`)
-- [ ] VW-02 Non-blocking HTTP server loop on `stream_socket_server`, bound to `127.0.0.1:23517` by default
-- [ ] VW-03 Ingest endpoint: decode and validate protocol v1 envelopes
-- [ ] VW-04 Availability endpoint
-- [ ] VW-05 Server-Sent Events stream to the page
-- [ ] VW-06 In-memory event store
-- [ ] VW-07 UI: live message list with value tree, origin, color, label, size
-- [ ] VW-08 UI: click origin to open in IDE (PhpStorm, VS Code, Cursor, Zed, Sublime)
-- [ ] VW-09 UI: clear screen
-- [ ] VW-10 Opens the default browser on start
-- [ ] VW-11 Detects an already running server and only opens the view
-- [ ] VW-12 `peep-server.phar` build in CI, attached to the GitHub Release
+- [x] VW-01 `bin/peep-server serve` command (`--port`, `--host`, `--open=browser|window`)
+- [x] VW-02 Non-blocking HTTP server (AMPHP v3), bound to `127.0.0.1:23517` by default; Host and Origin guards against DNS rebinding and other web pages; non-loopback hosts refused until token support (VF-20)
+- [x] VW-03 Ingest endpoint: decode and validate protocol v1 envelopes
+- [x] VW-04 Availability endpoint
+- [x] VW-05 Server-Sent Events stream to the page
+- [x] VW-06 In-memory event store
+- [x] VW-07 UI (Svelte 5, built with Bun and Vite): live message list with value tree, origin, color, label, size; text, HTML (sandboxed), JSON and table payloads
+- [x] VW-08 UI: click origin to open in IDE (PhpStorm, VS Code, Cursor, Zed, Sublime); the editor choice is kept in the browser until the settings page (VF-17)
+- [x] VW-09 UI: clear screen
+- [x] VW-10 Opens the default browser on start
+- [x] VW-11 Detects an already running server and only opens the view
+- [x] VW-12 `peep-server.phar` built with Box in CI (UI built first, production dependencies only) and smoke-tested; attaching it to GitHub Releases is RL-03
 
 ## API: Full client API (Phase 3)
 

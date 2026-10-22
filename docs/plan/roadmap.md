@@ -21,7 +21,7 @@ The feature checklist is in [features.md](features.md) and how each part works i
 |-------|------|---------|--------|
 | 0 | Project setup | | In progress (CI first run pending) |
 | 1 | Protocol and core client MVP | | Done (CI first run pending) |
-| 2 | Viewer MVP in the browser | v0.1.0 | Not started |
+| 2 | Viewer MVP in the browser | v0.1.0 | Done (CI first run and release pending) |
 | 3 | Full client API | v0.2.0 | Not started |
 | 4 | Laravel adapter | v0.3.0 | Not started |
 | 5 | Bridges for any PHP app | v0.4.0 | Not started |
@@ -124,10 +124,8 @@ Exit criteria:
 |---|----------|---------------|
 | D1 | Oldest Laravel version the adapter is tested on (recommendation: Laravel 6) | Phase 4 |
 | D2 | Should the viewer also accept Ray and Symfony VarDumper protocols (existing `ray()` / `dump()` calls show up with no code change)? | Phase 6 |
-| D3 | UI technology for the viewer page (plain JS, Alpine.js, Vue, ...) and whether it has a build step | Phase 2 |
 | D4 | Event storage in the viewer: memory only, or SQLite history across restarts | Phase 6 |
 | D5 | Default SMTP port (Mailpit uses 1025, Herd uses 2525; both may already be running) | Phase 7 |
-| D6 | Async library for the viewer: AMPHP v3 (recommended: fibers, HTTP server, SMTP sockets and TLS HTTP client in one family) or ReactPHP | Phase 2 |
 
 ## Decided
 
@@ -138,3 +136,5 @@ Exit criteria:
 - Viewer runs in the browser and in a Tauri window; the user picks with the "Display mode" setting. Browser first, Tauri after.
 - The viewer catches mail and SMS, and simulates provider webhooks back to the app with user-defined dynamic payloads.
 - Query debugging can be switched on and off from the viewer while the app is running.
+- Viewer server: PHP 8.5 with AMPHP v3 (fibers; HTTP server, SSE, SMTP sockets and HTTPS client from one library family). Decision D6, 2026-10-22.
+- Viewer UI: Svelte 5, built with Vite and run through Bun (`bun install`, `bun run build`); the build output ships inside the PHAR and the desktop app. Decision D3, 2026-10-22.

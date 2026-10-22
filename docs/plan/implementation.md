@@ -116,7 +116,7 @@ All Peep endpoints live under `/_peep/` so the provider-compatible paths (Mailgu
 | `GET /_peep/switches?project=` | client | Current switches when nothing was sent recently |
 | `POST /_peep/locks` / `GET /_peep/locks/{name}` | client | Create and poll a pause lock [PR-05] |
 | `GET /_peep/stream` | UI | Server-Sent Events |
-| `POST /_peep/ui/*` | UI | UI actions (clear, continue, stop, settings, switches, webhooks) |
+| `POST /_peep/ui/*` | UI | UI actions (`/_peep/ui/clear` so far; later continue, stop, settings, switches, webhooks) |
 | `POST /_peep/mail`, `POST /_peep/sms` | client, any app | Generic mail and SMS capture |
 | `POST /v3/{domain}/messages`, `POST /v3/{domain}/messages.mime` | apps using Mailgun API | Mailgun-compatible |
 | `POST /2010-04-01/Accounts/{sid}/Messages.json` | apps using Twilio API | Twilio-compatible |
@@ -356,7 +356,7 @@ public function resolve(): ?Origin
 
 ### Runtime
 
-PHP 8.5 CLI with an async event loop, so one process serves HTTP, SSE streams, SMTP and outbound webhook calls at the same time. Recommended: **AMPHP v3** (fibers, so the code reads top to bottom; `amphp/http-server` for HTTP and SSE, `amphp/socket` for SMTP, `amphp/http-client` for webhooks with TLS). Alternative: ReactPHP. Decision D6.
+PHP 8.5 CLI with an async event loop, so one process serves HTTP, SSE streams, SMTP and outbound webhook calls at the same time. **Decided (D6): AMPHP v3** (fibers, so the code reads top to bottom; `amphp/http-server` for HTTP and SSE, `amphp/socket` for SMTP, `amphp/http-client` for webhooks with TLS).
 
 ### Start-up [VW-01, VW-10, VW-11]
 
@@ -407,7 +407,7 @@ Every envelope, mail and SMS carries a project name (`meta.project`, SMTP userna
 
 ## 6. Viewer UI (Phase 2 and 6)
 
-UI framework and build step are decision D3; the logic is the same either way.
+**Decided (D3): Svelte 5**, source in `server/resources/ui/`, built with Vite run through Bun (`bun install`, `bun run build`) into `server/public/`. Bun is the package manager and runtime; Vite and the official Svelte plugin do the bundling.
 
 - **State:** a store keyed by card id, filled from the initial snapshot and updated by SSE events. Mail, SMS and webhook deliveries are separate collections.
 - **List:** virtualised (only visible rows rendered) so 10,000+ cards stay smooth [VF-10]; grouped by request id with collapsible groups [VF-01].

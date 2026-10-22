@@ -1,0 +1,14 @@
+#!/usr/bin/env php
+<?php
+
+// Written in old syntax on purpose: on an older PHP this file must still parse,
+// so the version check below can explain the problem instead of a parse error.
+
+if (PHP_VERSION_ID < 80500) {
+    fwrite(STDERR, 'The Peep viewer needs PHP 8.5 or newer; this is PHP ' . PHP_VERSION . ".\n");
+    exit(1);
+}
+
+require __DIR__ . '/../vendor/autoload.php';
+
+exit(ShibbirWeb\PeepServer\Console\Cli::run(array_slice($argv, 1)));
