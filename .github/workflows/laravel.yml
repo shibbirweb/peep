@@ -1,0 +1,57 @@
+name: Laravel
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: laravel-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Laravel ${{ matrix.laravel }} (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { laravel: '5.5', php: '7.1', testbench: '3.5.*', extra: '' }
+          - { laravel: '5.6', php: '7.1', testbench: '3.6.*', extra: '' }
+          - { laravel: '5.7', php: '7.1', testbench: '3.7.*', extra: '' }
+          - { laravel: '5.8', php: '7.1', testbench: '3.8.*', extra: '' }
+          - { laravel: '6', php: '7.2', testbench: '^4.0', extra: '' }
+          - { laravel: '7', php: '7.3', testbench: '^5.0', extra: '' }
+          - { laravel: '8', php: '7.4', testbench: '^6.0', extra: 'guzzlehttp/guzzle:^7.2' }
+          - { laravel: '9', php: '8.0', testbench: '^7.0', extra: 'guzzlehttp/guzzle:^7.2' }
+          - { laravel: '10', php: '8.1', testbench: '^8.0', extra: 'guzzlehttp/guzzle:^7.2' }
+          - { laravel: '11', php: '8.2', testbench: '^9.0', extra: 'guzzlehttp/guzzle:^7.8' }
+          - { laravel: '12', php: '8.3', testbench: '^10.0', extra: 'guzzlehttp/guzzle:^7.8' }
+          - { laravel: '13', php: '8.5', testbench: '^11.0', extra: 'guzzlehttp/guzzle:^7.8' }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          extensions: pdo_sqlite
+          ini-values: error_reporting=-1
+          # Composer 2.3+ needs PHP 7.2.5.
+          tools: composer:${{ (matrix.php == '7.1' || matrix.php == '7.2') && '2.2' || 'v2' }}
+
+      # The Laravel suite does not use the PHPUnit polyfills; removing them lets Testbench
+      # pick the PHPUnit it needs (6.x for Laravel 5.5). Old Laravel versions have security
+      # advisories, which is acceptable in this throwaway test environment only.
+      - name: Install Laravel ${{ matrix.laravel }}
+        run: |
+          composer config audit.block-insecure false || true
+          composer remove --dev --no-update yoast/phpunit-polyfills phpunit/phpunit
+          composer require --dev --no-interaction --no-progress --no-plugins --with-all-dependencies "orchestra/testbench:${{ matrix.testbench }}" ${{ matrix.extra }}
+
+      - name: Tests
+        run: vendor/bin/phpunit --configuration phpunit.laravel.xml.dist

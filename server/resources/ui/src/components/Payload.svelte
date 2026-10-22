@@ -3,12 +3,16 @@
   import { shortPath } from '../lib/ide.js';
   import ExceptionView from './ExceptionView.svelte';
   import Frames from './Frames.svelte';
+  import HtmlFrame from './HtmlFrame.svelte';
+  import LaravelPayload from './LaravelPayload.svelte';
   import LockBanner from './LockBanner.svelte';
   import TableView from './TableView.svelte';
   import ValueTree from './ValueTree.svelte';
 
   /** @type {{ payload: { type: string, content: object }, ide: string, expand?: object|null }} */
   let { payload, ide, expand = null } = $props();
+
+  const LARAVEL_TYPES = ['query', 'query_count', 'event', 'job', 'cache', 'http', 'view', 'request', 'log_message', 'mail_preview'];
 
   const content = $derived(payload.content ?? {});
   const json = $derived(payload.type === 'json' ? prettyJson(String(content.json ?? '')) : null);
@@ -22,8 +26,7 @@
   {:else if payload.type === 'text'}
     <pre>{content.text}</pre>
   {:else if payload.type === 'html'}
-    <!-- No allow-scripts and no allow-same-origin: app HTML can neither run code nor reach the viewer. -->
-    <iframe title="HTML" sandbox="" srcdoc={String(content.html ?? '')}></iframe>
+    <HtmlFrame html={String(content.html ?? '')} />
   {:else if payload.type === 'json' && json}
     <pre class:muted={!json.ok}>{json.text}</pre>
   {:else if payload.type === 'xml'}
@@ -78,6 +81,8 @@
     <div>🔔 {content.message}</div>
   {:else if payload.type === 'lock'}
     <LockBanner name={content.name} />
+  {:else if LARAVEL_TYPES.includes(payload.type)}
+    <LaravelPayload {payload} />
   {:else if payload.type === 'new_screen'}
     {#if content.title}<h2 class="screen">{content.title}</h2>{:else}<hr />{/if}
   {:else}
@@ -102,15 +107,6 @@
 
   .muted {
     color: var(--muted);
-  }
-
-  iframe {
-    width: 100%;
-    min-height: 120px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: white;
-    resize: vertical;
   }
 
   img {

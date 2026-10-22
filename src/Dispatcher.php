@@ -2,6 +2,7 @@
 
 namespace ShibbirWeb\Peep;
 
+use ShibbirWeb\Peep\Control\Switches;
 use ShibbirWeb\Peep\Envelope\Envelope;
 use ShibbirWeb\Peep\Envelope\EnvelopeEncoder;
 use ShibbirWeb\Peep\Envelope\MetaFactory;
@@ -56,13 +57,24 @@ final class Dispatcher
      */
     private $rateLimiter;
 
+    /**
+     * @var Switches
+     */
+    private $switches;
+
+    /**
+     * @var string
+     */
+    private $project;
+
     public function __construct(
         bool $enabled,
         string $endpoint,
         TransportInterface $transport,
         AvailabilityCache $availability,
         EnvelopeEncoder $encoder,
-        MetaFactory $metaFactory
+        MetaFactory $metaFactory,
+        string $project = 'default'
     ) {
         $this->enabled = $enabled;
         $this->endpoint = $endpoint;
@@ -71,6 +83,28 @@ final class Dispatcher
         $this->encoder = $encoder;
         $this->metaFactory = $metaFactory;
         $this->rateLimiter = new RateLimiter();
+        $this->switches = new Switches();
+        $this->project = $project;
+    }
+
+    /**
+     * The viewer's capture switches, refreshed with GET /_peep/switches at most once per TTL
+     * when no envelope answer brought fresh values.
+     */
+    public function switches(): Switches
+    {
+        if (! $this->switches->isFresh() && $this->isActive()) {
+            $answer = $this->getJson('/_peep/switches?project=' . rawurlencode($this->project));
+
+            if ($answer !== null) {
+                $this->switches->update($answer);
+            } else {
+                // Unreachable or old viewer: keep "default" values for a while instead of asking every time.
+                $this->switches->update(['switches' => [], 'switches_ttl' => 5]);
+            }
+        }
+
+        return $this->switches;
     }
 
     public function rateLimiter(): RateLimiter
@@ -173,8 +207,13 @@ final class Dispatcher
             $body = $this->encoder->encode(new Envelope($card, $payloads, $this->metaFactory->create()));
 
             if ($body !== null) {
-                $this->transport->post(self::ENVELOPE_PATH, $body);
+                $response = $this->transport->post(self::ENVELOPE_PATH, $body);
                 $this->availability->markUp($this->endpoint);
+
+                $answer = json_decode($response->body(), true);
+                if (is_array($answer)) {
+                    $this->switches->update($answer);
+                }
             }
         } catch (TransportException $exception) {
             $this->availability->markDown($this->endpoint);

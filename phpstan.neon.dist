@@ -6,11 +6,20 @@
 # (phpcs.xml.dist), `php -l` on PHP 7.1 and the test suite on every PHP version in CI.
 parameters:
     level: 8
+    # Docblock types describe the newest Laravel and PHP; the code still checks at runtime
+    # (method_exists(), class_exists(), is_*()) for the oldest supported versions. Those
+    # checks are needed, so PHPStan must not call them redundant.
+    treatPhpDocTypesAsCertain: false
     paths:
         - src
         - tests
     bootstrapFiles:
         - vendor/autoload.php
+    # Laravel is not a dependency of the client; the tools package installs it (with
+    # Testbench) so the adapter in src/Laravel and its tests can be analysed.
+    scanDirectories:
+        - tools/vendor/laravel/framework/src
+        - tools/vendor/orchestra/testbench-core/src
     excludePaths:
         analyseAndScan:
             # The polyfill declares TestCase twice and loads one at runtime by PHPUnit

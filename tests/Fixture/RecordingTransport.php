@@ -28,6 +28,11 @@ final class RecordingTransport implements TransportInterface
     public $raiseWarning = false;
 
     /**
+     * @var string Body of every envelope answer, e.g. with switches.
+     */
+    public $postResponseBody = '{"accepted":true}';
+
+    /**
      * @var list<string> Paths requested with GET.
      */
     public $gets = [];
@@ -54,7 +59,7 @@ final class RecordingTransport implements TransportInterface
 
         $this->requests[] = ['path' => $path, 'body' => $decoded];
 
-        return new TransportResponse(202, '{"accepted":true}');
+        return new TransportResponse(202, $this->postResponseBody);
     }
 
     public function get(string $path): TransportResponse

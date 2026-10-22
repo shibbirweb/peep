@@ -215,3 +215,16 @@ export function formatXml(xml) {
 export function isSafeUrl(url) {
   return /^(https?:|mailto:)/i.test(url);
 }
+
+/**
+ * Wraps HTML sent by an app for a sandboxed frame: a light document with readable
+ * defaults, so it does not inherit the viewer's dark colour scheme (white text on white).
+ *
+ * @param {string} html
+ * @returns {string}
+ */
+export function framedHtml(html) {
+  return '<!doctype html><html><head><meta charset="utf-8"><meta name="color-scheme" content="light">'
+    + '<style>html{color-scheme:light;background:#fff;color:#111;font:14px/1.5 system-ui,sans-serif}body{margin:8px}pre{white-space:pre-wrap}</style>'
+    + `</head><body>${html}</body></html>`;
+}

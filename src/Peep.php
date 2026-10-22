@@ -37,6 +37,42 @@ use Throwable;
  *
  * When Peep is disabled, the viewer is known to be down, or the card is muted by
  * once(), limit() or if(), methods return immediately without serializing anything.
+ *
+ * Added as macros by the Laravel adapter (only available in Laravel apps):
+ *
+ * @method mixed showQueries(?callable $callback = null) Show every query; with a callback, only while it runs.
+ * @method mixed queries(?callable $callback = null) Alias of showQueries().
+ * @method $this stopShowingQueries()
+ * @method mixed showSelectQueries(?callable $callback = null)
+ * @method mixed showInsertQueries(?callable $callback = null)
+ * @method mixed showUpdateQueries(?callable $callback = null)
+ * @method mixed showDeleteQueries(?callable $callback = null)
+ * @method mixed showSlowQueries(int|callable|null $thresholdOrCallback = null, ?callable $callback = null)
+ * @method mixed slowQueries(int|callable|null $thresholdOrCallback = null, ?callable $callback = null)
+ * @method $this stopShowingSlowQueries()
+ * @method mixed showDuplicateQueries(?callable $callback = null)
+ * @method $this stopShowingDuplicateQueries()
+ * @method mixed showConditionalQueries(callable $condition, ?callable $callback = null)
+ * @method $this stopShowingConditionalQueries()
+ * @method mixed countQueries(callable $callback) Show how many queries the callback ran; returns its result.
+ * @method mixed showEvents(?callable $callback = null)
+ * @method $this stopShowingEvents()
+ * @method mixed showJobs(?callable $callback = null)
+ * @method $this stopShowingJobs()
+ * @method mixed showCache(?callable $callback = null)
+ * @method $this stopShowingCache()
+ * @method mixed showHttpClientRequests(?callable $callback = null)
+ * @method $this stopShowingHttpClientRequests()
+ * @method mixed showViews(?callable $callback = null)
+ * @method $this stopShowingViews()
+ * @method mixed showRequests(?callable $callback = null)
+ * @method $this stopShowingRequests()
+ * @method $this model(mixed ...$models) Eloquent models with attributes and loaded relations.
+ * @method $this models(mixed ...$models)
+ * @method $this mailable(object $mailable) The rendered mail.
+ * @method $this markdown(string $markdown) Markdown rendered to HTML.
+ * @method $this context(string ...$keys) Laravel 11+ Context values.
+ * @method $this hiddenContext(string ...$keys)
  */
 final class Peep
 {
@@ -132,6 +168,28 @@ final class Peep
         }
 
         return $this;
+    }
+
+    /**
+     * Send a payload of any type, for framework adapters and macros. The viewer shows
+     * types it does not know as raw JSON.
+     *
+     * @param array<string, mixed> $content
+     */
+    public function payload(string $type, array $content = []): self
+    {
+        return $this->content(function (?Origin $origin) use ($type, $content) {
+            return new GenericPayload($type, $content, $origin);
+        });
+    }
+
+    /**
+     * Whether calls on this card are sent right now (enabled, viewer reachable, not muted).
+     * Lets integrations skip expensive work.
+     */
+    public function isActive(): bool
+    {
+        return ! $this->muted && $this->services->dispatcher->isActive();
     }
 
     /**
@@ -811,11 +869,6 @@ final class Peep
     }
 
     // Internals --------------------------------------------------------------------------
-
-    private function isActive(): bool
-    {
-        return ! $this->muted && $this->services->dispatcher->isActive();
-    }
 
     private function origin(): ?Origin
     {

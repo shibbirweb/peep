@@ -58,6 +58,14 @@ These rules are enforced by CI: tests on every PHP version from 7.1 to 8.5 (warn
 
 ## Tests
 
+Laravel adapter tests run against Orchestra Testbench for one Laravel version at a time (CI covers 5.5 to 13, see `.github/workflows/laravel.yml`). Locally, in a throwaway copy of the repository:
+
+```bash
+composer remove --dev --no-update yoast/phpunit-polyfills phpunit/phpunit
+composer require --dev --no-plugins -W "orchestra/testbench:^11.0" "guzzlehttp/guzzle:^7.8"
+vendor/bin/phpunit --configuration phpunit.laravel.xml.dist
+```
+
 - Client tests extend `ShibbirWeb\Peep\Tests\TestCase` and use `set_up()` / `tear_down()` instead of `setUp()` / `tearDown()`, so one suite runs on PHPUnit 7.5 to 12.
 - Every feature needs tests before it is ticked in [docs/plan/features.md](docs/plan/features.md).
 

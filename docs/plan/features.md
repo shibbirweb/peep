@@ -11,7 +11,7 @@ How each feature works is described in [implementation.md](implementation.md). T
 | CL: Core client MVP | 1 | 14 / 14 |
 | VW: Viewer MVP | 2 | 12 / 12 |
 | API: Full client API | 3 | 38 / 38 |
-| LV: Laravel adapter | 4 | 0 / 31 |
+| LV: Laravel adapter | 4 | 31 / 31 |
 | BR: Bridges for any PHP app | 5 | 0 / 7 |
 | VF: Full viewer | 6 | 4 / 25 |
 | MS: Mail and SMS catching | 7 | 0 / 15 |
@@ -135,41 +135,41 @@ Serializer casters:
 ## LV: Laravel adapter (Phase 4)
 
 Setup:
-- [ ] LV-01 `PeepServiceProvider`, auto-discovered
-- [ ] LV-02 `config/peep.php` with `env()` keys, publishable (`vendor:publish --tag=peep-config`)
-- [ ] LV-03 Enabled by default only outside production
-- [ ] LV-04 Request id per HTTP request, queued job and artisan command
-- [ ] LV-05 Project name from `config('app.name')`
-- [ ] LV-06 `AbstractWatcher` with runtime `class_exists` checks per Laravel version
+- [x] LV-01 `PeepServiceProvider`, auto-discovered
+- [x] LV-02 `config/peep.php` with `env()` keys, publishable (`vendor:publish --tag=peep-config`)
+- [x] LV-03 Enabled by default only outside production
+- [x] LV-04 Request id per HTTP request, queued job and artisan command
+- [x] LV-05 Project name from `config('app.name')`
+- [x] LV-06 `AbstractWatcher` with runtime `class_exists` checks per Laravel version
 
 Watchers (each with a config key and a runtime toggle such as `peep()->showQueries()` / `stopShowingQueries()`):
-- [ ] LV-07 Queries, with bindings and time
-- [ ] LV-08 Select / insert / update / delete query filters
-- [ ] LV-09 Slow queries (threshold in ms)
-- [ ] LV-10 Duplicate queries (N+1 hints)
-- [ ] LV-11 Conditional queries (`showConditionalQueries(callable)`)
-- [ ] LV-12 `countQueries(callable)`
-- [ ] LV-13 Events
-- [ ] LV-14 Jobs (dispatched, processed, failed)
-- [ ] LV-15 Cache (hit, miss, write, forget)
-- [ ] LV-16 HTTP client requests and responses (Laravel 8+, when the client events exist)
-- [ ] LV-17 Views with data
-- [ ] LV-18 Incoming requests (route, controller, middleware, status, duration, memory)
-- [ ] LV-19 Log calls
-- [ ] LV-20 Exceptions (from `MessageLogged`)
-- [ ] LV-21 Mail sent to the `log` mailer
-- [ ] LV-22 `dump()` / `dd()` routed to Peep
-- [ ] LV-23 Deprecation notices
+- [x] LV-07 Queries, with bindings and time
+- [x] LV-08 Select / insert / update / delete query filters
+- [x] LV-09 Slow queries (threshold in ms)
+- [x] LV-10 Duplicate queries (N+1 hints)
+- [x] LV-11 Conditional queries (`showConditionalQueries(callable)`)
+- [x] LV-12 `countQueries(callable)`
+- [x] LV-13 Events
+- [x] LV-14 Jobs (dispatched, processed, failed)
+- [x] LV-15 Cache (hit, miss, write, forget)
+- [x] LV-16 HTTP client requests and responses (Laravel 8+, when the client events exist)
+- [x] LV-17 Views with data
+- [x] LV-18 Incoming requests (route, controller, middleware, status, duration, memory)
+- [x] LV-19 Log calls
+- [x] LV-20 Exceptions (from `MessageLogged`)
+- [x] LV-21 Mail preview card for every sent mail (SwiftMailer and Symfony Mailer), plus `X-Peep-Project` / `X-Peep-Request-Id` headers so the mail catcher can link a mail to its request
+- [x] LV-22 `dump()` / `dd()` routed to Peep
+- [x] LV-23 Deprecation notices
 
 Objects and helpers:
-- [ ] LV-24 `model($model)` payload (attributes, loaded relations)
-- [ ] LV-25 `mailable($mailable)` payload (rendered)
-- [ ] LV-26 `markdown($string)`
-- [ ] LV-27 `context()` for Laravel 11+ Context
-- [ ] LV-28 Macros: `Collection::peep()`, `Stringable::peep()`, `Builder::peep()`, `TestResponse::peep()`
-- [ ] LV-29 Blade directives: `@peep`, `@peepAll`, `@measure`
-- [ ] LV-30 Laravel test matrix on every supported Laravel version (Orchestra Testbench)
-- [ ] LV-31 Query debugging follows the viewer's on/off switch at runtime (PR-07), for all, slow and duplicate queries; no `.env` change or restart. When off, queries are neither collected nor sent
+- [x] LV-24 `model($model)` payload (attributes, loaded relations)
+- [x] LV-25 `mailable($mailable)` payload (rendered)
+- [x] LV-26 `markdown($string)`
+- [x] LV-27 `context()` for Laravel 11+ Context
+- [x] LV-28 Macros: `Collection::peep()`, `Stringable::peep()`, `Builder::peep()`, `TestResponse::peep()`
+- [x] LV-29 Blade directives: `@peep`, `@peepAll`, `@peepMeasure` / `@endpeepMeasure` (prefixed so they never clash with other packages' `@measure`)
+- [x] LV-30 Laravel test matrix on every supported Laravel version (Orchestra Testbench): Laravel 5.5 to 13 pass locally; CI workflow `laravel.yml` (first run waits for the GitHub repository)
+- [x] LV-31 Query debugging follows the viewer's on/off switch at runtime (PR-07), for all, slow and duplicate queries; no `.env` change or restart. When off, queries are neither collected nor sent
 
 ## BR: Bridges for any PHP app (Phase 5)
 

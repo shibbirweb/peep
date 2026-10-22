@@ -20,11 +20,13 @@ use ShibbirWeb\PeepServer\Http\Controller\HealthController;
 use ShibbirWeb\PeepServer\Http\Controller\LockController;
 use ShibbirWeb\PeepServer\Http\Controller\StaticFileController;
 use ShibbirWeb\PeepServer\Http\Controller\StreamController;
+use ShibbirWeb\PeepServer\Http\Controller\SwitchController;
 use ShibbirWeb\PeepServer\Http\Guard\HostGuard;
 use ShibbirWeb\PeepServer\Http\Guard\OriginGuard;
 use ShibbirWeb\PeepServer\Http\Router;
 use ShibbirWeb\PeepServer\Lock\LockRegistry;
 use ShibbirWeb\PeepServer\Protocol\EnvelopeDecoder;
+use ShibbirWeb\PeepServer\Switch\SwitchStore;
 
 use function Amp\Http\Server\Middleware\stackMiddleware;
 
@@ -41,6 +43,8 @@ final class Application
 
     public readonly LockRegistry $locks;
 
+    public readonly SwitchStore $switches;
+
     private ?SocketHttpServer $server = null;
 
     private ?string $keepAliveTimer = null;
@@ -54,6 +58,7 @@ final class Application
         $this->cards = new CardStore();
         $this->hub = new EventHub();
         $this->locks = new LockRegistry();
+        $this->switches = new SwitchStore();
     }
 
     public function start(): void
@@ -102,7 +107,8 @@ final class Application
 
         $router = new Router()
             ->add('GET', '/_peep/health', new HealthController())
-            ->add('POST', '/_peep/envelope', new EnvelopeController(new EnvelopeDecoder(), $this->cards, $this->hub, $this->locks))
+            ->add('POST', '/_peep/envelope', new EnvelopeController(new EnvelopeDecoder(), $this->cards, $this->hub, $this->locks, $this->switches))
+            ->add('GET', '/_peep/switches', new SwitchController($this->switches))
             ->add('GET', '/_peep/stream', new StreamController($this->cards, $this->hub, $this->locks))
             ->add('GET', '/_peep/locks/*', $locks)
             ->add('POST', '/_peep/ui/clear', new ClearController($this->cards, $this->hub))

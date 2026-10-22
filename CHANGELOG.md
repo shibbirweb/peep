@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Laravel adapter (Laravel 5.5 to 13), auto-discovered: watchers for queries (all, by type, slow, duplicate, conditional, counted), events, jobs, cache, HTTP client, views, requests, logs, reported exceptions, mail, dumps and deprecations; request ids per job and command; `peep()->showQueries()` and the other show/stop methods, `model()`, `mailable()`, `markdown()`, `context()`; `->peep()` on collections, strings, query builders and test responses; Blade `@peep`, `@peepAll`, `@peepMeasure`; disabled in production by default.
+- Query debugging follows the viewer's switch while the app runs (`GET /_peep/switches` and envelope answers).
+- Viewer: cards for queries (bindings inlined), query counts, events, jobs, cache, HTTP calls, views, requests, logs and mail previews; query, HTTP and job cards update in place.
 - Full client API: `toJson()`, `xml()`, `image()`, `file()`, `link()`/`url()`, `date()`, `className()`, `raw()`, `invade()`, `phpinfo()`, `separator()`, `hide()`, `expand()`/`expandAll()`, `caller()`, `trace()`, `exception()`, `measure()`, `count()`/`counterValue()`, `catch()`, `pass()`, `die()` and `pd()`, `once()`, `limit()`, `rateLimiter()`, `if()`/`showIf()`, `pause()`, `remove()`/`removeIf()`, `newScreen()`, `clearScreen()`, `clearAll()`, `notify()`, `showApp()`/`hideApp()`, macros, `sendCustom()`.
 - Casters for dates, exceptions, closures and enums, with one-line summaries in the viewer.
 - Viewer: renderers for every new payload type, collapsed cards, expand levels and keys, pause banner with Continue and Stop, screen commands, counters that update in place.

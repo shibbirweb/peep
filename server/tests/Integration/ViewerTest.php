@@ -98,6 +98,19 @@ final class ViewerTest extends TestCase
         $this->assertSame([], $this->application->cards->cards());
     }
 
+    public function testSwitchesAreSentToClients(): void
+    {
+        $this->application->switches->update('shop', ['queries' => 'on']);
+
+        $answer = $this->json('/_peep/switches?project=shop');
+        $this->assertSame(['switches' => ['queries' => 'on', 'slow_queries' => 'default', 'duplicate_queries' => 'default', 'slow_query_ms' => null], 'switches_ttl' => 5], $answer);
+
+        $post = new Request($this->application->url() . '/_peep/envelope', 'POST', (string) json_encode(EnvelopeDecoderTest::envelope()));
+        $envelopeAnswer = json_decode($this->client->request($post)->getBody()->buffer(), true);
+        $this->assertIsArray($envelopeAnswer);
+        $this->assertSame($answer['switches'], $envelopeAnswer['switches'] ?? null);
+    }
+
     public function testPauseLockFlow(): void
     {
         $lockPayload = [['type' => 'lock', 'content' => ['name' => 'lock-1'], 'origin' => ['file' => '/app/a.php', 'line' => 3]]];

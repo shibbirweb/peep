@@ -13,6 +13,8 @@
     <testsuites>
         <testsuite name="Client">
             <directory>tests</directory>
+            <!-- Needs Laravel; run with phpunit.laravel.xml.dist after installing orchestra/testbench. -->
+            <exclude>tests/Laravel</exclude>
         </testsuite>
     </testsuites>
 </phpunit>

@@ -13,6 +13,12 @@ use ShibbirWeb\PeepServer\Protocol\Payload;
 final class Card
 {
     /**
+     * Payload types that describe the current state of one thing (a counter, a repeated
+     * query, an HTTP call, a job): a newer one replaces the older one on the card.
+     */
+    public const array LATEST_ONLY_TYPES = ['count', 'query', 'http', 'job'];
+
+    /**
      * @var list<Payload>
      */
     private array $payloads = [];
@@ -75,9 +81,9 @@ final class Card
             'replace' => $this->payloads = [new Payload('log', ['values' => $payload->content['values'] ?? []], $this->origin())],
             'hide' => $this->hidden = true,
             'expand' => $this->expand = $payload->content,
-            // A counter card shows only its latest count.
-            'count' => $this->payloads = [...array_values(array_filter($this->payloads, static fn(Payload $existing): bool => $existing->type !== 'count')), $payload],
-            default => $this->payloads[] = $payload,
+            default => $this->payloads = in_array($payload->type, self::LATEST_ONLY_TYPES, true)
+                ? [...array_values(array_filter($this->payloads, static fn(Payload $existing): bool => $existing->type !== $payload->type)), $payload]
+                : [...$this->payloads, $payload],
         };
     }
 

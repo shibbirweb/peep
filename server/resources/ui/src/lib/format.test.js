@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { formatBytes, formatXml, hasChildren, isSafeUrl, prettyJson, startsOpen, summary, tableOf, visibilityMarker } from './format.js';
+import { formatBytes, formatXml, framedHtml, hasChildren, isSafeUrl, prettyJson, startsOpen, summary, tableOf, visibilityMarker } from './format.js';
 
 describe('summary', () => {
   test('scalars and containers', () => {
@@ -100,4 +100,11 @@ test('isSafeUrl', () => {
 
 test('summary shows caster summaries for objects', () => {
   expect(summary({ type: 'object', class: 'DateTime', id: 1, summary: '2026-10-22' })).toBe('DateTime #1 · 2026-10-22');
+});
+
+test('framedHtml makes a light document around app HTML', () => {
+  const framed = framedHtml('<pre>x</pre>');
+
+  expect(framed).toContain('color-scheme" content="light"');
+  expect(framed).toContain('<body><pre>x</pre></body>');
 });

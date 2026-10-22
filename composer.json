@@ -67,6 +67,14 @@
             "@cs",
             "@analyse",
             "@compat"
-        ]
+        ],
+        "test:laravel": "phpunit --configuration phpunit.laravel.xml.dist"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "ShibbirWeb\\Peep\\Laravel\\PeepServiceProvider"
+            ]
+        }
     }
 }

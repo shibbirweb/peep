@@ -133,6 +133,19 @@ final class CardStoreTest extends TestCase
         $this->assertCount(1, $card['payloads']);
     }
 
+    public function testStateTypesKeepOnlyTheLatestPayload(): void
+    {
+        $store = new CardStore();
+        foreach (['query', 'http', 'job'] as $index => $type) {
+            $store->apply(self::envelope("card-{$type}", payloads: [['type' => $type, 'content' => ['step' => 1], 'origin' => null]]), 1.0);
+            $store->apply(self::envelope("card-{$type}", payloads: [['type' => $type, 'content' => ['step' => 2], 'origin' => null]]), 2.0);
+
+            $payloads = $store->find('shop', "card-{$type}")?->toArray()['payloads'] ?? [];
+            $this->assertCount(1, $payloads, $type);
+            $this->assertSame(['step' => 2], $payloads[0]['content'], $type);
+        }
+    }
+
     public function testCountReplacesThePreviousCount(): void
     {
         $store = new CardStore();

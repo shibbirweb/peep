@@ -59,7 +59,8 @@ final class PeepFactory
             $transport !== null ? $transport : TransportFactory::create($config),
             $availability !== null ? $availability : new AvailabilityCache(),
             new EnvelopeEncoder(),
-            new MetaFactory($config, $this->context)
+            new MetaFactory($config, $this->context),
+            $config->project()
         );
 
         $this->services = new Services(
@@ -90,9 +91,12 @@ final class PeepFactory
         self::$instance = $factory;
     }
 
-    public function make(): Peep
+    /**
+     * A new card, or an existing one when its id is given (to update it later).
+     */
+    public function make(?string $card = null): Peep
     {
-        return new Peep($this->services);
+        return new Peep($this->services, $card);
     }
 
     public function config(): Config

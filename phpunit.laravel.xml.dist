@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Laravel adapter tests. They need orchestra/testbench for the Laravel version under test,
+    installed by CI per version as a dev requirement (see .github/workflows/laravel.yml),
+    for example orchestra/testbench ^11.0 for Laravel 13.
+    Kept to elements PHPUnit 6 to 12 all understand.
+-->
+<phpunit
+    bootstrap="vendor/autoload.php"
+    colors="true"
+>
+    <php>
+        <ini name="error_reporting" value="-1"/>
+        <env name="APP_ENV" value="testing"/>
+    </php>
+    <testsuites>
+        <testsuite name="Laravel">
+            <directory>tests/Laravel</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>

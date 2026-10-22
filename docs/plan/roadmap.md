@@ -23,7 +23,7 @@ The feature checklist is in [features.md](features.md) and how each part works i
 | 1 | Protocol and core client MVP | | Done (CI first run pending) |
 | 2 | Viewer MVP in the browser | v0.1.0 | Done (CI first run and release pending) |
 | 3 | Full client API | v0.2.0 | Done (CI first run and release pending) |
-| 4 | Laravel adapter | v0.3.0 | Not started |
+| 4 | Laravel adapter | v0.3.0 | Done (CI first run and release pending) |
 | 5 | Bridges for any PHP app | v0.4.0 | Not started |
 | 6 | Full viewer | v0.5.0 | Not started |
 | 7 | Mail, SMS and webhook simulator | v0.6.0 | Not started |
@@ -122,7 +122,6 @@ Exit criteria:
 
 | # | Decision | Needed before |
 |---|----------|---------------|
-| D1 | Oldest Laravel version the adapter is tested on (recommendation: Laravel 6) | Phase 4 |
 | D2 | Should the viewer also accept Ray and Symfony VarDumper protocols (existing `ray()` / `dump()` calls show up with no code change)? | Phase 6 |
 | D4 | Event storage in the viewer: memory only, or SQLite history across restarts | Phase 6 |
 | D5 | Default SMTP port (Mailpit uses 1025, Herd uses 2525; both may already be running) | Phase 7 |
@@ -136,5 +135,6 @@ Exit criteria:
 - Viewer runs in the browser and in a Tauri window; the user picks with the "Display mode" setting. Browser first, Tauri after.
 - The viewer catches mail and SMS, and simulates provider webhooks back to the app with user-defined dynamic payloads.
 - Query debugging can be switched on and off from the viewer while the app is running.
+- Laravel adapter tested and supported on Laravel 5.5 to 13 (decision D1, 2026-10-22). Laravel 5.5 to 5.8 run on PHP 7.1; watchers whose events do not exist in an old version (HTTP client: 8+, Context: 11+) are skipped there.
 - Viewer server: PHP 8.5 with AMPHP v3 (fibers; HTTP server, SSE, SMTP sockets and HTTPS client from one library family). Decision D6, 2026-10-22.
 - Viewer UI: Svelte 5, built with Vite and run through Bun (`bun install`, `bun run build`); the build output ships inside the PHAR and the desktop app. Decision D3, 2026-10-22.

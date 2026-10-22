@@ -71,7 +71,7 @@ peep/
 └── docs/
 ```
 
-Client `src/` components: `Config/`, `Transport/`, `Envelope/`, `Payload/`, `Serializer/` (with `Caster/`), `Origin/`, `Context/`, `Limiter/`, `Switch/`, `Bridge/`, `Support/`, `Exception/`, `Laravel/`.
+Client `src/` components: `Config/`, `Transport/`, `Envelope/`, `Payload/`, `Serializer/` (with `Caster/`), `Origin/`, `Context/`, `Limiter/`, `Control/` (switches; `Switch` is a reserved word in PHP 7 namespaces), `Bridge/`, `Support/`, `Exception/`, `Laravel/`.
 
 ### Tooling [SU-07 to SU-14]
 
@@ -467,7 +467,14 @@ Blade::directive('peep', function ($expression) {
 });
 ```
 
-Same pattern for `Stringable`, query `Builder` (sends SQL and bindings, returns the builder) and `TestResponse`. `@peepAll` sends `get_defined_vars()['__data']`; `@measure` / `@endmeasure` wrap `peep()->measure()`.
+Same pattern for `Stringable`, query `Builder` (sends SQL and bindings, returns the builder) and `TestResponse`. `@peepAll` sends the view's data; `@peepMeasure` / `@endpeepMeasure` wrap `peep()->measure()`.
+
+Notes from building it:
+
+- Laravel-only Peep methods are macros (`Laravel/Macro/PeepMacros`), documented with `@method` tags on `Peep` for IDEs and static analysis.
+- Origins skip the app's `vendor/` and the directory Laravel itself was loaded from (found from the `Application` class file); Composer's `ClassLoader` location cannot be trusted because tools such as Laravel Herd preload their own.
+- Watchers type their parameters with current Laravel classes in docblocks and still check `method_exists()` / `class_exists()` for old versions; PHPStan runs with `treatPhpDocTypesAsCertain: false` so those checks are not reported as redundant.
+- Test matrix: Orchestra Testbench per version; the job removes the PHPUnit polyfills (Testbench 3.5 needs PHPUnit 6), installs with `--no-plugins` (an old dependency ships a Composer plugin), and adds Guzzle for Laravel 8+ (Laravel only suggests it).
 
 ## 8. Query debugging switch (Phase 4 and 6)
 
@@ -480,7 +487,7 @@ Lets a developer turn query capture on and off from the viewer while the app kee
 
 ### Client side
 
-- `Switch/Switches` holds the last known values with an expiry (`switches_ttl`, 5 seconds).
+- `Control/Switches` (inside the `Dispatcher`) holds the last known values with an expiry (`switches_ttl`, 5 seconds).
 - Updated for free from every ingest response.
 - When a watcher needs a decision and the values have expired, the client calls `GET /_peep/switches?project=` at most once per TTL (one sub-millisecond localhost call; shared through APCu when available).
 - If the viewer is unavailable, nothing is sent anyway, so the switch does not matter.

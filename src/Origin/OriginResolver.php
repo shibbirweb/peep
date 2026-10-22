@@ -25,6 +25,11 @@ final class OriginResolver
     private $skippedPrefixes;
 
     /**
+     * @var array<string, string> compiled view file => source file
+     */
+    private $viewSources = [];
+
+    /**
      * @param list<string> $skippedPrefixes Extra paths whose frames are skipped (e.g. a framework's macro code).
      */
     public function __construct(PathMapper $pathMapper, array $skippedPrefixes = [])
@@ -55,7 +60,7 @@ final class OriginResolver
             $caller = isset($frames[$index + 1]) ? $frames[$index + 1] : [];
 
             return new Origin(
-                $this->pathMapper->map($frame['file']),
+                $this->pathMapper->map($this->viewSource($frame['file'])),
                 isset($frame['line']) ? (int) $frame['line'] : 0,
                 isset($caller['function']) ? $caller['function'] : null,
                 isset($caller['class']) ? $caller['class'] : null
@@ -83,7 +88,7 @@ final class OriginResolver
             $userFrames = [];
             foreach (array_slice($frames, $index, $limit) as $userFrame) {
                 if (isset($userFrame['file'])) {
-                    $userFrame['file'] = $this->pathMapper->map($userFrame['file']);
+                    $userFrame['file'] = $this->pathMapper->map($this->viewSource($userFrame['file']));
                 }
 
                 $userFrames[] = $userFrame;
@@ -98,6 +103,36 @@ final class OriginResolver
     public function pathMapper(): PathMapper
     {
         return $this->pathMapper;
+    }
+
+    /**
+     * Laravel compiles Blade views to storage/framework/views/<hash>.php and ends each file
+     * with a comment naming the source. Point at the .blade.php file instead.
+     */
+    private function viewSource(string $file): string
+    {
+        if (strpos($file, DIRECTORY_SEPARATOR . 'framework' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR) === false) {
+            return $file;
+        }
+
+        if (! isset($this->viewSources[$file])) {
+            $this->viewSources[$file] = $file;
+
+            $size = @filesize($file);
+            $handle = is_int($size) ? @fopen($file, 'rb') : false;
+
+            if (is_resource($handle)) {
+                fseek($handle, max(0, (int) $size - 1024));
+                $tail = (string) fread($handle, 1024);
+                fclose($handle);
+
+                if (preg_match('#/\*\*PATH (.+?) ENDPATH\*\*/#', $tail, $matches) === 1) {
+                    $this->viewSources[$file] = $matches[1];
+                }
+            }
+        }
+
+        return $this->viewSources[$file];
     }
 
     private function isSkipped(string $file): bool

@@ -2,7 +2,7 @@
 
 Debug any PHP app in a separate window. Call `peep($value)` anywhere and see values, database queries, jobs, logs and exceptions live, in your browser or in a desktop app. Peep also catches the mail and SMS your app sends and can simulate provider webhooks back to it.
 
-> **Status: early development.** Nothing is released yet. The core client and the browser viewer work; framework integrations, mail and SMS catching and the desktop app are in progress. Progress is tracked in [docs/plan/features.md](docs/plan/features.md).
+> **Status: early development.** Nothing is released yet. The client, the browser viewer and the Laravel integration work; other framework bridges, mail and SMS catching and the desktop app are in progress. Progress is tracked in [docs/plan/features.md](docs/plan/features.md).
 
 ## Planned features
 
@@ -45,7 +45,19 @@ peep($user)->green()->label('Signed in user');
 peep()->table($rows, 'Users');
 ```
 
-Planned next: `peep()->showQueries()` and the other Laravel watchers.
+In Laravel (5.5 to 13) the package is auto-discovered and on outside production:
+
+```php
+peep()->showQueries();                         // every query, with bindings and time
+peep()->showSlowQueries(100);                  // queries slower than 100 ms
+peep()->showDuplicateQueries();                // the same query run again (N+1)
+peep()->countQueries(fn () => $order->load('items'));
+peep()->showJobs()->showHttpClientRequests();
+peep()->model($user);
+collect($rows)->peep()->map(...);
+```
+
+Logs, reported exceptions, `dump()` and sent mail show up without any call. Publish the config with `php artisan vendor:publish --tag=peep-config`.
 
 ## Documentation
 
