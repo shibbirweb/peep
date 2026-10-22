@@ -1,6 +1,6 @@
 # Peep Feature List
 
-How each feature works is described in [implementation.md](implementation.md). Tick a feature when it is merged with tests. Add `(in progress)` after the name while working on it. Reference the ID in commits and pull requests. Phases are described in [roadmap.md](roadmap.md).
+How each feature works is described in [implementation.md](implementation.md). Tick a feature when it is merged with tests. Add `(in progress)` after the name while working on it. Reference the ID in commits and pull requests. `[-]` marks a feature dropped by a decision in the roadmap. Phases are described in [roadmap.md](roadmap.md).
 
 ## Progress
 
@@ -13,7 +13,7 @@ How each feature works is described in [implementation.md](implementation.md). T
 | API: Full client API | 3 | 38 / 38 |
 | LV: Laravel adapter | 4 | 31 / 31 |
 | BR: Bridges for any PHP app | 5 | 7 / 7 |
-| VF: Full viewer | 6 | 4 / 25 |
+| VF: Full viewer | 6 | 23 / 23 (2 dropped) |
 | MS: Mail and SMS catching | 7 | 0 / 15 |
 | WH: Webhook simulator | 7 | 0 / 13 |
 | DT: Desktop app (Tauri) | 8 | 0 / 15 |
@@ -184,39 +184,39 @@ Objects and helpers:
 ## VF: Full viewer (Phase 6)
 
 Message list:
-- [ ] VF-01 Group by request id (collapsible per request, job, command)
-- [ ] VF-02 Filter by type (log, query, exception, job, event, http, dump)
-- [ ] VF-03 Filter by color label
-- [ ] VF-04 Text search inside values
-- [ ] VF-05 Query view: SQL with bindings inlined, time, slow and duplicate badges
+- [x] VF-01 Group by request id (collapsible per request, job, command; cards in a row from one request)
+- [x] VF-02 Filter by type (values, dumps, logs, queries, exceptions, jobs, events, HTTP, cache, views, mail)
+- [x] VF-03 Filter by color label
+- [x] VF-04 Text search inside values, SQL, files and request labels
+- [x] VF-05 Query view: SQL with bindings inlined, time, slow and duplicate badges
 - [x] VF-06 Exception view with stack trace and source snippet
 - [x] VF-07 Table, JSON, XML, HTML, image renderers
 - [x] VF-08 Card updates and removal by `uuid`
-- [ ] VF-09 Copy value as text
-- [ ] VF-10 Virtualised list for 10,000+ messages
+- [x] VF-09 Copy card as text
+- [x] VF-10 Virtualised list for 10,000+ messages (measured: 60 fps scrolling with 10,000 cards)
 
 Screens and controls:
-- [ ] VF-11 Screens: new screen, clear, archive of previous screens
+- [x] VF-11 Screens: new screen, clear, archive of the last 10 previous screens per project
 - [x] VF-12 Pause banner with Continue and Stop
-- [ ] VF-13 Pause receiving (ignore incoming messages)
-- [ ] VF-14 In-app notifications for `notify()` and exceptions (browser Notification API)
+- [x] VF-13 Pause receiving (ignore incoming messages)
+- [x] VF-14 Notifications for `notify()` and exceptions while the viewer is in the background (browser Notification API, opt-in)
 
 Settings (saved in `~/.config/peep/settings.json` / `%APPDATA%\peep\settings.json`):
-- [ ] VF-15 Settings page
-- [ ] VF-16 Display mode: window or browser
-- [ ] VF-17 IDE choice and path mapping
-- [ ] VF-18 Port and host
-- [ ] VF-19 Theme: light, dark, follow system
-- [ ] VF-20 Optional shared token for Docker or remote use
+- [x] VF-15 Settings page
+- [x] VF-16 Display mode: window or browser (window falls back to the browser until the desktop app exists)
+- [x] VF-17 IDE choice and path mapping
+- [x] VF-18 Port and host (applied on the next start; `--host` and `--port` still win)
+- [x] VF-19 Theme: light, dark, follow system
+- [x] VF-20 Optional shared token for Docker or remote use (`X-Peep-Token`, `PEEP_TOKEN`; needed to listen beyond loopback; the UI stays local)
 
 Query debugging:
-- [ ] VF-25 Query debugging on/off switch in the viewer toolbar (per project), with sub-switches for slow and duplicate queries and the slow threshold; state shown at all times
+- [x] VF-25 Query debugging on/off switch in the viewer toolbar (per project), with sub-switches for slow and duplicate queries and the slow threshold; state shown at all times
 
 Storage and protocols:
-- [ ] VF-21 Event store interface with in-memory and SQLite implementations (see decision D4)
-- [ ] VF-22 Multiple projects / hosts shown separately
-- [ ] VF-23 Ray protocol decoder (only if decision D2 is yes)
-- [ ] VF-24 Symfony VarDumper TCP server on 9912 (only if decision D2 is yes)
+- [x] VF-21 Card storage interface with memory-only and SQLite implementations (decision D4)
+- [x] VF-22 Multiple projects shown separately (tabs with counts; card limit per project)
+- [-] VF-23 Ray protocol decoder (dropped: decision D2 is no)
+- [-] VF-24 Symfony VarDumper TCP server on 9912 (dropped: decision D2 is no)
 
 ## MS: Mail and SMS catching (Phase 7)
 

@@ -117,7 +117,7 @@ All Peep endpoints live under `/_peep/` so the provider-compatible paths (Mailgu
 | `GET /_peep/switches?project=` | client | Current switches when nothing was sent recently |
 | `GET /_peep/locks/{name}` | client | Poll a pause lock created by a `lock` payload [PR-05] |
 | `GET /_peep/stream` | UI | Server-Sent Events |
-| `POST /_peep/ui/*` | UI | UI actions (`/_peep/ui/clear` so far; later continue, stop, settings, switches, webhooks) |
+| `POST /_peep/ui/*`, `GET /_peep/ui/settings`, `GET /_peep/ui/screens/{id}` | UI | UI actions: clear, lock continue and stop, switches, pause receiving, new screen, settings (webhooks in Phase 7) |
 | `POST /_peep/mail`, `POST /_peep/sms` | client, any app | Generic mail and SMS capture |
 | `POST /v3/{domain}/messages`, `POST /v3/{domain}/messages.mime` | apps using Mailgun API | Mailgun-compatible |
 | `POST /2010-04-01/Accounts/{sid}/Messages.json` | apps using Twilio API | Twilio-compatible |
@@ -382,7 +382,9 @@ Screen { id, project, title, cardIds[] }
 ```
 
 - Ingest: decode, validate (`protocol === 1`, required fields, size limit 8 MB), then apply each payload: content payloads append to the card (creating it on first sight), update payloads change fields of the existing card, screen payloads act on the project's screen list.
-- Store: `EventStoreInterface` with an in-memory ring buffer (default 10,000 cards per project, oldest dropped) and an optional SQLite implementation (decision D4).
+- Store: `CardStore` keeps the working set in memory (default 10,000 cards per project, oldest dropped; the `max_cards` setting) and tells a `CardStorage` about every change [VF-21]. `SqliteCardStorage` (decision D4) keeps one row per card holding its JSON in `history.sqlite` next to `settings.json`; saves are buffered and written in one transaction every 0.5 seconds, and on start-up the newest cards of each project are loaded back. `NullCardStorage` keeps nothing (history off, or no `pdo_sqlite`). SQLite calls block the event loop for a moment, which is fine for one developer's traffic.
+- Screens [VF-11]: a new screen (`newScreen()` in the app or the New screen button) moves the project's cards into an archive; the last 10 per project are kept in memory and opened read-only from the toolbar. Clear drops cards without archiving.
+- Pause receiving [VF-13]: while paused, envelopes are answered `202` with `accepted: false` and dropped, locks included, so a paused app is never left waiting.
 - Every change is published to the SSE hub.
 
 ### Server-Sent Events [VW-05]
@@ -397,10 +399,12 @@ Screen { id, project, title, cardIds[] }
 
 ### Settings [VF-15 to VF-20]
 
-- File: `$XDG_CONFIG_HOME/peep/settings.json`, else `~/.config/peep/settings.json` (macOS and Linux), `%APPDATA%\peep\settings.json` (Windows).
-- Written atomically (temp file plus `rename`). Only the viewer writes it; the CLI and the Tauri app go through the HTTP API.
-- `Settings` uses PHP 8.4 property hooks for validation; `DisplayMode` is an enum (`Window`, `Browser`).
-- Keys: `display_mode`, `ide`, `path_mappings`, `host`, `port`, `smtp_port`, `theme`, `token`, `max_cards`, `switches` (per project), `webhooks` (rules), `redact_keys`.
+- File: `PEEP_CONFIG_DIR/settings.json` when set, else `%APPDATA%\peep\settings.json` (Windows), `$XDG_CONFIG_HOME/peep/settings.json`, or `~/.config/peep/settings.json` (macOS and Linux).
+- Written atomically (temp file plus `rename`, mode 0600 because it can hold the token). Only the viewer writes it; the settings page and the Tauri app go through `POST /_peep/ui/settings`.
+- `Settings` validates with PHP 8.4 property hooks (`ide`, `host`, `port`, `token`, `max_cards`); a broken file loads with defaults for the broken keys, while a change from the settings page is all or nothing and answers `422` naming the setting. `DisplayMode` (`Window`, `Browser`) and `Theme` (`System`, `Light`, `Dark`) are enums.
+- Keys now: `display_mode`, `ide`, `path_mappings`, `host`, `port`, `theme`, `token`, `max_cards`, `history`, `notifications`, `switches` (per project). Phase 7 adds `smtp_port` and `webhooks`. `host`, `port`, `token`, `history` and `max_cards` apply on the next start; the page says so.
+- `serve` uses `host`, `port` and `display_mode` when `--host`, `--port` and `--open` are not given [VF-16, VF-18]. Listening beyond loopback is refused until a token is set [VF-20].
+- Token [VF-20]: `TokenGuard` runs before the other guards. Requests from loopback addresses pass. Other addresses (another machine, or Docker on Linux through the bridge) get only the client API, and only with `X-Peep-Token` equal to the token (`hash_equals`). The client sends the header when `token` / `PEEP_TOKEN` is set (both transports).
 
 ### Projects [VF-22]
 
@@ -413,7 +417,11 @@ Every envelope, mail and SMS carries a project name (`meta.project`, SMTP userna
 - **State:** a store keyed by card id, filled from the initial snapshot and updated by SSE events. Mail, SMS and webhook deliveries are separate collections.
 - **List:** virtualised (only visible rows rendered) so 10,000+ cards stay smooth [VF-10]; grouped by request id with collapsible groups [VF-01].
 - **Renderers** per payload type: value tree (lazy expand, search highlight), table, JSON, XML, HTML (sandboxed iframe), image, exception (stack trace with source snippet), query (SQL with bindings inlined per driver quoting, time, slow and duplicate badges) [VF-05 to VF-07].
-- **Filters and search:** by type, color and project; full-text search walks the value trees in a Web Worker so typing never blocks [VF-02 to VF-04].
+- **Filters and search:** by kind (from payload types), color and project [VF-02 to VF-04]. Search looks in a lower-case text form of each card (values, SQL, file, request label) built once per card object and cached; it runs 150 ms after typing stops. Measured on 10,000 cards: about 220 ms for the first search, less afterwards, so no Web Worker was needed.
+- **Virtual list** [VF-10]: `VirtualList.svelte` renders only rows within 1,200 px of the viewport, measures each row with a `ResizeObserver` and positions rows from running height totals. When new cards arrive on top while the user is scrolled down, or a row above the viewport changes height, the page scrolls by the same amount so the cards being read stay still. Measured: 60 fps scrolling (p95 16.7 ms) through 10,000 cards with about 20 cards in the DOM.
+- **Card limit** per project, in the viewer and in the page, so a busy project never pushes a quiet one out [VF-22].
+- **Query switches** [VF-25]: shown for the selected project (or the only one), with All, Slow, Duplicates and the threshold; the dot shows the state (gray app default, green on, red off). Changes are saved in the settings and reach running apps with their next envelope or within the 5-second switch TTL.
+- **Settings page** [VF-15]: a dialog that loads `GET /_peep/ui/settings`; editor and path mappings apply to file links at once (mappings run after the client's own remote-to-local mapping), theme sets `data-theme` on the page [VF-17, VF-19].
 - **IDE links** [VW-08]: `phpstorm://open?file={file}&line={line}`, `vscode://file/{file}:{line}`, `cursor://file/{file}:{line}`, `zed://file/{file}:{line}`, `subl://open?url=file://{file}&line={line}`, after path mapping.
 - **Actions** call `POST /_peep/ui/*` with the `X-Peep-UI` header.
 - **Tauri detection:** when `window.__TAURI__` exists, the UI reports unread counts and notifications to the native shell; otherwise it uses the browser Notification API [VF-14].
@@ -682,6 +690,7 @@ One tag `vX.Y.Z` releases everything [RL-03]:
 The viewer listens on the developer's machine, and any web page in a browser can try to send requests to `localhost`. These rules stop that.
 
 - **Bind to `127.0.0.1`** by default. Binding elsewhere (Docker, remote) requires a `token`; clients send it as `X-Peep-Token`.
+- **TokenGuard:** requests from other machines reach only the client API, and only with the token; the UI, the stream and UI actions answer only to loopback addresses, so a token never exposes the cards to the network.
 - **HostGuard:** for the UI, its assets, the stream and UI actions, the `Host` header must be `127.0.0.1`, `localhost`, `[::1]` or the configured host, with the right port. Blocks DNS-rebinding attacks. The client API (`/_peep/envelope`, `/_peep/switches`, `/_peep/health`, `GET /_peep/locks/{name}`) skips it, so apps in Docker can use `host.docker.internal`: a rebinding page can only read switch states, lock states and the version there, and cannot post envelopes because browsers send `Origin` with every POST.
 - **OriginGuard:** requests with an `Origin` header (browsers) are accepted only from the viewer's own origin or the Tauri origin. Server-side clients (PHP) send no `Origin`, so ingest still works; a random web page cannot post envelopes, trigger webhooks or change settings.
 - **UI actions** additionally require the `X-Peep-UI` header (a custom header forces a CORS preflight, which the viewer refuses for foreign origins).

@@ -32,6 +32,32 @@ final class TransportTest extends TestCase
         });
     }
 
+    public function testBothTransportsSendTheToken(): void
+    {
+        $viewer = FakeViewer::start();
+
+        try {
+            (new StreamTransport('127.0.0.1', $viewer->port(), 500, 2000, 'secret-token-1234'))->post('/_peep/envelope', '{}');
+            (new StreamTransport('127.0.0.1', $viewer->port(), 500, 2000))->get('/_peep/switches');
+
+            if (function_exists('curl_init')) {
+                (new CurlTransport('127.0.0.1', $viewer->port(), 500, 2000, 'secret-token-1234'))->get('/_peep/switches');
+            }
+
+            $tokens = array_map(function (array $request) {
+                return $request['token'];
+            }, $viewer->requests());
+
+            $this->assertSame('secret-token-1234', $tokens[0]);
+            $this->assertNull($tokens[1]);
+            if (function_exists('curl_init')) {
+                $this->assertSame('secret-token-1234', $tokens[2]);
+            }
+        } finally {
+            $viewer->stop();
+        }
+    }
+
     public function testErrorStatusIsReturnedNotThrown(): void
     {
         $viewer = FakeViewer::start(400);

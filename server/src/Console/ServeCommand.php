@@ -9,6 +9,13 @@ use Revolt\EventLoop\UnsupportedFeatureException;
 use ShibbirWeb\PeepServer\Application;
 use ShibbirWeb\PeepServer\Version;
 use InvalidArgumentException;
+use PDOException;
+use ShibbirWeb\PeepServer\Settings\Settings;
+use ShibbirWeb\PeepServer\Settings\SettingsFile;
+use ShibbirWeb\PeepServer\Settings\SettingsStore;
+use ShibbirWeb\PeepServer\Storage\CardStorage;
+use ShibbirWeb\PeepServer\Storage\NullCardStorage;
+use ShibbirWeb\PeepServer\Storage\SqliteCardStorage;
 use Throwable;
 
 use function Amp\trapSignal;
@@ -27,6 +34,7 @@ final readonly class ServeCommand
         private ViewOpener $opener = new ViewOpener(),
         private mixed $output = STDOUT,
         private mixed $errors = STDERR,
+        private ?SettingsFile $settingsFile = null,
     ) {}
 
     /**
@@ -34,8 +42,11 @@ final readonly class ServeCommand
      */
     public function run(array $arguments): int
     {
+        $settingsFile = $this->settingsFile ?? SettingsFile::inDefaultDirectory();
+        $settings = $settingsFile->load();
+
         try {
-            $options = ServeOptions::fromArguments($arguments);
+            $options = ServeOptions::fromArguments($arguments, $settings);
         } catch (InvalidArgumentException $exception) {
             $this->error('Error: ' . $exception->getMessage());
             $this->error(Cli::USAGE);
@@ -43,12 +54,12 @@ final readonly class ServeCommand
             return 2;
         }
 
-        $application = new Application($options->host, $options->port, new ConsoleLogger());
+        $url = new Application($options->host, $options->port, new ConsoleLogger())->url();
 
         switch ($this->probe->check($options->host, $options->port)) {
             case PortStatus::Peep:
-                $this->write("Peep is already running at {$application->url()}.");
-                $this->openView($options->open, $application->url());
+                $this->write("Peep is already running at {$url}.");
+                $this->openView($options->open, $url);
 
                 return 0;
 
@@ -61,7 +72,17 @@ final readonly class ServeCommand
                 break;
         }
 
+        $logger = new ConsoleLogger();
+        $application = new Application(
+            $options->host,
+            $options->port,
+            $logger,
+            settings: new SettingsStore($settings, $settingsFile),
+            storage: $this->storage($settings, $settingsFile),
+        );
+
         try {
+            $restored = $application->cards->restore();
             $application->start();
         } catch (Throwable $exception) {
             $this->error('Could not start Peep: ' . $exception->getMessage());
@@ -70,12 +91,31 @@ final readonly class ServeCommand
         }
 
         $this->write(sprintf('Peep %s is running at %s. Press Ctrl+C to stop.', Version::VERSION, $application->url()));
+        $this->write('History: ' . $application->cards->storage()->describe() . ($restored > 0 ? ", {$restored} cards restored" : '') . '.');
+        $this->write('Settings: ' . $settingsFile->path());
         $this->openView($options->open, $application->url());
 
         $this->waitUntilStopped();
         $application->stop();
 
         return 0;
+    }
+
+    private function storage(Settings $settings, SettingsFile $file): CardStorage
+    {
+        if (! $settings->history) {
+            return new NullCardStorage();
+        }
+
+        if (! SqliteCardStorage::isAvailable()) {
+            return new NullCardStorage('this PHP has no pdo_sqlite');
+        }
+
+        try {
+            return SqliteCardStorage::open($file->directory . DIRECTORY_SEPARATOR . SqliteCardStorage::FILE_NAME);
+        } catch (PDOException $exception) {
+            return new NullCardStorage('cannot open the history file: ' . $exception->getMessage());
+        }
     }
 
     private function openView(OpenMode $mode, string $url): void

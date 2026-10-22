@@ -130,6 +130,96 @@ final class ViewerTest extends TestCase
         $this->assertSame(404, $this->client->request(new Request($this->application->url() . '/_peep/locks/unknown'))->getStatus());
     }
 
+    public function testTheToolbarChangesSwitchesForRunningApps(): void
+    {
+        $answer = $this->ui('/_peep/ui/switches', ['project' => 'shop', 'switches' => ['queries' => 'off', 'slow_query_ms' => 50]]);
+
+        $this->assertSame('off', self::at($answer, 'switches', 'queries'));
+        $this->assertSame(['queries' => 'off', 'slow_queries' => 'default', 'duplicate_queries' => 'default', 'slow_query_ms' => 50], $this->json('/_peep/switches?project=shop')['switches'] ?? null);
+        $this->assertSame($this->application->switches->all(), $this->application->settings->settings->switches, 'Saved with the settings.');
+    }
+
+    public function testPausedReceivingIgnoresEnvelopes(): void
+    {
+        $this->ui('/_peep/ui/receiving', ['paused' => true]);
+
+        $post = fn(): Request => new Request($this->application->url() . '/_peep/envelope', 'POST', (string) json_encode(EnvelopeDecoderTest::envelope()));
+        $answer = json_decode($this->client->request($post())->getBody()->buffer(), true);
+
+        $this->assertIsArray($answer);
+        $this->assertFalse($answer['accepted']);
+        $this->assertSame([], $this->application->cards->cards());
+
+        $this->ui('/_peep/ui/receiving', ['paused' => false]);
+        $this->client->request($post())->getBody()->buffer();
+        $this->assertCount(1, $this->application->cards->cards());
+    }
+
+    public function testNewScreenArchivesAndArchivesCanBeOpened(): void
+    {
+        $post = new Request($this->application->url() . '/_peep/envelope', 'POST', (string) json_encode(EnvelopeDecoderTest::envelope()));
+        $this->client->request($post)->getBody()->buffer();
+
+        $this->ui('/_peep/ui/screens', ['project' => 'shop']);
+        $screens = $this->application->cards->screens('shop');
+        $this->assertCount(1, $screens);
+
+        $screen = $this->json('/_peep/ui/screens/' . $screens[0]['id']);
+        $this->assertSame('card-1', self::at($screen ?? [], 'cards', 0, 'id'));
+        $this->assertSame(404, $this->client->request(new Request($this->application->url() . '/_peep/ui/screens/nope'))->getStatus());
+    }
+
+    public function testSettingsAreValidatedAndReportWhatNeedsARestart(): void
+    {
+        $page = $this->ui('/_peep/ui/settings', ['changes' => ['theme' => 'dark', 'port' => 9999]]);
+        $this->assertSame('dark', self::at($page, 'settings', 'theme'));
+        $this->assertSame(['port'], $page['restart_required'] ?? null);
+
+        $invalid = new Request($this->application->url() . '/_peep/ui/settings', 'POST', (string) json_encode(['changes' => ['ide' => 'notepad']]));
+        $invalid->setHeader('x-peep-ui', '1');
+        $response = $this->client->request($invalid);
+        $this->assertSame(422, $response->getStatus());
+        $this->assertStringContainsString('"setting":"ide"', $response->getBody()->buffer());
+
+        $this->assertSame('dark', self::at($this->json('/_peep/ui/settings') ?? [], 'settings', 'theme'));
+    }
+
+    /**
+     * A value deep inside decoded JSON, or null.
+     *
+     * @param array<mixed> $data
+     */
+    private static function at(array $data, string|int ...$keys): mixed
+    {
+        $value = $data;
+        foreach ($keys as $key) {
+            if (! is_array($value) || ! array_key_exists($key, $value)) {
+                return null;
+            }
+
+            $value = $value[$key];
+        }
+
+        return $value;
+    }
+
+    /**
+     * POST to a UI action, as the viewer's own page does.
+     *
+     * @param array<string, mixed> $data
+     * @return array<mixed>
+     */
+    private function ui(string $path, array $data): array
+    {
+        $request = new Request($this->application->url() . $path, 'POST', (string) json_encode($data));
+        $request->setHeader('x-peep-ui', '1');
+        $response = $this->client->request($request);
+        $this->assertSame(200, $response->getStatus(), $path);
+        $decoded = json_decode($response->getBody()->buffer(), true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
     /**
      * @return array<mixed>|null
      */

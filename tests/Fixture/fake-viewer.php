@@ -11,6 +11,7 @@ if (is_string($logFile) && $logFile !== '') {
         'method' => isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : '',
         'path' => isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '',
         'content_type' => isset($_SERVER['CONTENT_TYPE']) ? $_SERVER['CONTENT_TYPE'] : '',
+        'token' => isset($_SERVER['HTTP_X_PEEP_TOKEN']) ? $_SERVER['HTTP_X_PEEP_TOKEN'] : null,
         'body' => (string) file_get_contents('php://input'),
     ];
 

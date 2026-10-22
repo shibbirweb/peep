@@ -25,7 +25,7 @@ return [
 ];
 ```
 
-`peep.php` is found by walking up from the working directory and from the directory of the script PHP runs. Environment variables (`PEEP_ENABLED`, `PEEP_HOST`, `PEEP_PORT`, `PEEP_PROJECT`, `PEEP_REMOTE_PATH`, `PEEP_LOCAL_PATH`, `PEEP_SERIALIZER`) win over the file.
+`peep.php` is found by walking up from the working directory and from the directory of the script PHP runs. Environment variables (`PEEP_ENABLED`, `PEEP_HOST`, `PEEP_PORT`, `PEEP_PROJECT`, `PEEP_REMOTE_PATH`, `PEEP_LOCAL_PATH`, `PEEP_SERIALIZER`, `PEEP_TOKEN`) win over the file.
 
 ## Apps in Docker or a VM
 
@@ -37,7 +37,15 @@ PEEP_REMOTE_PATH=/var/www/html
 PEEP_LOCAL_PATH=/Users/you/code/shop
 ```
 
-Docker Desktop (macOS and Windows) and OrbStack forward `host.docker.internal` to your machine's loopback address, where the viewer listens. On Linux, `--add-host=host.docker.internal:host-gateway` points at the Docker bridge instead, which the viewer does not listen on yet; listening beyond loopback needs the access token planned for the full viewer (VF-20).
+Docker Desktop (macOS and Windows) and OrbStack forward `host.docker.internal` to your machine's loopback address, where the viewer listens, so nothing else is needed.
+
+On Linux, `--add-host=host.docker.internal:host-gateway` points at the Docker bridge, so the viewer has to listen there too, which needs a token:
+
+1. In the viewer's Settings, generate a token and save.
+2. Restart the viewer listening on every address: `php peep-server.phar serve --host=0.0.0.0` (or set the host in Settings).
+3. Give the app the token: `PEEP_TOKEN=...` (in Laravel, `PEEP_TOKEN` in `.env`).
+
+Other machines (and containers) can then only send to the viewer; the viewer page itself still opens only on your machine. The same steps work for an app on another computer, with `PEEP_HOST` set to your machine's address.
 
 ## The bridges at a glance
 

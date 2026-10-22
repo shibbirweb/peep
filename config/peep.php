@@ -12,6 +12,9 @@ return [
     'host' => env('PEEP_HOST', '127.0.0.1'),
     'port' => env('PEEP_PORT', 23517),
 
+    // Only for a viewer that listens beyond this machine: the token from its settings page.
+    'token' => env('PEEP_TOKEN'),
+
     // Shown in the viewer to keep apps apart. Null: config('app.name').
     'project' => env('PEEP_PROJECT'),
 

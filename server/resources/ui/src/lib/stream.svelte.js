@@ -1,10 +1,20 @@
 import { applyEvent } from './cards.js';
+import { setPathMappings } from './ide.js';
+import { maybeNotify } from './notify.js';
 
-const EVENTS = ['snapshot', 'card.created', 'card.updated', 'card.removed', 'screen.cleared'];
+const CARD_EVENTS = ['snapshot', 'card.created', 'card.updated', 'card.removed', 'screen.cleared'];
 
-const UI_HEADERS = {
-  'Content-Type': 'application/json',
-  'X-Peep-UI': '1',
+export const DEFAULT_SETTINGS = {
+  display_mode: 'browser',
+  ide: 'phpstorm',
+  path_mappings: [],
+  host: '127.0.0.1',
+  port: 23517,
+  theme: 'system',
+  max_cards: 10000,
+  history: true,
+  notifications: false,
+  token_set: false,
 };
 
 /**
@@ -16,6 +26,12 @@ export const viewer = $state({
   connected: false,
   // Pause locks by name: 'active', 'continued' or 'stopped'.
   locks: {},
+  // Query debugging switches per project.
+  switches: {},
+  receivingPaused: false,
+  // Archived screens, newest first, without their cards.
+  screens: [],
+  settings: { ...DEFAULT_SETTINGS },
 });
 
 export function connect() {
@@ -29,42 +45,66 @@ export function connect() {
     viewer.connected = false;
   };
 
-  for (const name of EVENTS) {
+  for (const name of CARD_EVENTS) {
     source.addEventListener(name, (event) => {
       const data = JSON.parse(event.data);
-      viewer.cards = applyEvent(viewer.cards, name, data);
+
+      if (name === 'snapshot') {
+        applySnapshot(data);
+      }
+
+      viewer.cards = applyEvent(viewer.cards, name, data, viewer.settings.max_cards);
       trackLocks(name, data);
+
+      if (name === 'card.created' && viewer.settings.notifications) {
+        maybeNotify(data);
+      }
     });
   }
 
-  source.addEventListener('lock.released', (event) => {
-    const data = JSON.parse(event.data);
+  on(source, 'lock.released', (data) => {
     viewer.locks[data.name] = data.stop ? 'stopped' : 'continued';
+  });
+
+  on(source, 'switches.changed', (data) => {
+    viewer.switches[data.project] = data.switches;
+  });
+
+  on(source, 'receiving.changed', (data) => {
+    viewer.receivingPaused = data.paused;
+  });
+
+  on(source, 'screen.archived', (data) => {
+    viewer.screens = [data, ...viewer.screens.filter((screen) => screen.id !== data.id)];
+  });
+
+  on(source, 'settings.changed', (data) => {
+    applySettings(data);
   });
 
   return () => source.close();
 }
 
 /**
- * @param {string|null} project Null clears every project.
+ * @param {object} settings Public settings as the viewer sends them.
  */
-export async function clearCards(project) {
-  await fetch('/_peep/ui/clear', {
-    method: 'POST',
-    headers: UI_HEADERS,
-    body: JSON.stringify({ project }),
-  });
+export function applySettings(settings) {
+  viewer.settings = { ...DEFAULT_SETTINGS, ...settings };
+  setPathMappings(viewer.settings.path_mappings);
 }
 
-/**
- * @param {string} name
- * @param {'continue'|'stop'} action
- */
-export async function releaseLock(name, action) {
-  await fetch(`/_peep/ui/locks/${encodeURIComponent(name)}/${action}`, {
-    method: 'POST',
-    headers: UI_HEADERS,
-  });
+function applySnapshot(data) {
+  viewer.switches = data.switches ?? {};
+  viewer.receivingPaused = data.receiving_paused === true;
+  viewer.screens = data.screens ?? [];
+
+  if (data.settings) {
+    applySettings(data.settings);
+  }
+}
+
+function on(source, name, handle) {
+  source.addEventListener(name, (event) => handle(JSON.parse(event.data)));
 }
 
 function trackLocks(name, data) {

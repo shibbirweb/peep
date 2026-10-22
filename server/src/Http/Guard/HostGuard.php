@@ -8,6 +8,7 @@ use Amp\Http\Server\Middleware;
 use Amp\Http\Server\Request;
 use Amp\Http\Server\RequestHandler;
 use Amp\Http\Server\Response;
+use ShibbirWeb\PeepServer\Http\ClientApi;
 use ShibbirWeb\PeepServer\Http\Responses;
 
 /**
@@ -33,20 +34,12 @@ final readonly class HostGuard implements Middleware
         $this->allowedHosts = array_values(array_unique(['127.0.0.1', 'localhost', '[::1]', strtolower($bindHost)]));
     }
 
-    /**
-     * Endpoints apps call; everything else (UI, assets, stream, UI actions) is checked.
-     */
-    private const array CLIENT_PATHS = ['/_peep/envelope', '/_peep/switches', '/_peep/health'];
-
-    private const string LOCK_POLL_PREFIX = '/_peep/locks/';
-
     public function handleRequest(Request $request, RequestHandler $requestHandler): Response
     {
         $host = strtolower(trim((string) $request->getHeader('host')));
         $path = $request->getUri()->getPath();
-        $isClientApi = in_array($path, self::CLIENT_PATHS, true) || str_starts_with($path, self::LOCK_POLL_PREFIX);
 
-        if (! $isClientApi && ! $this->isAllowed($host)) {
+        if (! ClientApi::isClientPath($path) && ! $this->isAllowed($host)) {
             return Responses::error(421, 'invalid_host', 'This server only answers to its own address.');
         }
 

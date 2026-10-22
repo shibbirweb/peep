@@ -1,5 +1,6 @@
 <script>
-  import { releaseLock, viewer } from '../lib/stream.svelte.js';
+  import { releaseLock } from '../lib/api.js';
+  import { viewer } from '../lib/stream.svelte.js';
 
   /** @type {{ name: string }} */
   let { name } = $props();

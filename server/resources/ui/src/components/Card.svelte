@@ -1,28 +1,51 @@
 <script>
   import { clock } from '../lib/format.js';
   import { ideUrl, shortPath } from '../lib/ide.js';
+  import { cardText } from '../lib/text.js';
   import Payload from './Payload.svelte';
 
   /** @type {{ card: object, ide: string }} */
   let { card, ide } = $props();
 
+  // Kept outside the component: the list unmounts cards that scroll out of view.
+  const toggled = toggledCards;
+
   const link = $derived(card.origin ? ideUrl(ide, card.origin.file, card.origin.line) : null);
+  const cardKey = $derived(`${card.project}:${card.id}`);
 
   // peep()->hide() sends a card collapsed; the header toggles it.
-  let collapsed = $state(false);
-  let collapsedFromServer = $state(false);
+  let flip = $state(toggled.has(`${card.project}:${card.id}`));
+  const collapsed = $derived(card.hidden !== flip);
+  let copied = $state(false);
 
-  $effect(() => {
-    if (card.hidden && !collapsedFromServer) {
-      collapsed = true;
-      collapsedFromServer = true;
+  function toggle() {
+    flip = !flip;
+
+    if (flip) {
+      toggled.add(cardKey);
+    } else {
+      toggled.delete(cardKey);
     }
-  });
+  }
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(cardText(card));
+      copied = true;
+      setTimeout(() => (copied = false), 1200);
+    } catch {
+      copied = false;
+    }
+  }
+</script>
+
+<script module>
+  const toggledCards = new Set();
 </script>
 
 <article class="card size-{card.size}" style:--card-color={card.color ? `var(--${card.color})` : 'var(--border)'}>
   <header>
-    <button class="collapse" type="button" onclick={() => (collapsed = !collapsed)} aria-expanded={!collapsed} title={collapsed ? 'Show' : 'Hide'}>{collapsed ? '▸' : '▾'}</button>
+    <button class="collapse" type="button" onclick={toggle} aria-expanded={!collapsed} title={collapsed ? 'Show' : 'Hide'}>{collapsed ? '▸' : '▾'}</button>
     {#if card.label}<span class="label">{card.label}</span>{/if}
     {#if card.origin}
       {#if link}
@@ -34,6 +57,7 @@
     <span class="spacer"></span>
     <span class="request" title="{card.request.kind}: {card.request.label}">{card.request.label}</span>
     <time>{clock(card.created_at)}</time>
+    <button class="copy" type="button" onclick={copy} title="Copy as text">{copied ? 'Copied' : 'Copy'}</button>
   </header>
 
   {#if !collapsed}
@@ -88,6 +112,17 @@
 
   .spacer {
     flex: 1;
+  }
+
+  .copy {
+    font-size: 11px;
+    padding: 0 6px;
+    opacity: 0;
+  }
+
+  .card:hover .copy,
+  .copy:focus-visible {
+    opacity: 1;
   }
 
   .request {

@@ -22,8 +22,9 @@
   --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
+/* Dark colors: from the system unless the settings choose light, or chosen in the settings. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --bg: #111113;
     --surface: #18191b;
     --surface-2: #212225;
@@ -35,7 +36,27 @@
     --number: #70b8ff;
     --keyword: #e796f3;
     --key: #edeef0;
+    color-scheme: dark;
   }
+}
+
+:root[data-theme='dark'] {
+  --bg: #111113;
+  --surface: #18191b;
+  --surface-2: #212225;
+  --border: #2e3135;
+  --text: #edeef0;
+  --muted: #9ba1a6;
+  --accent: #8d8dff;
+  --string: #3dd68c;
+  --number: #70b8ff;
+  --keyword: #e796f3;
+  --key: #edeef0;
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
 }
 
 * {

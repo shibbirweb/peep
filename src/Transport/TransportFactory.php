@@ -16,11 +16,11 @@ final class TransportFactory
     public static function create(Config $config): TransportInterface
     {
         if (self::isAvailable('stream_socket_client')) {
-            return new StreamTransport($config->host(), $config->port(), $config->connectTimeoutMs(), $config->timeoutMs());
+            return new StreamTransport($config->host(), $config->port(), $config->connectTimeoutMs(), $config->timeoutMs(), $config->token());
         }
 
         if (self::isAvailable('curl_init')) {
-            return new CurlTransport($config->host(), $config->port(), $config->connectTimeoutMs(), $config->timeoutMs());
+            return new CurlTransport($config->host(), $config->port(), $config->connectTimeoutMs(), $config->timeoutMs(), $config->token());
         }
 
         return new NullTransport();

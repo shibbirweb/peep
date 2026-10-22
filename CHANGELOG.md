@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Full viewer: cards grouped by request, filters by kind and color, search, copy as text, a virtual list that stays smooth with 10,000+ cards, project tabs with counts, and the card limit per project.
+- Query debugging switches in the viewer toolbar (all, slow with threshold, duplicates), saved and applied to running apps within seconds.
+- Pause receiving, New screen with the last 10 previous screens per project, and desktop notifications for `notify()` and exceptions.
+- Settings page and `settings.json`: display mode, editor and path mappings, theme, host, port, token, cards per project, history, notifications. `serve` uses them when no option is given.
+- History: cards are kept across viewer restarts in SQLite when `pdo_sqlite` is available.
+- Token for apps on other machines or in Docker on Linux: `PEEP_TOKEN` in the app (`token` in Laravel's config), sent as `X-Peep-Token`; the viewer can then listen beyond loopback, and its page stays local.
 - Bridges for any PHP app: PSR-3 logger (`PeepLogger`, psr/log 1 to 3), Monolog handler (`PeepHandlerFactory::create()`, Monolog 1 to 3), `dump()` and `dd()` to Peep (`DumpHandler`, VarDumper 3.4 to 8.x), opt-in VarDumper casters for values (`serializer: var-dumper`), and an error handler for warnings, uncaught exceptions and fatal errors (with PHP 8.5 fatal error backtraces).
 - Global install: `peep.phar install` loads Peep into every script of a PHP install through `auto_prepend_file`; `uninstall` and `status`; projects with Composer keep their own version.
 - Setup guides for plain PHP, Symfony, Slim, WordPress and the global install (`docs/guides/`).

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { ideUrl, shortPath } from './ide.js';
+import { ideUrl, mapPath, setPathMappings, shortPath } from './ide.js';
 
 describe('ideUrl', () => {
   test('builds a link for each editor', () => {
@@ -24,4 +24,16 @@ describe('ideUrl', () => {
 test('shortPath keeps the last two segments', () => {
   expect(shortPath('/var/www/app/Http/Controller.php')).toBe('Http/Controller.php');
   expect(shortPath('Command line code')).toBe('Command line code');
+});
+
+test('path mappings from the settings apply before the link is built', () => {
+  setPathMappings([{ from: '/var/www/html/', to: '/Users/me/shop' }]);
+
+  try {
+    expect(ideUrl('vscode', '/var/www/html/app/a.php', 3)).toBe('vscode://file/Users/me/shop/app/a.php:3');
+    expect(ideUrl('vscode', '/var/www/htmlx/a.php', 3)).toBe('vscode://file/var/www/htmlx/a.php:3');
+    expect(mapPath('/var/www/html')).toBe('/Users/me/shop');
+  } finally {
+    setPathMappings([]);
+  }
 });

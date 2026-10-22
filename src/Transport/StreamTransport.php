@@ -30,12 +30,21 @@ final class StreamTransport implements TransportInterface
      */
     private $timeoutMs;
 
-    public function __construct(string $host, int $port, int $connectTimeoutMs, int $timeoutMs)
+    /**
+     * @var string|null
+     */
+    private $token;
+
+    /**
+     * @param string|null $token Sent as X-Peep-Token; header-safe (checked by Config).
+     */
+    public function __construct(string $host, int $port, int $connectTimeoutMs, int $timeoutMs, ?string $token = null)
     {
         $this->host = $host;
         $this->port = $port;
         $this->connectTimeoutMs = $connectTimeoutMs;
         $this->timeoutMs = $timeoutMs;
+        $this->token = $token;
     }
 
     public function post(string $path, string $body): TransportResponse
@@ -81,6 +90,10 @@ final class StreamTransport implements TransportInterface
             . "Accept: application/json\r\n"
             . 'User-Agent: peep-php/' . Version::VERSION . "\r\n"
             . "Connection: close\r\n";
+
+        if ($this->token !== null) {
+            $request .= 'X-Peep-Token: ' . $this->token . "\r\n";
+        }
 
         if ($body === null) {
             return $request . "\r\n";

@@ -116,6 +116,7 @@ class PeepServiceProvider extends ServiceProvider
             'remote_path' => $settings['remote_path'],
             'local_path' => $settings['local_path'],
             'serializer' => $settings['serializer'],
+            'token' => $settings['token'],
         ]);
 
         // The Laravel casters (models without queries, collections) apply to Peep's serializer;
@@ -184,6 +185,7 @@ class PeepServiceProvider extends ServiceProvider
             'remote_path' => null,
             'local_path' => null,
             'serializer' => 'peep',
+            'token' => null,
         ];
     }
 

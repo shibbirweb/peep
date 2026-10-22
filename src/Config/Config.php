@@ -81,6 +81,11 @@ final class Config
     private $serializer;
 
     /**
+     * @var string|null
+     */
+    private $token;
+
+    /**
      * @param array<string, mixed> $options
      */
     private function __construct(array $options)
@@ -101,10 +106,11 @@ final class Config
         $this->maxNodes = self::toIntInRange($options['max_nodes'], $defaults['max_nodes'], 1, 1000000);
         $this->redactKeys = self::toKeyList($options['redact_keys'], $defaults['redact_keys']);
         $this->serializer = in_array($options['serializer'], ['peep', 'var-dumper'], true) ? $options['serializer'] : 'peep';
+        $this->token = self::toToken($options['token']);
     }
 
     /**
-     * @return array{enabled: bool, host: string, port: int, connect_timeout_ms: int, timeout_ms: int, project: string, remote_path: null, local_path: null, max_depth: int, max_items: int, max_string_length: int, max_nodes: int, redact_keys: list<string>, serializer: string}
+     * @return array{enabled: bool, host: string, port: int, connect_timeout_ms: int, timeout_ms: int, project: string, remote_path: null, local_path: null, max_depth: int, max_items: int, max_string_length: int, max_nodes: int, redact_keys: list<string>, serializer: string, token: null}
      */
     public static function defaults(): array
     {
@@ -132,6 +138,7 @@ final class Config
                 'cookie',
             ],
             'serializer' => 'peep',
+            'token' => null,
         ];
     }
 
@@ -236,6 +243,14 @@ final class Config
     }
 
     /**
+     * Shared secret sent as X-Peep-Token, for a viewer on another machine (or Docker on Linux).
+     */
+    public function token(): ?string
+    {
+        return $this->token;
+    }
+
+    /**
      * Accepts booleans, 1/0 and the strings true/false, 1/0, yes/no, on/off.
      *
      * @param mixed $value
@@ -283,6 +298,20 @@ final class Config
     private static function toNullableString($value): ?string
     {
         if (is_string($value) && trim($value) !== '') {
+            return trim($value);
+        }
+
+        return null;
+    }
+
+    /**
+     * Only characters that are safe in an HTTP header; anything else is ignored.
+     *
+     * @param mixed $value
+     */
+    private static function toToken($value): ?string
+    {
+        if (is_string($value) && preg_match('/^[A-Za-z0-9_-]{1,256}$/', trim($value)) === 1) {
             return trim($value);
         }
 

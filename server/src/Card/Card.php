@@ -67,6 +67,62 @@ final class Card
     }
 
     /**
+     * Restores a card saved with toArray() (history). Null when the data is not a card.
+     *
+     * @param array<mixed> $data
+     */
+    public static function fromArray(array $data): ?self
+    {
+        $request = $data['request'] ?? null;
+        if (
+            ! is_string($data['id'] ?? null) || ! is_string($data['project'] ?? null)
+            || ! is_array($request) || ! is_string($request['id'] ?? null)
+            || ! is_float($data['created_at'] ?? null) || ! is_array($data['payloads'] ?? null)
+        ) {
+            return null;
+        }
+
+        $card = new self(
+            id: $data['id'],
+            project: $data['project'],
+            request: [
+                'id' => $request['id'],
+                'kind' => is_string($request['kind'] ?? null) ? $request['kind'] : 'unknown',
+                'label' => is_string($request['label'] ?? null) ? $request['label'] : '',
+                'started_at' => is_float($request['started_at'] ?? null) ? $request['started_at'] : $data['created_at'],
+            ],
+            hostname: is_string($data['hostname'] ?? null) ? $data['hostname'] : '',
+            phpVersion: is_string($data['php_version'] ?? null) ? $data['php_version'] : '',
+            createdAt: $data['created_at'],
+        );
+
+        foreach ($data['payloads'] as $payload) {
+            if (is_array($payload) && is_string($payload['type'] ?? null) && is_array($payload['content'] ?? null)) {
+                $origin = $payload['origin'] ?? null;
+                $card->payloads[] = new Payload(
+                    $payload['type'],
+                    self::withStringKeys($payload['content']),
+                    is_array($origin) && is_string($origin['file'] ?? null) && is_int($origin['line'] ?? null) ? [
+                        'file' => $origin['file'],
+                        'line' => $origin['line'],
+                        'function' => is_string($origin['function'] ?? null) ? $origin['function'] : null,
+                        'class' => is_string($origin['class'] ?? null) ? $origin['class'] : null,
+                    ] : null,
+                );
+            }
+        }
+
+        $card->color = is_string($data['color'] ?? null) ? $data['color'] : null;
+        $card->label = is_string($data['label'] ?? null) ? $data['label'] : null;
+        $card->size = is_string($data['size'] ?? null) ? $data['size'] : 'normal';
+        $card->hidden = ($data['hidden'] ?? false) === true;
+        $card->expand = is_array($data['expand'] ?? null) ? self::withStringKeys($data['expand']) : null;
+        $card->updatedAt = is_float($data['updated_at'] ?? null) ? $data['updated_at'] : $card->createdAt;
+
+        return $card;
+    }
+
+    /**
      * Applies one payload. Content payloads are appended; update payloads change the card.
      * A "remove" payload is handled by the store, not here.
      */
@@ -118,6 +174,15 @@ final class Card
             'created_at' => $this->createdAt,
             'updated_at' => $this->updatedAt,
         ];
+    }
+
+    /**
+     * @param array<mixed> $values
+     * @return array<string, mixed>
+     */
+    private static function withStringKeys(array $values): array
+    {
+        return array_filter($values, is_string(...), ARRAY_FILTER_USE_KEY);
     }
 
     private static function stringContent(Payload $payload, string $key): ?string

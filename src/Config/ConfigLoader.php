@@ -27,6 +27,7 @@ final class ConfigLoader
         'remote_path' => 'PEEP_REMOTE_PATH',
         'local_path' => 'PEEP_LOCAL_PATH',
         'serializer' => 'PEEP_SERIALIZER',
+        'token' => 'PEEP_TOKEN',
     ];
 
     private const MAX_PARENT_LEVELS = 64;

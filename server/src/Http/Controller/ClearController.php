@@ -9,6 +9,7 @@ use Amp\Http\Server\RequestHandler;
 use Amp\Http\Server\Response;
 use ShibbirWeb\PeepServer\Card\CardStore;
 use ShibbirWeb\PeepServer\Event\EventHub;
+use ShibbirWeb\PeepServer\Http\JsonBody;
 use ShibbirWeb\PeepServer\Http\Responses;
 
 /**
@@ -23,8 +24,7 @@ final readonly class ClearController implements RequestHandler
 
     public function handleRequest(Request $request): Response
     {
-        $data = json_decode($request->getBody()->buffer(limit: 65536), true);
-        $project = is_array($data) && is_string($data['project'] ?? null) && $data['project'] !== '' ? $data['project'] : null;
+        $project = JsonBody::project(JsonBody::read($request));
 
         $this->hub->publish($this->cards->clear($project));
 

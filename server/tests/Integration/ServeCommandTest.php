@@ -15,6 +15,28 @@ final class ServeCommandTest extends TestCase
 {
     private const string BINARY = __DIR__ . '/../../bin/peep-server';
 
+    private string $configDirectory;
+
+    protected function setUp(): void
+    {
+        // The started viewers must not read or write the developer's own settings and history.
+        $this->configDirectory = sys_get_temp_dir() . '/peep-serve-' . bin2hex(random_bytes(6));
+        putenv('PEEP_CONFIG_DIR=' . $this->configDirectory);
+    }
+
+    protected function tearDown(): void
+    {
+        putenv('PEEP_CONFIG_DIR');
+
+        foreach (glob($this->configDirectory . '/*') ?: [] as $file) {
+            unlink($file);
+        }
+
+        if (is_dir($this->configDirectory)) {
+            rmdir($this->configDirectory);
+        }
+    }
+
     public function testStartsDetectsItselfAndStopsOnSigint(): void
     {
         if (! function_exists('posix_kill') && ! function_exists('proc_terminate')) {

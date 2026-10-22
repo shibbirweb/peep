@@ -7,7 +7,7 @@ namespace ShibbirWeb\PeepServer\Switch;
 /**
  * Capture switches per project, sent to clients with every envelope answer and from
  * GET /_peep/switches. Each switch is "on", "off" or "default" (follow the app's config).
- * The toolbar that changes them is VF-25.
+ * The viewer's toolbar changes them (POST /_peep/ui/switches).
  */
 final class SwitchStore
 {
@@ -24,6 +24,24 @@ final class SwitchStore
      * @var array<string, array<string, string|int|null>>
      */
     private array $projects = [];
+
+    /**
+     * @param array<string, array<string, string|int|null>> $saved Switches from the settings file.
+     */
+    public function __construct(array $saved = [])
+    {
+        foreach ($saved as $project => $switches) {
+            $this->update($project, $switches);
+        }
+    }
+
+    /**
+     * @return array<string, array<string, string|int|null>> Every project that has switches set.
+     */
+    public function all(): array
+    {
+        return $this->projects;
+    }
 
     /**
      * @return array<string, string|int|null>

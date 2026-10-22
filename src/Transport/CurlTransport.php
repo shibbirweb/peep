@@ -30,12 +30,21 @@ final class CurlTransport implements TransportInterface
      */
     private $timeoutMs;
 
-    public function __construct(string $host, int $port, int $connectTimeoutMs, int $timeoutMs)
+    /**
+     * @var string|null
+     */
+    private $token;
+
+    /**
+     * @param string|null $token Sent as X-Peep-Token; header-safe (checked by Config).
+     */
+    public function __construct(string $host, int $port, int $connectTimeoutMs, int $timeoutMs, ?string $token = null)
     {
         $this->host = $host;
         $this->port = $port;
         $this->connectTimeoutMs = $connectTimeoutMs;
         $this->timeoutMs = $timeoutMs;
+        $this->token = $token;
     }
 
     public function post(string $path, string $body): TransportResponse
@@ -64,13 +73,19 @@ final class CurlTransport implements TransportInterface
             ]);
         }
 
+        $headers = [
+            'Content-Type: application/json',
+            'Accept: application/json',
+            'Expect:',
+        ];
+
+        if ($this->token !== null) {
+            $headers[] = 'X-Peep-Token: ' . $this->token;
+        }
+
         curl_setopt_array($handle, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => [
-                'Content-Type: application/json',
-                'Accept: application/json',
-                'Expect:',
-            ],
+            CURLOPT_HTTPHEADER => $headers,
             CURLOPT_USERAGENT => 'peep-php/' . Version::VERSION,
             CURLOPT_CONNECTTIMEOUT_MS => $this->connectTimeoutMs,
             CURLOPT_TIMEOUT_MS => $this->timeoutMs,

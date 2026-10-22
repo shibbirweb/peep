@@ -23,7 +23,15 @@ All Peep endpoints are under `/_peep/`, so provider-compatible paths (Mailgun, T
 | `GET /_peep/switches?project={project}` | Read the switches for a project | `200` |
 | `GET /_peep/locks/{name}` | Poll a pause lock (created by a `lock` payload) | `200` |
 
-When the viewer is started with a token (needed when it listens on anything other than `127.0.0.1`), every request must send it in the `X-Peep-Token` header; otherwise the answer is `401`.
+Requests from the viewer's own machine need nothing else. Requests from other machines (including Docker on Linux, which connects through the bridge network) are accepted only when the viewer has a token in its settings (needed before it listens on anything other than loopback), only on the four endpoints above, and only with that token in the `X-Peep-Token` header:
+
+| Situation | Answer |
+|-----------|--------|
+| Other machine, viewer has no token | `403` `remote_disabled` |
+| Other machine, any other path (UI, stream, UI actions) | `403` `local_only` |
+| Other machine, missing or wrong token | `401` `invalid_token` |
+
+The client sends `X-Peep-Token` when its `token` option (`PEEP_TOKEN`) is set.
 
 ### Health
 
@@ -56,6 +64,8 @@ Response `202`:
 
 `400` with `{"error": "...", "message": "..."}` when the envelope is invalid; `413` when it is larger than 8 MB.
 
+While the user has paused receiving in the viewer, the answer is still `202`, with `"accepted": false, "paused": true` and the switches: the envelope is dropped, and a `lock` in it is not created (the app's `pause()` goes on at once).
+
 ### Switches
 
 ```http
@@ -82,6 +92,22 @@ GET /_peep/locks/a3f9c2d17b4e8a10
 - `404`: unknown or expired lock; the client continues.
 
 Clients poll every 500 ms. Locks expire after one hour.
+
+### Viewer UI endpoints
+
+These serve the viewer's own page and are not part of the client contract; they are listed so other tools (the desktop app) can use them. They answer only to this machine, and every `POST` needs the `X-Peep-UI: 1` header.
+
+| Method and path | Purpose |
+|-----------------|---------|
+| `GET /_peep/stream` | Server-Sent Events: `snapshot` first (cards, projects, active locks, switches, receiving state, screens, public settings), then `card.created`, `card.updated`, `card.removed`, `screen.cleared`, `screen.archived`, `lock.released`, `switches.changed`, `receiving.changed`, `settings.changed`, `app.command` |
+| `POST /_peep/ui/clear` | `{"project": "shop"}`, or `null` for every project |
+| `POST /_peep/ui/locks/{name}/continue`, `.../stop` | Release a pause lock |
+| `POST /_peep/ui/switches` | `{"project": "shop", "switches": {"queries": "on"}}`; saved in the settings |
+| `POST /_peep/ui/receiving` | `{"paused": true}` |
+| `POST /_peep/ui/screens` | `{"project": "shop"}`: move the cards to a previous screen |
+| `GET /_peep/ui/screens/{id}` | A previous screen with its cards (the last 10 per project are kept, in memory) |
+| `GET /_peep/ui/settings` | Settings, with the token, where history is kept and which changes need a restart |
+| `POST /_peep/ui/settings` | `{"changes": {...}}`; `422` with `setting` and `message` when a value is invalid |
 
 ## Envelope format
 

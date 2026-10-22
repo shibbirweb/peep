@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ShibbirWeb\PeepServer\Console;
 
 use InvalidArgumentException;
+use ShibbirWeb\PeepServer\Settings\Settings;
 
 /**
  * Options of `peep-server serve`.
@@ -23,10 +24,11 @@ final readonly class ServeOptions
 
     /**
      * @param list<string> $arguments Command-line arguments after the command name.
+     * @param Settings $settings Host, port and display mode when the arguments do not set them.
      *
      * @throws InvalidArgumentException
      */
-    public static function fromArguments(array $arguments): self
+    public static function fromArguments(array $arguments, Settings $settings = new Settings()): self
     {
         $values = [];
 
@@ -41,18 +43,18 @@ final readonly class ServeOptions
             $values[$matches[1]] = $matches[2] ?? $arguments[++$index] ?? '';
         }
 
-        $port = filter_var($values['port'] ?? self::DEFAULT_PORT, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 65535]]);
+        $port = filter_var($values['port'] ?? $settings->port, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 65535]]);
         if ($port === false) {
             throw new InvalidArgumentException('--port must be a number from 1 to 65535.');
         }
 
-        $open = OpenMode::tryFrom($values['open'] ?? OpenMode::Browser->value)
+        $open = OpenMode::tryFrom($values['open'] ?? $settings->displayMode->value)
             ?? throw new InvalidArgumentException('--open must be browser, window or none.');
 
-        $host = trim($values['host'] ?? self::DEFAULT_HOST);
-        if (! self::isLoopback($host)) {
-            // Listening beyond this machine needs the access token (VF-20, Phase 6).
-            throw new InvalidArgumentException('--host must be a loopback address (127.0.0.1, localhost or ::1) until token support is added.');
+        $host = trim($values['host'] ?? $settings->host);
+        if (! self::isLoopback($host) && $settings->token === null) {
+            // Other machines could then send to (and with Docker on Linux, reach) the viewer.
+            throw new InvalidArgumentException('Listening on ' . $host . ' needs a token. Set one in the Peep settings first, or use 127.0.0.1.');
         }
 
         return new self($host, $port, $open);

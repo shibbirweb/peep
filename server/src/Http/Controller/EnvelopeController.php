@@ -10,6 +10,7 @@ use Amp\Http\Server\Request;
 use Amp\Http\Server\RequestHandler;
 use Amp\Http\Server\Response;
 use ShibbirWeb\PeepServer\Card\CardStore;
+use ShibbirWeb\PeepServer\Card\Receiving;
 use ShibbirWeb\PeepServer\Event\EventHub;
 use ShibbirWeb\PeepServer\Http\Responses;
 use ShibbirWeb\PeepServer\Lock\LockRegistry;
@@ -30,6 +31,7 @@ final readonly class EnvelopeController implements RequestHandler
         private EventHub $hub,
         private LockRegistry $locks,
         private SwitchStore $switches,
+        private Receiving $receiving = new Receiving(),
     ) {}
 
     public function handleRequest(Request $request): Response
@@ -51,6 +53,10 @@ final readonly class EnvelopeController implements RequestHandler
                 'message' => $exception->getMessage(),
                 'supported' => [EnvelopeDecoder::PROTOCOL],
             ]);
+        }
+
+        if ($this->receiving->paused) {
+            return Responses::json(202, ['accepted' => false, 'paused' => true, ...$this->switches->answer($envelope->project)]);
         }
 
         $now = microtime(true);

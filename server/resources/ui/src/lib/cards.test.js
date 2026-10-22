@@ -56,3 +56,14 @@ describe('applyEvent', () => {
 test('projectsOf lists each project once, sorted', () => {
   expect(projectsOf([card('a', 'shop'), card('b', 'blog'), card('c', 'shop')])).toEqual(['blog', 'shop']);
 });
+
+test('the limit is per project, so a busy project keeps a quiet one on the page', () => {
+  let cards = applyEvent([], 'card.created', card('quiet', 'blog'), 3);
+
+  for (let index = 0; index < 5; index++) {
+    cards = applyEvent(cards, 'card.created', card(`busy-${index}`, 'shop'), 3);
+  }
+
+  expect(cards.map((c) => c.id)).toEqual(['busy-4', 'busy-3', 'busy-2', 'quiet']);
+  expect(applyEvent([], 'snapshot', { cards: [card('a', 'blog'), card('b'), card('c'), card('d')] }, 2).map((c) => c.id)).toEqual(['d', 'c', 'a']);
+});

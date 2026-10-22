@@ -10,9 +10,12 @@ use Amp\Http\Server\RequestHandler;
 use Amp\Http\Server\Response;
 use ShibbirWeb\PeepServer\Card\Card;
 use ShibbirWeb\PeepServer\Card\CardStore;
+use ShibbirWeb\PeepServer\Card\Receiving;
 use ShibbirWeb\PeepServer\Event\EventHub;
 use ShibbirWeb\PeepServer\Event\ServerEvent;
 use ShibbirWeb\PeepServer\Lock\LockRegistry;
+use ShibbirWeb\PeepServer\Settings\SettingsStore;
+use ShibbirWeb\PeepServer\Switch\SwitchStore;
 
 /**
  * GET /_peep/stream: Server-Sent Events for the UI.
@@ -23,12 +26,13 @@ use ShibbirWeb\PeepServer\Lock\LockRegistry;
  */
 final readonly class StreamController implements RequestHandler
 {
-    public const int SNAPSHOT_LIMIT = 2000;
-
     public function __construct(
         private CardStore $cards,
         private EventHub $hub,
         private LockRegistry $locks,
+        private SwitchStore $switches = new SwitchStore(),
+        private Receiving $receiving = new Receiving(),
+        private SettingsStore $settings = new SettingsStore(),
     ) {}
 
     public function handleRequest(Request $request): Response
@@ -72,9 +76,13 @@ final readonly class StreamController implements RequestHandler
     private function snapshot(): ServerEvent
     {
         return new ServerEvent('snapshot', [
-            'cards' => array_map(static fn(Card $card): array => $card->toArray(), $this->cards->cards(limit: self::SNAPSHOT_LIMIT)),
+            'cards' => array_map(static fn(Card $card): array => $card->toArray(), $this->cards->cards(limit: $this->settings->settings->maxCards)),
             'projects' => $this->cards->projects(),
             'active_locks' => $this->locks->active(microtime(true)),
+            'switches' => $this->switches->all(),
+            'receiving_paused' => $this->receiving->paused,
+            'screens' => $this->cards->screens(),
+            'settings' => $this->settings->public(),
         ], $this->hub->lastId());
     }
 }

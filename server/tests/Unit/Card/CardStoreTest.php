@@ -173,8 +173,9 @@ final class CardStoreTest extends TestCase
         $events = $store->apply(self::envelope('d', 'blog', [
             ['type' => 'new_screen', 'content' => ['title' => 'Checkout'], 'origin' => ['file' => '/app/a.php', 'line' => 1]],
         ]), 4.0);
-        $this->assertSame(['screen.cleared', 'card.created'], self::names($events));
+        $this->assertSame(['screen.archived', 'screen.cleared', 'card.created'], self::names($events));
         $this->assertSame(['d'], array_map(static fn($card) => $card->id, $store->cards('blog')));
+        $this->assertSame(1, $store->screens('blog')[0]['count'], 'The previous cards are archived.');
 
         $events = $store->apply(self::envelope('e', 'shop', [['type' => 'clear_all', 'content' => [], 'origin' => null]]), 5.0);
         $this->assertSame(['project' => null], $events[0]->data);
@@ -182,6 +183,32 @@ final class CardStoreTest extends TestCase
 
         $events = $store->apply(self::envelope('f', 'shop', [['type' => 'show_app', 'content' => [], 'origin' => null]]), 6.0);
         $this->assertSame(['app.command'], self::names($events));
+    }
+
+    public function testNewScreensKeepTheLastTenArchives(): void
+    {
+        $store = new CardStore();
+        $newScreen = static fn(string $title): array => [['type' => 'new_screen', 'content' => ['title' => $title], 'origin' => null]];
+
+        $store->apply(self::envelope('first', payloads: $newScreen('Login')), 1.0);
+        $store->apply(self::envelope('a'), 2.0);
+        $store->apply(self::envelope('second', payloads: $newScreen('Checkout')), 3.0);
+
+        $screens = $store->screens('shop');
+        $this->assertCount(1, $screens);
+        $this->assertSame('Login', $screens[0]['title'], 'An archive keeps the title of the screen it ends.');
+        $this->assertSame(2, $screens[0]['count']);
+        $this->assertSame(['first', 'a'], array_map(static fn($card) => $card->id, $store->screen($screens[0]['id'])['cards'] ?? []));
+
+        for ($index = 0; $index < 12; $index++) {
+            $store->apply(self::envelope('card-' . $index), 10.0 + $index);
+            $store->newScreen('shop', 'Screen ' . $index, 10.5 + $index);
+        }
+
+        $this->assertCount(CardStore::MAX_SCREENS, $store->screens('shop'));
+        $this->assertSame('Screen 10', $store->screens('shop')[0]['title'], 'Newest first.');
+        $this->assertSame([], $store->cards('shop'));
+        $this->assertNull($store->screen('missing'));
     }
 
     /**
