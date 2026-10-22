@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Bridges for any PHP app: PSR-3 logger (`PeepLogger`, psr/log 1 to 3), Monolog handler (`PeepHandlerFactory::create()`, Monolog 1 to 3), `dump()` and `dd()` to Peep (`DumpHandler`, VarDumper 3.4 to 8.x), opt-in VarDumper casters for values (`serializer: var-dumper`), and an error handler for warnings, uncaught exceptions and fatal errors (with PHP 8.5 fatal error backtraces).
+- Global install: `peep.phar install` loads Peep into every script of a PHP install through `auto_prepend_file`; `uninstall` and `status`; projects with Composer keep their own version.
+- Setup guides for plain PHP, Symfony, Slim, WordPress and the global install (`docs/guides/`).
+
 - Laravel adapter (Laravel 5.5 to 13), auto-discovered: watchers for queries (all, by type, slow, duplicate, conditional, counted), events, jobs, cache, HTTP client, views, requests, logs, reported exceptions, mail, dumps and deprecations; request ids per job and command; `peep()->showQueries()` and the other show/stop methods, `model()`, `mailable()`, `markdown()`, `context()`; `->peep()` on collections, strings, query builders and test responses; Blade `@peep`, `@peepAll`, `@peepMeasure`; disabled in production by default.
 - Query debugging follows the viewer's switch while the app runs (`GET /_peep/switches` and envelope answers).
 - Viewer: cards for queries (bindings inlined), query counts, events, jobs, cache, HTTP calls, views, requests, logs and mail previews; query, HTTP and job cards update in place.
@@ -30,3 +34,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Test setup that runs one suite on PHPUnit 7.5 to 12 and fails on any warning, notice or deprecation.
 - Code style (PSR-12 for the client, PER-CS 2.0 for the viewer), PHPStan, and PHPCompatibility for PHP 7.1+.
 - CI for PHP 7.1 to 8.5, the viewer, and a check that Composer installs only client files.
+
+### Fixed
+
+- Peep no longer calls `set_error_handler()` while sending, which on PHP 7 could remove the app's error handler when Peep was called from inside it.
+- The viewer's Host check now covers only the UI and the stream, so apps in Docker can send through `host.docker.internal`.

@@ -23,11 +23,6 @@ final class RecordingTransport implements TransportInterface
     public $failWith;
 
     /**
-     * @var bool Raise a PHP warning while posting, like a failing socket call does.
-     */
-    public $raiseWarning = false;
-
-    /**
      * @var string Body of every envelope answer, e.g. with switches.
      */
     public $postResponseBody = '{"accepted":true}';
@@ -44,10 +39,6 @@ final class RecordingTransport implements TransportInterface
 
     public function post(string $path, string $body): TransportResponse
     {
-        if ($this->raiseWarning) {
-            trigger_error('Simulated socket warning', E_USER_WARNING);
-        }
-
         if ($this->failWith !== null) {
             throw $this->failWith;
         }

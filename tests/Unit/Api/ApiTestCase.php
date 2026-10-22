@@ -50,6 +50,7 @@ abstract class ApiTestCase extends TestCase
     }
 
     /**
+     * @phpstan-impure
      * @return list<array<string, mixed>>
      */
     protected function payloads(): array

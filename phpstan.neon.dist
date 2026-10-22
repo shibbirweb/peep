@@ -25,3 +25,8 @@ parameters:
             # The polyfill declares TestCase twice and loads one at runtime by PHPUnit
             # version; PHPStan runs with a current PHPUnit, so it must see the Gte8 one.
             - vendor/yoast/phpunit-polyfills/src/TestCases/TestCasePHPUnitLte7.php
+        analyse:
+            # The Monolog 1 and 2 handler; analysing it against the installed Monolog 3 is
+            # meaningless (Monolog 3 has PeepLogRecordHandler). It is covered by the test
+            # runs on PHP versions that install Monolog 1 and 2.
+            - src/Bridge/Monolog/PeepHandler.php

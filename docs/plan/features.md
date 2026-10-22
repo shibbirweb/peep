@@ -12,7 +12,7 @@ How each feature works is described in [implementation.md](implementation.md). T
 | VW: Viewer MVP | 2 | 12 / 12 |
 | API: Full client API | 3 | 38 / 38 |
 | LV: Laravel adapter | 4 | 31 / 31 |
-| BR: Bridges for any PHP app | 5 | 0 / 7 |
+| BR: Bridges for any PHP app | 5 | 7 / 7 |
 | VF: Full viewer | 6 | 4 / 25 |
 | MS: Mail and SMS catching | 7 | 0 / 15 |
 | WH: Webhook simulator | 7 | 0 / 13 |
@@ -173,13 +173,13 @@ Objects and helpers:
 
 ## BR: Bridges for any PHP app (Phase 5)
 
-- [ ] BR-01 PSR-3 logger (`PeepLogger`), works with psr/log 1, 2 and 3
-- [ ] BR-02 Monolog handler, Monolog 1, 2 and 3
-- [ ] BR-03 Symfony VarDumper handler (`dump()` / `dd()` to Peep), VarDumper 4.4 to 8.x
-- [ ] BR-04 `VarDumperSerializer` used for values when symfony/var-dumper is installed
-- [ ] BR-05 Error handler for plain PHP: errors, uncaught exceptions, fatal errors on shutdown (with PHP 8.5 fatal error backtraces when available)
-- [ ] BR-06 Global install through `auto_prepend_file` (PHAR plus install command)
-- [ ] BR-07 Setup guides: plain PHP, Symfony, Slim, WordPress
+- [x] BR-01 PSR-3 logger (`PeepLogger`), works with psr/log 1, 2 and 3
+- [x] BR-02 Monolog handler, Monolog 1, 2 and 3 (`PeepHandlerFactory::create()` picks the class)
+- [x] BR-03 Symfony VarDumper handler (`dump()` / `dd()` to Peep, passthrough to the previous handler), VarDumper 3.4 to 8.x
+- [x] BR-04 `VarDumperSerializer`: values shown with VarDumper's casters, opt-in with `serializer: var-dumper` (casters may call code on values)
+- [x] BR-05 Error handler for plain PHP: errors, uncaught exceptions, fatal errors on shutdown (with PHP 8.5 fatal error backtraces when available)
+- [x] BR-06 Global install through `auto_prepend_file` (`peep.phar` with `install`, `uninstall`, `status`; on by default; Composer projects keep their own version)
+- [x] BR-07 Setup guides: plain PHP, Symfony, Slim, WordPress, global install (`docs/guides/`)
 
 ## VF: Full viewer (Phase 6)
 

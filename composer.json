@@ -29,8 +29,16 @@
         "php": ">=7.1"
     },
     "require-dev": {
+        "monolog/monolog": "^1.25 || ^2.0 || ^3.0",
         "phpunit/phpunit": "^7.5.20 || ^8.5.40 || ^9.6 || ^11.5 || ^12.5",
+        "psr/log": "^1.1 || ^2.0 || ^3.0",
+        "symfony/var-dumper": "^3.4 || ^4.4 || ^5.4 || ^6.4 || ^7.0 || ^8.0",
         "yoast/phpunit-polyfills": "^4.0"
+    },
+    "suggest": {
+        "monolog/monolog": "To send Monolog logs to Peep (Monolog 1, 2 or 3)",
+        "psr/log": "To use Peep as a PSR-3 logger",
+        "symfony/var-dumper": "To send dump() and dd() to Peep, and for richer value rendering"
     },
     "autoload": {
         "psr-4": {
@@ -68,7 +76,8 @@
             "@analyse",
             "@compat"
         ],
-        "test:laravel": "phpunit --configuration phpunit.laravel.xml.dist"
+        "test:laravel": "phpunit --configuration phpunit.laravel.xml.dist",
+        "build:phar": "@php -d phar.readonly=0 tools/vendor/bin/box compile --no-interaction"
     },
     "extra": {
         "laravel": {

@@ -26,6 +26,7 @@ final class ConfigLoader
         'project' => 'PEEP_PROJECT',
         'remote_path' => 'PEEP_REMOTE_PATH',
         'local_path' => 'PEEP_LOCAL_PATH',
+        'serializer' => 'PEEP_SERIALIZER',
     ];
 
     private const MAX_PARENT_LEVELS = 64;
@@ -51,11 +52,12 @@ final class ConfigLoader
     }
 
     /**
-     * @param array<string, mixed> $overrides
+     * @param array<string, mixed> $overrides Win over everything (framework adapters).
+     * @param array<string, mixed> $defaults Lose against everything (e.g. the global install enables Peep by default).
      */
-    public function load(array $overrides = []): Config
+    public function load(array $overrides = [], array $defaults = []): Config
     {
-        $options = [];
+        $options = $defaults;
 
         $file = $this->findFile();
         if ($file !== null) {

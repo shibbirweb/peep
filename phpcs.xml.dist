@@ -8,6 +8,8 @@
 
     <file>src</file>
     <file>tests</file>
+    <file>resources</file>
+    <file>bin/peep</file>
 
     <arg name="extensions" value="php"/>
     <arg name="colors"/>

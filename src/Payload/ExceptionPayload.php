@@ -20,12 +20,13 @@ final class ExceptionPayload extends AbstractPayload
 
     /**
      * @param callable(string): string $mapPath Maps container paths to local paths.
+     * @param list<array<string, mixed>>|null $trace Replaces the exception's own trace (fatal errors).
      */
-    public function __construct(Throwable $exception, callable $mapPath, ?Origin $origin = null)
+    public function __construct(Throwable $exception, callable $mapPath, ?Origin $origin = null, ?array $trace = null)
     {
         parent::__construct($origin);
 
-        $this->content = self::describe($exception, $mapPath);
+        $this->content = self::describe($exception, $mapPath, $trace);
 
         $previous = [];
         $current = $exception->getPrevious();
@@ -49,11 +50,12 @@ final class ExceptionPayload extends AbstractPayload
 
     /**
      * @param callable(string): string $mapPath
+     * @param list<array<string, mixed>>|null $trace
      * @return array<string, mixed>
      */
-    private static function describe(Throwable $exception, callable $mapPath): array
+    private static function describe(Throwable $exception, callable $mapPath, ?array $trace = null): array
     {
-        $frames = TracePayload::normalize($exception->getTrace());
+        $frames = TracePayload::normalize($trace !== null ? $trace : $exception->getTrace());
         foreach ($frames as $index => $frame) {
             if ($frame['file'] !== null) {
                 $frames[$index]['file'] = $mapPath($frame['file']);

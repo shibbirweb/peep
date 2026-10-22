@@ -1,0 +1,9 @@
+<?php
+
+// Command line tool of peep.phar (global install). PHP 7.1 syntax, like the client.
+
+use ShibbirWeb\Peep\Install\Installer;
+
+require_once 'phar://peep.phar/resources/global/prepend.php';
+
+exit(Installer::run(array_slice(isset($argv) ? $argv : [], 1), STDOUT, STDERR));

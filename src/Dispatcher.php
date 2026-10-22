@@ -168,10 +168,6 @@ final class Dispatcher
             return null;
         }
 
-        set_error_handler(function () {
-            return true;
-        });
-
         try {
             $response = $this->transport->get($path);
         } catch (TransportException $exception) {
@@ -180,8 +176,6 @@ final class Dispatcher
             return null;
         } catch (Throwable $exception) {
             return null;
-        } finally {
-            restore_error_handler();
         }
 
         if (! $response->isSuccessful()) {
@@ -198,11 +192,10 @@ final class Dispatcher
      */
     private function send(string $card, array $payloads): void
     {
-        // Socket warnings must not reach the app's error handler (frameworks turn them into exceptions).
-        set_error_handler(function () {
-            return true;
-        });
-
+        // No temporary set_error_handler() here: on PHP 7, setting and restoring an error handler
+        // while PHP is running one (peep() called from an app's error handler, or from Laravel
+        // logging a deprecation) makes PHP drop the app's handler. Transports silence their own
+        // socket warnings with @ instead, and everything else is caught below.
         try {
             $body = $this->encoder->encode(new Envelope($card, $payloads, $this->metaFactory->create()));
 
@@ -219,8 +212,6 @@ final class Dispatcher
             $this->availability->markDown($this->endpoint);
         } catch (Throwable $exception) {
             // A bug inside Peep must never break the app.
-        } finally {
-            restore_error_handler();
         }
     }
 }

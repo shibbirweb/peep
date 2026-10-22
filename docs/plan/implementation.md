@@ -99,7 +99,8 @@ PHPUnit 7.5 (the only PHPUnit for PHP 7.1) is affected by advisory PKSA-z3gr-8qh
 3. `client-quality`: PHP 8.5 runner: PHP-CS-Fixer (dry run), PHPStan, PHPCompatibility.
 4. `laravel-tests`: matrix of supported Laravel versions with Orchestra Testbench (decision D1).
 5. `server-tests`: PHP 8.5: tests, PHPStan, PER-CS.
-6. `dist-check` [SU-14]: `git archive HEAD` and assert it contains only `src/`, `config/`, `resources/`, `composer.json`, `LICENSE`, `README.md`, `CHANGELOG.md` (proves `.gitattributes` export-ignore).
+6. `client-phar`: builds `peep.phar` on PHP 8.5, then runs `install`, `uninstall` and an `auto_prepend_file` script with it on PHP 7.1 and 8.5.
+7. `dist-check` [SU-14]: `git archive HEAD` and assert it contains only `src/`, `config/`, `resources/`, `composer.json`, `LICENSE`, `README.md`, `CHANGELOG.md` (proves `.gitattributes` export-ignore).
 
 ## 3. Protocol v1 (Phase 1)
 
@@ -506,11 +507,15 @@ The `QueryExecuted` listener is always registered while Peep is enabled; when th
 |--------|-------|
 | PSR-3 `PeepLogger` [BR-01] | Implements `Psr\Log\LoggerInterface` with untyped parameters and `void` returns where psr/log 3 needs them. On PHP 7.1 only psr/log 1 installs; parameter type widening keeps the same class valid against psr/log 2 and 3 on PHP 8 |
 | Monolog `PeepHandler` [BR-02] | Extends `AbstractProcessingHandler`; one class per Monolog major selected at runtime (`Logger::API` constant: 2 or 3; missing means Monolog 1) because the `write()` signature changed (array record vs `LogRecord`) |
-| VarDumper `DumpHandler` [BR-03, BR-04] | `VarDumper::setHandler()`, chaining the previous handler. `VarDumperSerializer` uses `VarCloner` data when var-dumper is installed (4.4 to 8.x) and converts it to the value tree |
-| `ErrorHandler` [BR-05] | `set_error_handler` and `set_exception_handler`, both chaining previous handlers; `register_shutdown_function` reads `error_get_last()` for `E_ERROR`, `E_PARSE`, `E_CORE_ERROR`, `E_COMPILE_ERROR` and sends it, including the backtrace PHP 8.5 adds to fatal errors when present |
-| Global install [BR-06] | A client PHAR (`peep.phar`, PHP 7.1+) plus `php peep.phar install` which writes a `99-peep.ini` with `auto_prepend_file` into the PHP's scan directory (`php --ini`). The prepended file registers the PHAR autoloader and defines `peep()` only if missing |
+| VarDumper `DumpHandler` [BR-03] | `VarDumper::setHandler()`, chaining the previous handler (passthrough); with no previous handler it prints through VarDumper's default once and puts itself back. VarDumper's own directory is skipped when finding the origin, so cards point at the `dump()` call. The Laravel dump watcher uses the same class |
+| `VarDumperSerializer` [BR-04] | Opt-in (`serializer: var-dumper`), because casters can call code on values. `VarCloner` data is walked by `TreeDumper` (a `DumperInterface`) into the value tree; any failure falls back to Peep's own serializer. Works with VarDumper 3.4 to 8.x |
+| `ErrorHandler` [BR-05] | `set_error_handler` and `set_exception_handler`, both chaining previous handlers (errors silenced by `error_reporting` or `@` are sent, marked `silenced`); `register_shutdown_function` reads `error_get_last()` for `E_ERROR`, `E_PARSE`, `E_CORE_ERROR`, `E_COMPILE_ERROR`, `E_USER_ERROR` and sends an exception card. PHP 8.5 adds a `trace` key there (`fatal_error_backtraces`), used as the card's frames; older versions get no frames rather than the shutdown handler's own |
+| Global install [BR-06] | A client PHAR (`build/peep.phar`, PHP 7.1+, built with Box from `box.json.dist`, `composer build:phar`). Its stub runs `bin/peep` (install, uninstall, status, version) when executed and the prepend file when loaded through `auto_prepend_file`. `install` copies the PHAR to `~/.peep/peep.phar` and writes `99-peep.ini` (with a marker line) into the ini scan directory; it refuses to replace another `auto_prepend_file` without `--force`; `uninstall` removes only a file with the marker. The `PEEP_GLOBAL_INSTALL` constant makes Peep enabled by default (lowest priority: `peep.php` and `PEEP_ENABLED` still win) |
+| Setup guides [BR-07] | `docs/guides/`: plain PHP, Symfony, Slim, WordPress, global install |
 
-Global install versus a project that also requires `shibbirweb/peep`: Composer registers its autoloader with `prepend = true`, so the project's own version of the classes wins; the global `peep()` function is a thin wrapper around `PeepFactory`, so it works with either version.
+Global install versus a project that also requires `shibbirweb/peep`: the prepend file registers a lazy autoloader for `ShibbirWeb\Peep\` classes (appended), and Composer registers its own with `prepend = true`, so the project's version of the classes wins. `peep()` from the PHAR is defined first but only calls `PeepFactory`, so it works with either version.
+
+PHP 7 lesson from this phase: never call `set_error_handler()` inside Peep's send path. On PHP 7, calling it from inside a running error handler and then restoring loses the app's handler, so a framework that logs a deprecation through Peep would stop handling errors. The dispatcher suppresses transport warnings with `@` and checks results instead.
 
 ## 10. Mail and SMS catching (Phase 7)
 
@@ -677,7 +682,7 @@ One tag `vX.Y.Z` releases everything [RL-03]:
 The viewer listens on the developer's machine, and any web page in a browser can try to send requests to `localhost`. These rules stop that.
 
 - **Bind to `127.0.0.1`** by default. Binding elsewhere (Docker, remote) requires a `token`; clients send it as `X-Peep-Token`.
-- **HostGuard:** the `Host` header must be `127.0.0.1`, `localhost`, `[::1]` or the configured host, with the right port. Blocks DNS-rebinding attacks.
+- **HostGuard:** for the UI, its assets, the stream and UI actions, the `Host` header must be `127.0.0.1`, `localhost`, `[::1]` or the configured host, with the right port. Blocks DNS-rebinding attacks. The client API (`/_peep/envelope`, `/_peep/switches`, `/_peep/health`, `GET /_peep/locks/{name}`) skips it, so apps in Docker can use `host.docker.internal`: a rebinding page can only read switch states, lock states and the version there, and cannot post envelopes because browsers send `Origin` with every POST.
 - **OriginGuard:** requests with an `Origin` header (browsers) are accepted only from the viewer's own origin or the Tauri origin. Server-side clients (PHP) send no `Origin`, so ingest still works; a random web page cannot post envelopes, trigger webhooks or change settings.
 - **UI actions** additionally require the `X-Peep-UI` header (a custom header forces a CORS preflight, which the viewer refuses for foreign origins).
 - **HTML from apps** (mail bodies, `html()` payloads) is rendered only in sandboxed iframes without `allow-same-origin`, so it cannot call the viewer's API.

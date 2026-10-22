@@ -2,7 +2,7 @@
 
 Debug any PHP app in a separate window. Call `peep($value)` anywhere and see values, database queries, jobs, logs and exceptions live, in your browser or in a desktop app. Peep also catches the mail and SMS your app sends and can simulate provider webhooks back to it.
 
-> **Status: early development.** Nothing is released yet. The client, the browser viewer and the Laravel integration work; other framework bridges, mail and SMS catching and the desktop app are in progress. Progress is tracked in [docs/plan/features.md](docs/plan/features.md).
+> **Status: early development.** Nothing is released yet. The client, the browser viewer, the Laravel integration and the bridges for other PHP apps work; the full viewer, mail and SMS catching and the desktop app are in progress. Progress is tracked in [docs/plan/features.md](docs/plan/features.md).
 
 ## Planned features
 
@@ -59,8 +59,12 @@ collect($rows)->peep()->map(...);
 
 Logs, reported exceptions, `dump()` and sent mail show up without any call. Publish the config with `php artisan vendor:publish --tag=peep-config`.
 
+Any other PHP app: see the [setup guides](docs/guides/README.md) for plain PHP, Symfony, Slim, WordPress and the global install (`peep()` in every script, no Composer).
+
 ## Documentation
 
+- [Setup guides](docs/guides/README.md)
+- [Protocol](docs/protocol.md)
 - [Roadmap](docs/plan/roadmap.md)
 - [Feature list](docs/plan/features.md)
 - [Implementation plan](docs/plan/implementation.md)

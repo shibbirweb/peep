@@ -4,6 +4,9 @@
 # Keep everything except the client out of the archive Composer downloads,
 # so `composer require shibbirweb/peep` installs only the client.
 /.github                export-ignore
+/bin                    export-ignore
+/resources/global       export-ignore
+/box.json.dist          export-ignore
 /desktop                export-ignore
 /docs                   export-ignore
 /server                 export-ignore

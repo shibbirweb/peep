@@ -76,6 +76,11 @@ final class Config
     private $redactKeys;
 
     /**
+     * @var string "peep" or "var-dumper"
+     */
+    private $serializer;
+
+    /**
      * @param array<string, mixed> $options
      */
     private function __construct(array $options)
@@ -95,10 +100,11 @@ final class Config
         $this->maxStringLength = self::toIntInRange($options['max_string_length'], $defaults['max_string_length'], 1, 10000000);
         $this->maxNodes = self::toIntInRange($options['max_nodes'], $defaults['max_nodes'], 1, 1000000);
         $this->redactKeys = self::toKeyList($options['redact_keys'], $defaults['redact_keys']);
+        $this->serializer = in_array($options['serializer'], ['peep', 'var-dumper'], true) ? $options['serializer'] : 'peep';
     }
 
     /**
-     * @return array{enabled: bool, host: string, port: int, connect_timeout_ms: int, timeout_ms: int, project: string, remote_path: null, local_path: null, max_depth: int, max_items: int, max_string_length: int, max_nodes: int, redact_keys: list<string>}
+     * @return array{enabled: bool, host: string, port: int, connect_timeout_ms: int, timeout_ms: int, project: string, remote_path: null, local_path: null, max_depth: int, max_items: int, max_string_length: int, max_nodes: int, redact_keys: list<string>, serializer: string}
      */
     public static function defaults(): array
     {
@@ -125,6 +131,7 @@ final class Config
                 'authorization',
                 'cookie',
             ],
+            'serializer' => 'peep',
         ];
     }
 
@@ -218,6 +225,14 @@ final class Config
     public function redactKeys(): array
     {
         return $this->redactKeys;
+    }
+
+    /**
+     * "peep" (default: never calls code on the value) or "var-dumper" (Symfony casters).
+     */
+    public function serializer(): string
+    {
+        return $this->serializer;
     }
 
     /**

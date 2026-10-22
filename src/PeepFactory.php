@@ -2,6 +2,7 @@
 
 namespace ShibbirWeb\Peep;
 
+use ShibbirWeb\Peep\Bridge\VarDumper\VarDumperSerializer;
 use ShibbirWeb\Peep\Config\Config;
 use ShibbirWeb\Peep\Config\ConfigLoader;
 use ShibbirWeb\Peep\Context\ExecutionContext;
@@ -63,6 +64,10 @@ final class PeepFactory
             $config->project()
         );
 
+        if ($serializer === null && $config->serializer() === 'var-dumper' && VarDumperSerializer::isAvailable()) {
+            $serializer = new VarDumperSerializer($config);
+        }
+
         $this->services = new Services(
             $dispatcher,
             $serializer !== null ? $serializer : $valueSerializer,
@@ -77,7 +82,10 @@ final class PeepFactory
     public static function instance(): self
     {
         if (self::$instance === null) {
-            self::$instance = new self((new ConfigLoader())->load());
+            // The global install (auto_prepend_file) is only on developer machines: there Peep
+            // is on unless peep.php or PEEP_ENABLED says otherwise.
+            $defaults = defined('PEEP_GLOBAL_INSTALL') ? ['enabled' => true] : [];
+            self::$instance = new self((new ConfigLoader())->load([], $defaults));
         }
 
         return self::$instance;

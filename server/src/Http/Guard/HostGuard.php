@@ -11,11 +11,15 @@ use Amp\Http\Server\Response;
 use ShibbirWeb\PeepServer\Http\Responses;
 
 /**
- * Rejects requests whose Host header is not the viewer itself.
+ * Rejects browser-facing requests whose Host header is not the viewer itself.
  *
  * A web page can make the browser resolve its own domain to 127.0.0.1 (DNS rebinding)
- * and then talk to the viewer as a "same origin" page. Such requests still carry the
+ * and then read the viewer as a "same origin" page. Such requests still carry the
  * attacker's domain in Host, so checking Host stops them.
+ *
+ * The client API is not checked: apps in Docker or a VM reach the viewer through names
+ * such as host.docker.internal. It holds nothing a page could read (envelopes are only
+ * written, and browsers send Origin with every POST, which OriginGuard checks).
  */
 final readonly class HostGuard implements Middleware
 {
@@ -29,11 +33,20 @@ final readonly class HostGuard implements Middleware
         $this->allowedHosts = array_values(array_unique(['127.0.0.1', 'localhost', '[::1]', strtolower($bindHost)]));
     }
 
+    /**
+     * Endpoints apps call; everything else (UI, assets, stream, UI actions) is checked.
+     */
+    private const array CLIENT_PATHS = ['/_peep/envelope', '/_peep/switches', '/_peep/health'];
+
+    private const string LOCK_POLL_PREFIX = '/_peep/locks/';
+
     public function handleRequest(Request $request, RequestHandler $requestHandler): Response
     {
         $host = strtolower(trim((string) $request->getHeader('host')));
+        $path = $request->getUri()->getPath();
+        $isClientApi = in_array($path, self::CLIENT_PATHS, true) || str_starts_with($path, self::LOCK_POLL_PREFIX);
 
-        if (! $this->isAllowed($host)) {
+        if (! $isClientApi && ! $this->isAllowed($host)) {
             return Responses::error(421, 'invalid_host', 'This server only answers to its own address.');
         }
 

@@ -115,11 +115,14 @@ class PeepServiceProvider extends ServiceProvider
             'project' => self::project($app, $settings),
             'remote_path' => $settings['remote_path'],
             'local_path' => $settings['local_path'],
+            'serializer' => $settings['serializer'],
         ]);
 
-        $serializer = ValueSerializer::fromConfig($config)
-            ->withCaster(new CollectionCaster())
-            ->withCaster(new ModelCaster());
+        // The Laravel casters (models without queries, collections) apply to Peep's serializer;
+        // with "var-dumper" the factory uses VarDumper's casters instead.
+        $serializer = $config->serializer() === 'peep'
+            ? ValueSerializer::fromConfig($config)->withCaster(new CollectionCaster())->withCaster(new ModelCaster())
+            : null;
 
         return new PeepFactory($config, $transport, $serializer);
     }
@@ -180,6 +183,7 @@ class PeepServiceProvider extends ServiceProvider
             'project' => null,
             'remote_path' => null,
             'local_path' => null,
+            'serializer' => 'peep',
         ];
     }
 

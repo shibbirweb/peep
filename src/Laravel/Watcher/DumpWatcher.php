@@ -2,57 +2,30 @@
 
 namespace ShibbirWeb\Peep\Laravel\Watcher;
 
+use ShibbirWeb\Peep\Bridge\VarDumper\DumpHandler;
+
 /**
  * dump() and dd() calls also go to Peep. With "dumps_passthrough" (default) the dump
  * still appears where it normally does.
  */
 final class DumpWatcher extends AbstractWatcher
 {
-    private const VAR_DUMPER = 'Symfony\\Component\\VarDumper\\VarDumper';
-
-    /**
-     * @var callable|null
-     */
-    private $previous;
-
     public function isSupported(): bool
     {
-        return class_exists(self::VAR_DUMPER);
+        return DumpHandler::isAvailable();
     }
 
     public function register($app): void
     {
-        $class = self::VAR_DUMPER;
+        $passthrough = ! isset($this->config['dumps_passthrough']) || (bool) $this->config['dumps_passthrough'];
 
-        $this->previous = $class::setHandler(function ($value, ...$rest) use ($class) {
-            if ($this->isOn()) {
-                $this->peep()->send($value)->label('dump()');
-            }
-
-            if (! $this->passthrough()) {
-                return;
-            }
-
-            if ($this->previous !== null) {
-                call_user_func($this->previous, $value, ...$rest);
-
-                return;
-            }
-
-            // No earlier handler: let VarDumper print with its default handler, then put ours back.
-            $ours = $class::setHandler(null);
-            $class::dump($value);
-            $class::setHandler($ours);
+        DumpHandler::register($passthrough, $this->factory, function () {
+            return $this->isOn();
         });
     }
 
     protected function configKey(): string
     {
         return 'send_dumps';
-    }
-
-    private function passthrough(): bool
-    {
-        return ! isset($this->config['dumps_passthrough']) || (bool) $this->config['dumps_passthrough'];
     }
 }

@@ -20,6 +20,10 @@ return [
     'remote_path' => env('PEEP_REMOTE_PATH'),
     'local_path' => env('PEEP_LOCAL_PATH'),
 
+    // "peep" never calls code on the values it shows. "var-dumper" uses Symfony VarDumper's
+    // casters (richer for Doctrine, Carbon, DOM, ...), which may call methods on values.
+    'serializer' => env('PEEP_SERIALIZER', 'peep'),
+
     // Queries. "queries" shows every query (filtered by "query_types"); slow and duplicate
     // queries can be shown on their own. The viewer's query switch overrides these while it runs.
     'send_queries' => env('PEEP_QUERIES', false),

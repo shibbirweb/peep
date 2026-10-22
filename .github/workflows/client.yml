@@ -50,7 +50,9 @@ jobs:
           tools: none
 
       - name: Lint every client file with PHP 7.1
-        run: find src tests -name '*.php' -print0 | xargs -0 -n1 php -l
+        run: |
+          find src tests resources -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l bin/peep
 
   quality:
     name: Code style, static analysis, compatibility
@@ -86,3 +88,71 @@ jobs:
 
       - name: Check export-ignore
         run: bash .github/scripts/check-dist.sh
+
+  phar:
+    name: Build peep.phar (global install)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+          ini-values: phar.readonly=0
+          tools: composer:v2
+
+      - name: Install Box
+        run: composer install --working-dir=tools --prefer-dist --no-interaction --no-progress
+
+      - name: Compile
+        run: tools/vendor/bin/box compile --no-interaction
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: peep.phar
+          path: build/peep.phar
+          if-no-files-found: error
+
+  phar-smoke:
+    name: peep.phar on PHP ${{ matrix.php }}
+    needs: phar
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.1', '8.5']
+    steps:
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          ini-values: error_reporting=-1, display_errors=On
+          tools: none
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: peep.phar
+
+      - name: Command line tool
+        run: |
+          php peep.phar version
+          mkdir -p "$RUNNER_TEMP/home" "$RUNNER_TEMP/conf.d"
+          HOME="$RUNNER_TEMP/home" php peep.phar install --ini-dir="$RUNNER_TEMP/conf.d"
+          test -f "$RUNNER_TEMP/home/.peep/peep.phar"
+          grep -q auto_prepend_file "$RUNNER_TEMP/conf.d/99-peep.ini"
+          HOME="$RUNNER_TEMP/home" php peep.phar uninstall --ini-dir="$RUNNER_TEMP/conf.d"
+          test ! -f "$RUNNER_TEMP/conf.d/99-peep.ini"
+
+      - name: Loaded through auto_prepend_file
+        run: |
+          cat > script.php <<'PHP'
+          <?php
+          if (! function_exists('peep')) {
+              fwrite(STDERR, "peep() is missing\n");
+              exit(1);
+          }
+          peep('hello from CI');
+          echo (new ReflectionClass('ShibbirWeb\\Peep\\Peep'))->getFileName(), "\n";
+          PHP
+          php -d auto_prepend_file="$PWD/peep.phar" script.php | grep -q '^phar://'

@@ -29,6 +29,19 @@ final class GuardTest extends TestCase
         }
     }
 
+    public function testHostGuardLetsAppsInDockerReachTheClientApi(): void
+    {
+        $guard = new HostGuard('127.0.0.1', 23517);
+        $docker = ['host' => 'host.docker.internal:23517'];
+
+        $this->assertSame(200, $this->statusOf($guard, $this->request('POST', '/_peep/envelope', $docker)));
+        $this->assertSame(200, $this->statusOf($guard, $this->request('GET', '/_peep/switches', $docker)));
+        $this->assertSame(200, $this->statusOf($guard, $this->request('GET', '/_peep/locks/abc', $docker)));
+        $this->assertSame(421, $this->statusOf($guard, $this->request('GET', '/_peep/stream', $docker)), 'The stream stays protected.');
+        $this->assertSame(421, $this->statusOf($guard, $this->request('GET', '/', $docker)));
+        $this->assertSame(421, $this->statusOf($guard, $this->request('POST', '/_peep/ui/clear', $docker)));
+    }
+
     public function testOriginGuardAllowsRequestsWithoutOriginAndFromTheViewerItself(): void
     {
         $guard = new OriginGuard('127.0.0.1', 23517);

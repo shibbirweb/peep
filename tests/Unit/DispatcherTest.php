@@ -107,14 +107,28 @@ final class DispatcherTest extends TestCase
         $this->assertCount(1, $this->transport->requests, 'A bug is not a down viewer.');
     }
 
-    public function testWarningsNeverReachTheAppErrorHandler(): void
+    public function testTheAppErrorHandlerSurvivesPeepCallsFromInsideIt(): void
     {
-        $this->transport->raiseWarning = true;
+        $dispatcher = $this->dispatcher(true);
+        $calls = 0;
 
-        // The base TestCase turns any warning that escapes into a failing exception.
-        $this->dispatcher(true)->dispatch('card-1', [new TextPayload('hi')]);
+        // An app error handler that calls Peep, like a framework logging a deprecation.
+        set_error_handler(function () use ($dispatcher, &$calls) {
+            $calls++;
+            $dispatcher->dispatch('card-' . $calls, [new TextPayload('from the error handler')]);
 
-        $this->assertCount(1, $this->transport->requests);
+            return true;
+        });
+
+        try {
+            trigger_error('first', E_USER_NOTICE);
+            trigger_error('second', E_USER_NOTICE);
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertSame(2, $calls, 'The app handler must still be installed for the second error.');
+        $this->assertCount(2, $this->transport->requests);
     }
 
     private function dispatcher(bool $enabled): Dispatcher

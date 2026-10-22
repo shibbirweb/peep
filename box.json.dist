@@ -1,0 +1,17 @@
+{
+    "output": "build/peep.phar",
+    "alias": "peep.phar",
+    "main": false,
+    "stub": "resources/global/stub.php",
+    "directories": [
+        "src",
+        "resources/global"
+    ],
+    "files": [
+        "bin/peep",
+        "LICENSE"
+    ],
+    "exclude-composer-files": true,
+    "dump-autoload": false,
+    "check-requirements": false
+}
