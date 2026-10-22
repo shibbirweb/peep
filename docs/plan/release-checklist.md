@@ -28,7 +28,7 @@ This is not a clearance search. Before 1.0, search the official databases for th
 
 Releases follow nibtree's model: `develop` is the beta line, `main` is stable, and workflows do the bumping, tagging and publishing. The full description, with diagrams, is the wiki's [Releasing](../wiki/developer/Releasing.md) page.
 
-1. Create the `develop` branch from `main` (done) and protect both: pull requests and passing CI.
+1. Create the `develop` branch from `main` and make it the default branch (both done), and protect `develop` and `main`: pull requests and passing CI.
 2. Tick Settings, Actions, General, "Allow GitHub Actions to create and approve pull requests".
 3. Actions, **Beta release** on `develop`: opens `chore:[REL-n] release 0.1.0-beta.1`. Merge it; **Publish beta** publishes the pre-release and **Release** attaches the PHARs and desktop apps.
 4. Actions, **Stable release** on `develop`, merge its pull request, then merge the develop to main pull request that **Promote stable** opens. **Publish stable** publishes the release; **Release** builds it and, with `PACKAGIST_AUTO_PUBLISH`, creates or updates the Packagist package.

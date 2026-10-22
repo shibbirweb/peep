@@ -61,6 +61,7 @@ The version lives in `src/Version.php` (the source of truth), `server/src/Versio
 
 | Setting | Why |
 |---------|-----|
+| General: default branch `develop` | Pull requests target `develop`, and the workflows started by CI finishing (Publish beta, Promote stable, Publish stable) run from `develop`'s copy, so a fix to them applies once it is merged there |
 | Actions, General: "Allow GitHub Actions to create and approve pull requests" | Beta and Stable release open pull requests |
 | Variable `PACKAGIST_AUTO_PUBLISH` = `true`, secrets `PACKAGIST_USERNAME`, `PACKAGIST_TOKEN` | Release creates the Packagist package on the first release and updates it on every one after |
 | Secrets `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` | Signed and notarized macOS apps |
