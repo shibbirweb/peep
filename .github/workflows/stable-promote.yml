@@ -42,6 +42,10 @@ jobs:
         id: check
         run: |
           version="$(bun scripts/version.ts show)"
+          if [ "$version" = "0.0.0" ]; then
+            echo "The version is 0.0.0, the placeholder before the first release. Nothing to do." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
           case "$version" in
             *-*)
               echo "develop is at $version, a beta. Nothing to promote." >> "$GITHUB_STEP_SUMMARY"
