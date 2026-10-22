@@ -58,8 +58,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           sha="$(git rev-parse HEAD)"
-          conclusion="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$sha&per_page=1" \
-            --jq '.workflow_runs[0] | if . == null then "none" else (.conclusion // .status) end')"
+          # The general runs list, filtered to ci.yml here: GitHub's per-workflow list
+          # (actions/workflows/ci.yml/runs?head_sha=...) sometimes leaves out runs that exist.
+          conclusion="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$sha&per_page=100" \
+            --jq '[.workflow_runs[] | select(.path == ".github/workflows/ci.yml")] | sort_by(.created_at) | last | if . == null then "none" else (.conclusion // .status) end')"
           if [ "$conclusion" != "success" ]; then
             echo "::error::CI on ${sha:0:7} is '$conclusion', not a pass. Wait for it to pass on develop, then run this again."
             exit 1
