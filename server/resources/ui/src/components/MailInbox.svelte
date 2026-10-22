@@ -4,6 +4,7 @@
   import { clock, formatBytes } from '../lib/format.js';
   import { mailMatches } from '../lib/inbox.js';
   import HtmlFrame from './HtmlFrame.svelte';
+  import SendWebhook from './SendWebhook.svelte';
 
   /** @type {{ mails: Array<object>, project: string, smtpPort: number, onrequest: (requestId: string) => void }} */
   let { mails, project, smtpPort, onrequest } = $props();
@@ -105,6 +106,8 @@
           {#if detail.request_id}<button type="button" onclick={() => onrequest(detail.request_id)} title="Show the cards of the request or job that sent this mail">Show request</button>{/if}
           <button type="button" onclick={() => markMailRead(detail.id, false)}>Mark unread</button>
           <button type="button" onclick={remove}>Delete</button>
+          <span class="spacer"></span>
+          <SendWebhook kind="mail" id={detail.id} project={detail.project} />
         </div>
       </header>
 

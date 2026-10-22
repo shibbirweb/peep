@@ -30,6 +30,7 @@ use ShibbirWeb\PeepServer\Http\Controller\StaticFileController;
 use ShibbirWeb\PeepServer\Http\Controller\StreamController;
 use ShibbirWeb\PeepServer\Http\Controller\SwitchController;
 use ShibbirWeb\PeepServer\Http\Controller\UiSwitchController;
+use ShibbirWeb\PeepServer\Http\Controller\WebhookController;
 use ShibbirWeb\PeepServer\Http\Guard\HostGuard;
 use ShibbirWeb\PeepServer\Http\Guard\OriginGuard;
 use ShibbirWeb\PeepServer\Http\Guard\TokenGuard;
@@ -46,6 +47,8 @@ use ShibbirWeb\PeepServer\Sms\SmsStore;
 use ShibbirWeb\PeepServer\Storage\CardStorage;
 use ShibbirWeb\PeepServer\Storage\NullCardStorage;
 use ShibbirWeb\PeepServer\Switch\SwitchStore;
+use ShibbirWeb\PeepServer\Webhook\WebhookRules;
+use ShibbirWeb\PeepServer\Webhook\WebhookRunner;
 use Throwable;
 
 use function Amp\Http\Server\Middleware\stackMiddleware;
@@ -70,6 +73,8 @@ final class Application
     public readonly Receiving $receiving;
 
     public readonly Catcher $catcher;
+
+    public readonly WebhookRunner $webhooks;
 
     private ?SocketHttpServer $server = null;
 
@@ -96,6 +101,9 @@ final class Application
         $this->switches = new SwitchStore($settings->settings->switches);
         $this->receiving = new Receiving();
         $this->catcher = new Catcher(new MailStore(), new SmsStore(), $this->hub);
+        $this->webhooks = new WebhookRunner(new WebhookRules($settings), $this->hub, logger: $logger);
+        $this->catcher->onMail($this->webhooks->onMail(...));
+        $this->catcher->onSms($this->webhooks->onSms(...));
     }
 
     public function start(): void
@@ -210,12 +218,13 @@ final class Application
         $screens = new ScreenController($this->cards, $this->hub);
         $sms = new SmsController($this->catcher);
         $inbox = new InboxController($this->catcher, $this->hub);
+        $webhooks = new WebhookController($this->webhooks, $this->catcher, $this->hub);
 
         $router = new Router()
             ->add('GET', '/_peep/health', new HealthController())
             ->add('POST', '/_peep/envelope', new EnvelopeController(new EnvelopeDecoder(), $this->cards, $this->hub, $this->locks, $this->switches, $this->receiving))
             ->add('GET', '/_peep/switches', new SwitchController($this->switches))
-            ->add('GET', '/_peep/stream', new StreamController($this->cards, $this->hub, $this->locks, $this->switches, $this->receiving, $this->settings, $this->catcher))
+            ->add('GET', '/_peep/stream', new StreamController($this->cards, $this->hub, $this->locks, $this->switches, $this->receiving, $this->settings, $this->catcher, $this->webhooks))
             ->add('POST', '/_peep/mail', new MailController($this->catcher))
             ->add('POST', '/v3/*', new MailgunController($this->catcher))
             ->add('POST', '/_peep/sms', $sms)
@@ -224,6 +233,8 @@ final class Application
             ->add('GET', '/_peep/ui/mail/*', $inbox)
             ->add('POST', '/_peep/ui/mail/*', $inbox)
             ->add('POST', '/_peep/ui/sms/*', $inbox)
+            ->add('GET', '/_peep/ui/webhooks/*', $webhooks)
+            ->add('POST', '/_peep/ui/webhooks/*', $webhooks)
             ->add('GET', '/_peep/locks/*', $locks)
             ->add('POST', '/_peep/ui/clear', new ClearController($this->cards, $this->hub))
             ->add('POST', '/_peep/ui/locks/*', $locks)

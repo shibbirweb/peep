@@ -3,6 +3,7 @@
   import { clearSms, deleteSms, markThreadRead } from '../lib/api.js';
   import { clock } from '../lib/format.js';
   import { describeSegments, threadsOf } from '../lib/inbox.js';
+  import SendWebhook from './SendWebhook.svelte';
 
   /** @type {{ messages: Array<object>, project: string, onrequest: (requestId: string) => void }} */
   let { messages, project, onrequest } = $props();
@@ -67,6 +68,7 @@
             {#if sms.request_id}<button type="button" class="link" onclick={() => onrequest(sms.request_id)}>Show request</button>{/if}
             <button type="button" class="link" onclick={() => deleteSms(sms.id)}>Delete</button>
           </footer>
+          <div class="webhook"><SendWebhook kind="sms" id={sms.id} project={sms.project} /></div>
         </article>
       {/each}
     {/if}
@@ -214,6 +216,10 @@
     margin-top: 6px;
     font-size: 11.5px;
     color: var(--muted);
+  }
+
+  .webhook {
+    margin-top: 6px;
   }
 
   .sid {

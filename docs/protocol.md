@@ -114,7 +114,7 @@ These serve the viewer's own page and are not part of the client contract; they 
 
 | Method and path | Purpose |
 |-----------------|---------|
-| `GET /_peep/stream` | Server-Sent Events: `snapshot` first (cards, projects, active locks, switches, receiving state, screens, public settings, mails, SMS), then `card.created`, `card.updated`, `card.removed`, `screen.cleared`, `screen.archived`, `lock.released`, `switches.changed`, `receiving.changed`, `settings.changed`, `app.command`, `mail.received`, `mail.updated`, `mail.removed`, `mail.cleared`, `sms.received`, `sms.updated`, `sms.removed`, `sms.cleared` |
+| `GET /_peep/stream` | Server-Sent Events: `snapshot` first (cards, projects, active locks, switches, receiving state, screens, public settings, mails, SMS), then `card.created`, `card.updated`, `card.removed`, `screen.cleared`, `screen.archived`, `lock.released`, `switches.changed`, `receiving.changed`, `settings.changed`, `app.command`, `mail.received`, `mail.updated`, `mail.removed`, `mail.cleared`, `sms.received`, `sms.updated`, `sms.removed`, `sms.cleared`, `webhooks.changed`, `webhook.delivered`, `webhook.cleared` |
 | `POST /_peep/ui/clear` | `{"project": "shop"}`, or `null` for every project |
 | `POST /_peep/ui/locks/{name}/continue`, `.../stop` | Release a pause lock |
 | `POST /_peep/ui/switches` | `{"project": "shop", "switches": {"queries": "on"}}`; saved in the settings |
@@ -127,6 +127,11 @@ These serve the viewer's own page and are not part of the client contract; they 
 | `GET /_peep/ui/mail/{id}/source`, `.../attachments/{index}` | The raw message as text; an attachment as a download |
 | `POST /_peep/ui/mail/{id}/read`, `.../delete`, `POST /_peep/ui/mail/clear` | Inbox actions (`{"read": false}` marks unread) |
 | `POST /_peep/ui/sms/read`, `/_peep/ui/sms/{id}/delete`, `/_peep/ui/sms/clear` | SMS actions (`read` takes `{"project", "to"}`) |
+| `GET /_peep/ui/webhooks/presets` | Webhook presets |
+| `POST /_peep/ui/webhooks/rules`, `.../rules/{id}/delete`, `.../rules/{id}/test` | Save (`{"rule"}`, `422` with `field`), delete, or test a rule with sample data (`{"event"}`) |
+| `POST /_peep/ui/webhooks/send` | `{"rule_id", "mail_id" or "sms_id", "event"}`: send for a caught message (no event: every step) |
+| `POST /_peep/ui/webhooks/import` | `{"rules": [...], "replace": false}` |
+| `GET /_peep/ui/webhooks/deliveries/{id}`, `POST .../{id}/resend`, `POST .../deliveries/clear` | The delivery log |
 
 ## Envelope format
 

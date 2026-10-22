@@ -2,6 +2,7 @@ import { applyEvent } from './cards.js';
 import { setPathMappings } from './ide.js';
 import { MAIL_EVENTS, SMS_EVENTS, applyInboxEvent } from './inbox.js';
 import { maybeNotify } from './notify.js';
+import { applyWebhookEvent } from './webhooks.js';
 
 const CARD_EVENTS = ['snapshot', 'card.created', 'card.updated', 'card.removed', 'screen.cleared'];
 
@@ -38,6 +39,8 @@ export const viewer = $state({
   // Caught mail (summaries) and SMS, newest first.
   mails: [],
   sms: [],
+  // Webhook rules and the latest deliveries, newest first.
+  webhooks: { rules: [], deliveries: [] },
 });
 
 export function connect() {
@@ -94,6 +97,12 @@ export function connect() {
     });
   }
 
+  for (const name of ['webhooks.changed', 'webhook.delivered', 'webhook.cleared']) {
+    on(source, name, (data) => {
+      viewer.webhooks = applyWebhookEvent(viewer.webhooks, name, data);
+    });
+  }
+
   for (const name of SMS_EVENTS) {
     on(source, name, (data) => {
       viewer.sms = applyInboxEvent(viewer.sms, name, data);
@@ -117,6 +126,7 @@ function applySnapshot(data) {
   viewer.screens = data.screens ?? [];
   viewer.mails = data.mails ?? [];
   viewer.sms = data.sms ?? [];
+  viewer.webhooks = data.webhooks ?? { rules: [], deliveries: [] };
 
   if (data.settings) {
     applySettings(data.settings);

@@ -2,7 +2,7 @@
 
 Debug any PHP app in a separate window. Call `peep($value)` anywhere and see values, database queries, jobs, logs and exceptions live, in your browser or in a desktop app. Peep also catches the mail and SMS your app sends and can simulate provider webhooks back to it.
 
-> **Status: early development.** Nothing is released yet. The client, the browser viewer with its settings, filters and history, the Laravel integration, the bridges for other PHP apps and mail and SMS catching work; the webhook simulator and the desktop app are in progress. Progress is tracked in [docs/plan/features.md](docs/plan/features.md).
+> **Status: early development.** Nothing is released yet. The client, the browser viewer with its settings, filters and history, the Laravel integration, the bridges for other PHP apps mail and SMS catching and the webhook simulator work; the desktop app is in progress. Progress is tracked in [docs/plan/features.md](docs/plan/features.md).
 
 ## Planned features
 

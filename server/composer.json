@@ -14,6 +14,7 @@
         "php": ">=8.5",
         "amphp/amp": "^3.1",
         "amphp/byte-stream": "^2.1",
+        "amphp/http-client": "^5.3",
         "amphp/http-server": "^3.4",
         "amphp/http-server-form-parser": "^2.0",
         "amphp/pipeline": "^1.2",
@@ -23,7 +24,6 @@
         "zbateson/mail-mime-parser": "^3.0"
     },
     "require-dev": {
-        "amphp/http-client": "^5.3",
         "phpunit/phpunit": "^12.5"
     },
     "autoload": {

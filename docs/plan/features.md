@@ -15,7 +15,7 @@ How each feature works is described in [implementation.md](implementation.md). T
 | BR: Bridges for any PHP app | 5 | 7 / 7 |
 | VF: Full viewer | 6 | 23 / 23 (2 dropped) |
 | MS: Mail and SMS catching | 7 | 15 / 15 |
-| WH: Webhook simulator | 7 | 0 / 13 |
+| WH: Webhook simulator | 7 | 13 / 13 |
 | DT: Desktop app (Tauri) | 8 | 0 / 15 |
 | RL: Release | 9 | 0 / 10 |
 
@@ -245,19 +245,19 @@ SMS:
 
 After the viewer catches a mail or SMS, it can call back a URL the user sets up, with a body format the user defines and dynamic values filled in. This simulates provider webhooks (delivered, opened, bounced, SMS status) so the app's webhook handling can be tested locally.
 
-- [ ] WH-01 Webhook rules: trigger (mail received, SMS received, manual), target URL, HTTP method, headers, body format (JSON, form-urlencoded, XML)
-- [ ] WH-02 Body template with dynamic values, e.g. `{{ mail.message_id }}`, `{{ mail.to }}`, `{{ mail.subject }}`, `{{ sms.sid }}`, `{{ sms.to }}`, `{{ sms.body }}`, `{{ event }}`, `{{ now }}`, `{{ now.unix }}`, `{{ uuid }}`, `{{ random.int }}`, plus user-defined variables
-- [ ] WH-03 Template functions: `hmac_sha256`, `sha1`, `base64`, `url_encode`, date formatting
-- [ ] WH-04 Presets: Mailgun events (delivered, opened, clicked, failed, bounced, complained), Twilio status callbacks (queued, sent, delivered, failed, undelivered), Vonage delivery receipts
-- [ ] WH-05 Provider signatures so the app's verification passes: Mailgun (`timestamp`, `token`, `signature` with the webhook signing key), Twilio (`X-Twilio-Signature`)
-- [ ] WH-06 Sequences with delays, e.g. queued, then sent after 1 s, then delivered after 3 s
-- [ ] WH-07 Manual send from a mail or SMS card: pick an event and send
-- [ ] WH-08 Delivery log: request sent, response status, headers, body and duration; resend button
-- [ ] WH-09 Optional retry on failure (off by default)
-- [ ] WH-10 "Test" button that sends a rule with sample data
-- [ ] WH-11 Rules per project, saved in the settings file; import and export as JSON
-- [ ] WH-12 Outbound calls only to URLs the user configured, with timeouts; never follows redirects to other hosts
-- [ ] WH-13 Webhook settings page in the viewer
+- [x] WH-01 Webhook rules: trigger (mail received, SMS received, manual), target URL, HTTP method, headers, body format (JSON, form-urlencoded, XML)
+- [x] WH-02 Body template with dynamic values, e.g. `{{ mail.message_id }}`, `{{ mail.to }}`, `{{ mail.subject }}`, `{{ sms.sid }}`, `{{ sms.to }}`, `{{ sms.body }}`, `{{ event }}`, `{{ now }}`, `{{ now.unix }}`, `{{ uuid }}`, `{{ random.int }}`, plus user-defined variables
+- [x] WH-03 Template functions: `hmac_sha256`, `hmac_sha1`, `sha1`, `sha256`, `md5`, `base64`, `url_encode`, `date`, `upper`, `lower`, `uuid`, `random_hex`, `random_int`, `json`
+- [x] WH-04 Presets: Mailgun events (delivered, opened, clicked, failed, bounced, complained), Twilio status callbacks (queued, sent, delivered, failed, undelivered), Vonage delivery receipts
+- [x] WH-05 Provider signatures so the app's verification passes: Mailgun (`timestamp`, `token`, `signature` with the webhook signing key), Twilio (`X-Twilio-Signature`)
+- [x] WH-06 Sequences with delays, e.g. queued, then sent after 1 s, then delivered after 3 s
+- [x] WH-07 Manual send from a mail or SMS card: pick an event and send
+- [x] WH-08 Delivery log: request sent, response status, headers, body and duration; resend button
+- [x] WH-09 Optional retry on failure (off by default)
+- [x] WH-10 "Test" button that sends a rule with sample data
+- [x] WH-11 Rules per project, saved in the settings file; import and export as JSON
+- [x] WH-12 Outbound calls only to URLs the user configured, with timeouts; never follows redirects to other hosts
+- [x] WH-13 Webhook settings page in the viewer
 
 ## DT: Desktop app, Tauri (Phase 8)
 

@@ -17,6 +17,8 @@ use ShibbirWeb\PeepServer\Inbox\Catcher;
 use ShibbirWeb\PeepServer\Lock\LockRegistry;
 use ShibbirWeb\PeepServer\Mail\Mail;
 use ShibbirWeb\PeepServer\Sms\Sms;
+use ShibbirWeb\PeepServer\Webhook\Delivery;
+use ShibbirWeb\PeepServer\Webhook\WebhookRunner;
 use ShibbirWeb\PeepServer\Settings\SettingsStore;
 use ShibbirWeb\PeepServer\Switch\SwitchStore;
 
@@ -39,6 +41,7 @@ final readonly class StreamController implements RequestHandler
         private Receiving $receiving = new Receiving(),
         private SettingsStore $settings = new SettingsStore(),
         private ?Catcher $catcher = null,
+        private ?WebhookRunner $webhooks = null,
     ) {}
 
     public function handleRequest(Request $request): Response
@@ -91,6 +94,10 @@ final readonly class StreamController implements RequestHandler
             'settings' => $this->settings->public(),
             'mails' => array_map(static fn(Mail $mail): array => $mail->summary(), array_slice($this->catcher?->mails->all() ?? [], 0, self::INBOX_LIMIT)),
             'sms' => array_map(static fn(Sms $sms): array => $sms->toArray(), array_slice($this->catcher?->sms->all() ?? [], 0, self::INBOX_LIMIT)),
+            'webhooks' => [
+                'rules' => $this->webhooks?->rules->toArray() ?? [],
+                'deliveries' => array_map(static fn(Delivery $delivery): array => $delivery->summary(), array_slice($this->webhooks?->deliveries() ?? [], 0, 200)),
+            ],
         ], $this->hub->lastId());
     }
 }

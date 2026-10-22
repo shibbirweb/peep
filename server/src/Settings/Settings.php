@@ -122,6 +122,13 @@ final class Settings
     public bool $notifications = false;
 
     /**
+     * Webhook rules (validated by Webhook\Rule when loaded).
+     *
+     * @var list<array<mixed>>
+     */
+    public array $webhooks = [];
+
+    /**
      * Query debugging switches per project, as set in the toolbar.
      *
      * @var array<string, array<string, string|int|null>>
@@ -179,7 +186,7 @@ final class Settings
     }
 
     /**
-     * @return array{display_mode: string, ide: string, path_mappings: list<array{from: string, to: string}>, host: string, port: int, theme: string, smtp: bool, smtp_port: int, token: string|null, max_cards: int, history: bool, notifications: bool, switches: array<string, array<string, string|int|null>>}
+     * @return array{display_mode: string, ide: string, path_mappings: list<array{from: string, to: string}>, host: string, port: int, theme: string, smtp: bool, smtp_port: int, token: string|null, max_cards: int, history: bool, notifications: bool, switches: array<string, array<string, string|int|null>>, webhooks: list<array<mixed>>}
      */
     public function toArray(): array
     {
@@ -197,6 +204,7 @@ final class Settings
             'history' => $this->history,
             'notifications' => $this->notifications,
             'switches' => $this->switches,
+            'webhooks' => $this->webhooks,
         ];
     }
 
@@ -220,6 +228,7 @@ final class Settings
                 'history' => $this->history = is_bool($value) ? $value : throw new InvalidSettingException($key, 'History must be true or false.'),
                 'notifications' => $this->notifications = is_bool($value) ? $value : throw new InvalidSettingException($key, 'Notifications must be true or false.'),
                 'switches' => $this->switches = self::switches($value),
+                'webhooks' => $this->webhooks = is_array($value) ? array_values(array_filter($value, is_array(...))) : throw new InvalidSettingException($key, 'Webhooks must be a list.'),
                 default => throw new InvalidSettingException($key, 'Unknown setting: ' . $key . '.'),
             };
         } catch (ValueError | TypeError) {

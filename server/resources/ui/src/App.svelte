@@ -4,6 +4,7 @@
   import FilterBar from './components/FilterBar.svelte';
   import MailInbox from './components/MailInbox.svelte';
   import SmsInbox from './components/SmsInbox.svelte';
+  import WebhookPage from './components/WebhookPage.svelte';
   import QuerySwitches from './components/QuerySwitches.svelte';
   import SettingsDialog from './components/SettingsDialog.svelte';
   import VirtualList from './components/VirtualList.svelte';
@@ -117,6 +118,7 @@
       <button type="button" class:active={tab === 'cards'} onclick={() => (tab = 'cards')}>Cards</button>
       <button type="button" class:active={tab === 'mail'} onclick={() => (tab = 'mail')}>Mail{#if unreadMail > 0} <span class="badge">{unreadMail}</span>{/if}</button>
       <button type="button" class:active={tab === 'sms'} onclick={() => (tab = 'sms')}>SMS{#if unreadSms > 0} <span class="badge">{unreadSms}</span>{/if}</button>
+      <button type="button" class:active={tab === 'webhooks'} onclick={() => (tab = 'webhooks')}>Webhooks</button>
     </nav>
 
     <nav class="projects" aria-label="Projects">
@@ -169,6 +171,8 @@
     <MailInbox mails={viewer.mails} {project} smtpPort={viewer.settings.smtp_port} onrequest={showRequest} />
   {:else if tab === 'sms'}
     <SmsInbox messages={viewer.sms} {project} onrequest={showRequest} />
+  {:else if tab === 'webhooks'}
+    <WebhookPage rules={viewer.webhooks.rules} deliveries={viewer.webhooks.deliveries} {project} />
   {:else if rows.length === 0}
     <div class="empty">
       {#if inProject.length > 0}

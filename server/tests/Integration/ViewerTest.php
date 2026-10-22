@@ -10,6 +10,7 @@ use Amp\Http\Client\Request;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use ShibbirWeb\PeepServer\Application;
+use ShibbirWeb\PeepServer\Tests\Support\JsonPath;
 use ShibbirWeb\PeepServer\Tests\Unit\Protocol\EnvelopeDecoderTest;
 
 use function Amp\async;
@@ -20,6 +21,8 @@ use function Amp\delay;
  */
 final class ViewerTest extends TestCase
 {
+    use JsonPath;
+
     private Application $application;
 
     private HttpClient $client;
@@ -182,25 +185,6 @@ final class ViewerTest extends TestCase
         $this->assertStringContainsString('"setting":"ide"', $response->getBody()->buffer());
 
         $this->assertSame('dark', self::at($this->json('/_peep/ui/settings') ?? [], 'settings', 'theme'));
-    }
-
-    /**
-     * A value deep inside decoded JSON, or null.
-     *
-     * @param array<mixed> $data
-     */
-    private static function at(array $data, string|int ...$keys): mixed
-    {
-        $value = $data;
-        foreach ($keys as $key) {
-            if (! is_array($value) || ! array_key_exists($key, $value)) {
-                return null;
-            }
-
-            $value = $value[$key];
-        }
-
-        return $value;
     }
 
     /**

@@ -150,3 +150,80 @@ export function deleteSms(id) {
 export function clearSms(project) {
   return post('/_peep/ui/sms/clear', { project });
 }
+
+// Presets never change while the viewer runs: fetched once.
+let presets = null;
+
+export function loadPresets() {
+  presets ??= fetch('/_peep/ui/webhooks/presets')
+    .then((response) => response.json())
+    .then((data) => data.presets ?? [])
+    .catch(() => {
+      presets = null;
+
+      return [];
+    });
+
+  return presets;
+}
+
+/**
+ * @param {object} rule
+ */
+export function saveRule(rule) {
+  return post('/_peep/ui/webhooks/rules', { rule });
+}
+
+/**
+ * @param {string} id
+ */
+export function deleteRule(id) {
+  return post(`/_peep/ui/webhooks/rules/${encodeURIComponent(id)}/delete`);
+}
+
+/**
+ * @param {string} id
+ * @param {string} event
+ */
+export function testRule(id, event) {
+  return post(`/_peep/ui/webhooks/rules/${encodeURIComponent(id)}/test`, { event });
+}
+
+/**
+ * @param {{rule_id: string, mail_id?: string, sms_id?: string, event?: string}} request
+ */
+export function sendWebhook(request) {
+  return post('/_peep/ui/webhooks/send', request);
+}
+
+/**
+ * @param {string} id
+ */
+export async function loadDelivery(id) {
+  const response = await fetch(`/_peep/ui/webhooks/deliveries/${encodeURIComponent(id)}`);
+
+  if (!response.ok) {
+    throw new Error('This delivery is no longer in the log.');
+  }
+
+  return response.json();
+}
+
+/**
+ * @param {string} id
+ */
+export function resendDelivery(id) {
+  return post(`/_peep/ui/webhooks/deliveries/${encodeURIComponent(id)}/resend`);
+}
+
+export function clearDeliveries() {
+  return post('/_peep/ui/webhooks/deliveries/clear');
+}
+
+/**
+ * @param {Array<object>} rules
+ * @param {boolean} replace
+ */
+export function importRules(rules, replace) {
+  return post('/_peep/ui/webhooks/import', { rules, replace });
+}

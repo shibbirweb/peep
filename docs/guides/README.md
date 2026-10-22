@@ -8,6 +8,7 @@ Peep works in any PHP app from PHP 7.1 to 8.5. Laravel is set up automatically (
 - [WordPress](wordpress.md): themes and plugins.
 - [Global install](global-install.md): `peep()` in every script of a PHP install, without Composer.
 - [Mail and SMS](mail-and-sms.md): catch the mail and SMS your app sends, in any framework.
+- [Webhooks](webhooks.md): have the viewer call your app back with signed provider events.
 
 In every case, start the viewer first:
 

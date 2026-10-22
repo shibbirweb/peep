@@ -556,84 +556,69 @@ SMS details [MS-14]: segments counted as GSM-7 (160 per message, 153 per part; `
 
 ## 11. Webhook simulator (Phase 7)
 
+`Inbox\Catcher` tells `Webhook\WebhookRunner` about every caught mail and SMS; the runner finds the rules that apply and calls the app back.
+
 ### Rule model [WH-01, WH-11]
 
 ```json
 {
-  "id": "wh_01",
+  "id": "wh_3f9a1c2b7d10",
   "project": "my-app",
   "name": "Mailgun delivered",
   "trigger": "mail.received",
   "filter": { "to_contains": "" },
-  "target": { "url": "http://my-app.test/webhooks/mailgun", "use_status_callback": false },
+  "url": "http://my-app.test/webhooks/mailgun",
+  "use_status_callback": false,
   "method": "POST",
   "headers": { "User-Agent": "mailgun/treq-2" },
   "format": "json",
   "body": "{ ...template... }",
-  "signature": { "type": "mailgun", "secret": "key-local-signing" },
+  "signature": { "type": "mailgun", "secret": "key-local-signing", "header": "", "value": "" },
   "steps": [ { "event": "accepted", "delay_ms": 0 }, { "event": "delivered", "delay_ms": 2000 } ],
-  "retry": { "enabled": false, "max": 3 }
+  "retry": { "enabled": false, "max": 3 },
+  "vars": { "account_sid": "AC..." },
+  "enabled": true
 }
 ```
 
-Triggers: `mail.received`, `sms.received`, `manual` [WH-07]. Rules are stored in settings and can be exported and imported as JSON.
+`Webhook\Rule::fromArray()` validates every field and names the bad one (`422` with `field`): triggers `mail.received`, `sms.received`, `manual`; `project` `*` for every project; methods `POST`, `PUT`, `PATCH`, `GET`, `DELETE`; formats `json`, `form`, `xml`, `raw`; the URL must be `http(s)://host...` (it may contain placeholders); headers cannot set `Host`, `Content-Length`, `Transfer-Encoding` or `Connection`; up to 20 steps, each delayed 0 to 600,000 ms; retry up to 10 attempts. Rules are kept in `settings.json` under `webhooks` (`Webhook\WebhookRules`), exported as `{"peep_webhooks": 1, "rules": [...]}` and imported from that or a plain list.
 
 ### Template engine [WH-02, WH-03]
 
-A small, safe expression language. Nothing is ever evaluated as PHP.
+Nothing is ever evaluated as PHP. `Webhook\Template\Expression` tokenizes and parses one `{{ }}` expression by recursive descent:
 
-- Syntax: `{{ expression }}`; an expression is a variable path (`mail.to`), a string or number literal, a function call (`hmac_sha256(secret, signature.timestamp ~ signature.token)`), or `~` concatenation. Tokenizer plus recursive-descent parser; unknown variables render as an empty string and are listed as warnings in the delivery log.
-- Variables: `event`, `project`, `now` (ISO 8601), `now.unix`, `now.unix_float`, `now.ms`, `mail.id`, `mail.message_id`, `mail.from`, `mail.to`, `mail.to_list`, `mail.subject`, `mail.text`, `mail.headers.*`, `sms.sid`, `sms.to`, `sms.from`, `sms.body`, `sms.segments`, `sms.status_callback`, `signature.*` (filled by the signer), `vars.*` (user-defined).
-- Functions: `uuid()`, `random_int(min, max)`, `random_hex(length)`, `hmac_sha256(key, data)`, `hmac_sha1(key, data)`, `sha1(data)`, `base64(data)`, `url_encode(data)`, `date(format)`, `upper()`, `lower()`.
-- **Rendering by format**, so values are always escaped correctly:
-  - `json`: the template is parsed as JSON first; then each string leaf is rendered. A leaf that is exactly one placeholder (`"{{ now.unix_float }}"`) keeps the value's type (number, bool, array); any other leaf is string interpolation. JSON escaping is therefore never the user's problem.
-  - `form`: the body is a list of key/value pairs; each value is rendered, then URL-encoded.
-  - `xml`: rendered with XML escaping.
-  - `raw`: rendered as text, no escaping.
+```
+expression := term ("~" term)*
+term       := string | number | call | path | "(" expression ")"
+call       := name "(" [expression ("," expression)*] ")"
+path       := name ("." name)*
+```
+
+Unknown variables and functions render as an empty string and are listed as warnings on the delivery; a template that cannot be read (unclosed `{{`, string or call, invalid JSON body) fails the delivery with the reason.
+
+- Variables (`Webhook\Variables`): `event`, `project`, `rule.id`, `rule.name`, `now` (ISO 8601 with milliseconds), `now.unix`, `now.unix_float`, `now.ms`, `mail.id`, `mail.message_id` (without `< >`), `mail.from`, `mail.from_email`, `mail.to`, `mail.to_list`, `mail.recipient` (first To address), `mail.cc`, `mail.subject`, `mail.text`, `mail.headers.<lower-case name>`, `mail.request_id`, `sms.id`, `sms.sid`, `sms.message_id` (Vonage style), `sms.to`, `sms.from`, `sms.body`, `sms.segments`, `sms.status_callback`, `sms.request_id`, `signature.*` (Mailgun) and `vars.*`.
+- Functions (`Webhook\Template\Functions`): `uuid()`, `random_int(min, max)`, `random_hex(length)`, `hmac_sha256(key, data)`, `hmac_sha1(key, data)`, `sha1`, `sha256`, `md5`, `base64`, `url_encode`, `date(format, unix)` (UTC), `upper`, `lower`, `json`.
+- Rendering by format (`TemplateRenderer`): `json` parses the body as JSON and renders each string leaf, and a leaf that is exactly one placeholder keeps the value's type; `form` is a JSON object of fields, each rendered as text and then URL-encoded; `xml` escapes every inserted value; `raw` inserts as is. Header values and the URL are rendered as text, with line breaks removed from headers.
 
 ### Presets [WH-04]
 
-| Preset | Body (abbreviated) |
-|--------|--------------------|
-| Mailgun events (`accepted`, `delivered`, `opened`, `clicked`, `failed`, `complained`, `unsubscribed`) | JSON: `{"signature": {"timestamp", "token", "signature"}, "event-data": {"event": "{{ event }}", "timestamp": "{{ now.unix_float }}", "id": "{{ random_hex(22) }}", "recipient": "{{ mail.to }}", "message": {"headers": {"message-id": "{{ mail.message_id }}"}}}}` |
-| Twilio status callback (`queued`, `sent`, `delivered`, `failed`, `undelivered`) | form: `MessageSid`, `SmsSid`, `MessageStatus`, `SmsStatus`, `To`, `From`, `AccountSid`, `ApiVersion` |
-| Vonage delivery receipt | form or query: `msisdn`, `to`, `network-code`, `messageId`, `price`, `status`, `scts`, `err-code`, `message-timestamp` |
-
-Presets are only starting points; the user edits the body freely.
+`Webhook\Presets` (also `GET /_peep/ui/webhooks/presets`): Mailgun events (JSON with `signature` and `event-data`; events `accepted`, `delivered`, `opened`, `clicked`, `failed`, `complained`, `unsubscribed`), Twilio status callback (form `MessageSid`, `SmsSid`, `MessageStatus`, `SmsStatus`, `To`, `From`, `AccountSid`, `ApiVersion`; `queued`, `sent`, `delivered` after 0, 1 and 3 s; uses the app's `StatusCallback`), Vonage delivery receipt (JSON), and a generic JSON body.
 
 ### Signatures [WH-05]
 
-- **Mailgun** (computed before rendering, exposed as `signature.*`): `timestamp = now.unix`, `token = random_hex(50)`, `signature = hash_hmac('sha256', timestamp . token, signingKey)`.
-- **Twilio** (computed after rendering, sent as the `X-Twilio-Signature` header):
-
-```php
-function twilioSignature(string $authToken, string $url, array $params): string
-{
-    ksort($params, SORT_STRING);
-
-    $data = $url;
-    foreach ($params as $key => $value) {
-        $data .= $key . $value;
-    }
-
-    return base64_encode(hash_hmac('sha1', $data, $authToken, true));
-}
-```
-
-  `$url` is the full target URL exactly as called (scheme, host, port, path, query), because the app recomputes it from the incoming request.
-- **Custom:** a header name plus a template expression, e.g. `X-Signature: {{ hmac_sha256(vars.secret, body) }}` where `body` is the rendered body.
+- **Mailgun** (before rendering, as `signature.*`): `timestamp` = Unix time, `token` = 50 random hex characters, `signature = hash_hmac('sha256', timestamp . token, signingKey)`.
+- **Twilio** (after rendering, header `X-Twilio-Signature`): `base64(hmac_sha1(url . sorted fields as name followed by value, authToken))` over the exact URL called, query included; checked against the example in Twilio's documentation in the tests.
+- **Custom:** a header name and a template, with the rendered body available as `body`, e.g. `{{ hmac_sha256(vars.secret, body) }}`.
 
 ### Running a rule [WH-06 to WH-10, WH-12]
 
-1. Trigger fires (mail or SMS stored, or a manual click with a chosen event).
-2. For each step, schedule a timer at the cumulative delay.
-3. On each timer: build variables, sign (Mailgun), render URL, headers and body, sign (Twilio / custom), send with the async HTTP client: 10 s timeout, redirects not followed.
-4. Record the delivery: request (method, URL, headers, body), response (status, headers, body cut at 64 KB), duration, errors and template warnings; publish `webhook.delivered`.
-5. Retry (only if enabled): on a network error or status 500 and above, back off 1 s, 2 s, 4 s up to `max`.
+1. A trigger fires: a mail or SMS is stored, a manual send from the inbox (one event or all steps) [WH-07], or Test with built-in sample data [WH-10].
+2. The steps run in one fiber, each after its delay from the start.
+3. Each call: build variables, sign (Mailgun), render URL, headers and body, sign (Twilio or custom), send with the AMPHP HTTP client: no redirects followed, 10-second connect, transfer and inactivity timeouts.
+4. The delivery is logged (`Webhook\Delivery`: request, response with the body cut at 64 KB, duration, error, template warnings, attempt) and published as `webhook.delivered`. The log keeps the last 500 in memory. Resend sends the logged request again unchanged [WH-08].
+5. Retry (only when switched on) after a network error or a status of 500 or more: 1 s, 2 s, 4 s... up to the rule's maximum [WH-09].
 
-"Test" [WH-10] runs a rule with built-in sample data. "Resend" re-runs a logged delivery with the same rendered request.
-
-Target URL rules [WH-12]: the URL comes from the rule. `use_status_callback` (Twilio `StatusCallback` or generic `status_callback` sent by the app) must be switched on per rule, and the callback host must match an allow-list (default `localhost`, `127.0.0.1`, `*.test`, `*.localhost`), because that URL comes from captured data.
+Target URL rules [WH-12]: the rule's URL is whatever the user typed. A status callback URL comes from captured data, so it is used only when the rule has `use_status_callback` on and its host is `localhost`, `127.0.0.1`, `[::1]`, `*.test` or `*.localhost`; any other host fails the delivery with the reason.
 
 ## 12. Desktop app (Phase 8)
 
