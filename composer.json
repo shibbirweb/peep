@@ -32,7 +32,7 @@
         "monolog/monolog": "^1.25 || ^2.0 || ^3.0",
         "phpunit/phpunit": "^7.5.20 || ^8.5.40 || ^9.6 || ^11.5 || ^12.5",
         "psr/log": "^1.1 || ^2.0 || ^3.0",
-        "symfony/var-dumper": "^3.4 || ^4.4 || ^5.4 || ^6.4 || ^7.0 || ^8.0",
+        "symfony/var-dumper": "^3.4 || ^4.4 || ^5.4 || ^6.0 || ^7.0 || ^8.0",
         "yoast/phpunit-polyfills": "^4.0"
     },
     "suggest": {
