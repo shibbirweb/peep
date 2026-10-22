@@ -22,7 +22,7 @@ The feature checklist is in [features.md](features.md) and how each part works i
 | 0 | Project setup | | In progress (CI first run pending) |
 | 1 | Protocol and core client MVP | | Done (CI first run pending) |
 | 2 | Viewer MVP in the browser | v0.1.0 | Done (CI first run and release pending) |
-| 3 | Full client API | v0.2.0 | Not started |
+| 3 | Full client API | v0.2.0 | Done (CI first run and release pending) |
 | 4 | Laravel adapter | v0.3.0 | Not started |
 | 5 | Bridges for any PHP app | v0.4.0 | Not started |
 | 6 | Full viewer | v0.5.0 | Not started |

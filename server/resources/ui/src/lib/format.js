@@ -22,7 +22,11 @@ export function summary(node) {
     case 'array':
       return `array(${node.length})`;
     case 'object':
-      return node.lazy ? `${node.class} #${node.id} (lazy, not initialized)` : `${node.class} #${node.id}`;
+      if (node.lazy) {
+        return `${node.class} #${node.id} (lazy, not initialized)`;
+      }
+
+      return node.summary ? `${node.class} #${node.id} · ${node.summary}` : `${node.class} #${node.id}`;
     case 'ref':
       return `→ #${node.id}`;
     case 'resource':
@@ -110,4 +114,104 @@ export function tableOf(node) {
       cells: columns.map((column) => child.node.children.find((cell) => String(cell.key) === column)?.node ?? null),
     })),
   };
+}
+
+/**
+ * Whether a value tree node starts open, given the card's expand setting.
+ *
+ * @param {number} depth
+ * @param {string} path Dot-separated keys from the root, '' for the root.
+ * @param {{ level?: number|null, keys?: Array<string>, all?: boolean }|null} expand
+ * @returns {boolean}
+ */
+export function startsOpen(depth, path, expand) {
+  if (expand?.all) {
+    return true;
+  }
+
+  if (depth < (expand?.level ?? 2)) {
+    return true;
+  }
+
+  return (expand?.keys ?? []).some((key) => key === path || key.startsWith(`${path}.`));
+}
+
+/**
+ * @param {number} bytes
+ * @returns {string}
+ */
+export function formatBytes(bytes) {
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+
+  const units = ['KB', 'MB', 'GB'];
+  let value = bytes / 1024;
+  let unit = 0;
+
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+
+  return `${value.toFixed(1)} ${units[unit]}`;
+}
+
+/**
+ * Indents XML for display. Not a validator: malformed XML still comes out readable.
+ *
+ * @param {string} xml
+ * @returns {string}
+ */
+export function formatXml(xml) {
+  const tokens = xml.replace(/>\s+</g, '><').match(/<[^>]+>|[^<]+/g) ?? [];
+  const lines = [];
+  let depth = 0;
+
+  for (const raw of tokens) {
+    const token = raw.trim();
+
+    if (token === '') {
+      continue;
+    }
+
+    const isTag = token.startsWith('<');
+    const closing = token.startsWith('</');
+    const standalone = token.endsWith('/>') || token.startsWith('<?') || token.startsWith('<!');
+
+    if (!isTag) {
+      // Text joins the line of its opening tag: <name>text
+      lines[lines.length - 1] = (lines[lines.length - 1] ?? '') + token;
+      continue;
+    }
+
+    if (closing) {
+      depth = Math.max(0, depth - 1);
+      const previous = lines[lines.length - 1];
+
+      // Keep <name>text</name> on one line.
+      if (previous !== undefined && /<[^/!?][^>]*>[^<]+$/.test(previous)) {
+        lines[lines.length - 1] = previous + token;
+        continue;
+      }
+    }
+
+    lines.push('  '.repeat(depth) + token);
+
+    if (!closing && !standalone) {
+      depth += 1;
+    }
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Links in cards may only use safe schemes; anything else (e.g. javascript:) is shown as text.
+ *
+ * @param {string} url
+ * @returns {boolean}
+ */
+export function isSafeUrl(url) {
+  return /^(https?:|mailto:)/i.test(url);
 }

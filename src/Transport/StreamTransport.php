@@ -40,6 +40,16 @@ final class StreamTransport implements TransportInterface
 
     public function post(string $path, string $body): TransportResponse
     {
+        return $this->send('POST', $path, $body);
+    }
+
+    public function get(string $path): TransportResponse
+    {
+        return $this->send('GET', $path, null);
+    }
+
+    private function send(string $method, string $path, ?string $body): TransportResponse
+    {
         $deadline = microtime(true) + $this->timeoutMs / 1000;
 
         $socket = @stream_socket_client(
@@ -55,7 +65,7 @@ final class StreamTransport implements TransportInterface
         }
 
         try {
-            $this->write($socket, $this->request($path, $body), $deadline);
+            $this->write($socket, $this->request($method, $path, $body), $deadline);
             $raw = $this->read($socket, $deadline);
         } finally {
             fclose($socket);
@@ -64,15 +74,21 @@ final class StreamTransport implements TransportInterface
         return HttpResponseParser::parse($raw);
     }
 
-    private function request(string $path, string $body): string
+    private function request(string $method, string $path, ?string $body): string
     {
-        return 'POST ' . $path . " HTTP/1.1\r\n"
+        $request = $method . ' ' . $path . " HTTP/1.1\r\n"
             . 'Host: ' . self::addressHost($this->host) . ':' . $this->port . "\r\n"
-            . "Content-Type: application/json\r\n"
             . "Accept: application/json\r\n"
-            . 'Content-Length: ' . strlen($body) . "\r\n"
             . 'User-Agent: peep-php/' . Version::VERSION . "\r\n"
-            . "Connection: close\r\n"
+            . "Connection: close\r\n";
+
+        if ($body === null) {
+            return $request . "\r\n";
+        }
+
+        return $request
+            . "Content-Type: application/json\r\n"
+            . 'Content-Length: ' . strlen($body) . "\r\n"
             . "\r\n"
             . $body;
     }

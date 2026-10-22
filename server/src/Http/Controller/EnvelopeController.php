@@ -12,6 +12,7 @@ use Amp\Http\Server\Response;
 use ShibbirWeb\PeepServer\Card\CardStore;
 use ShibbirWeb\PeepServer\Event\EventHub;
 use ShibbirWeb\PeepServer\Http\Responses;
+use ShibbirWeb\PeepServer\Lock\LockRegistry;
 use ShibbirWeb\PeepServer\Protocol\EnvelopeDecoder;
 use ShibbirWeb\PeepServer\Protocol\InvalidEnvelopeException;
 
@@ -36,6 +37,7 @@ final readonly class EnvelopeController implements RequestHandler
         private EnvelopeDecoder $decoder,
         private CardStore $cards,
         private EventHub $hub,
+        private LockRegistry $locks,
     ) {}
 
     public function handleRequest(Request $request): Response
@@ -59,7 +61,16 @@ final readonly class EnvelopeController implements RequestHandler
             ]);
         }
 
-        $this->hub->publish($this->cards->apply($envelope, microtime(true)));
+        $now = microtime(true);
+
+        foreach ($envelope->payloads as $payload) {
+            $name = $payload->content['name'] ?? null;
+            if ($payload->type === 'lock' && is_string($name) && preg_match('/^[A-Za-z0-9_-]{1,64}$/', $name) === 1) {
+                $this->locks->register($name, $envelope->project, $envelope->card, $now);
+            }
+        }
+
+        $this->hub->publish($this->cards->apply($envelope, $now));
 
         return Responses::json(202, [
             'accepted' => true,

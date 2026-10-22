@@ -12,7 +12,12 @@ final readonly class Payload
     /**
      * Types that change an existing card instead of adding content to it.
      */
-    public const array UPDATE_TYPES = ['color', 'label', 'size', 'replace', 'remove'];
+    public const array UPDATE_TYPES = ['color', 'label', 'size', 'replace', 'remove', 'hide', 'expand'];
+
+    /**
+     * Types that act on the screen or the app, not on one card.
+     */
+    public const array COMMAND_TYPES = ['clear_screen', 'clear_all', 'show_app', 'hide_app'];
 
     /**
      * @param array<string, mixed> $content
@@ -27,6 +32,11 @@ final readonly class Payload
     public function isUpdate(): bool
     {
         return in_array($this->type, self::UPDATE_TYPES, true);
+    }
+
+    public function isCommand(): bool
+    {
+        return in_array($this->type, self::COMMAND_TYPES, true);
     }
 
     /**

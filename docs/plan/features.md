@@ -10,10 +10,10 @@ How each feature works is described in [implementation.md](implementation.md). T
 | PR: Protocol | 1 | 7 / 7 |
 | CL: Core client MVP | 1 | 14 / 14 |
 | VW: Viewer MVP | 2 | 12 / 12 |
-| API: Full client API | 3 | 0 / 38 |
+| API: Full client API | 3 | 38 / 38 |
 | LV: Laravel adapter | 4 | 0 / 31 |
 | BR: Bridges for any PHP app | 5 | 0 / 7 |
-| VF: Full viewer | 6 | 0 / 25 |
+| VF: Full viewer | 6 | 4 / 25 |
 | MS: Mail and SMS catching | 7 | 0 / 15 |
 | WH: Webhook simulator | 7 | 0 / 13 |
 | DT: Desktop app (Tauri) | 8 | 0 / 15 |
@@ -81,56 +81,56 @@ How each feature works is described in [implementation.md](implementation.md). T
 ## API: Full client API (Phase 3)
 
 Formats:
-- [ ] API-01 `json($string)` and `toJson($value)`
-- [ ] API-02 `xml($string)`
-- [ ] API-03 `image($pathOrUrlOrBase64)`
-- [ ] API-04 `file($path)`
-- [ ] API-05 `link($url, $label)` / `url()`
-- [ ] API-06 `date($dateTime)` (DateTimeInterface, Carbon when present)
-- [ ] API-07 `className($object)`
-- [ ] API-08 `raw($value)` (no casters)
-- [ ] API-09 `invade($object)` for private properties and methods
-- [ ] API-10 `phpinfo(...$keys)`
-- [ ] API-11 `expand($levelOrKeys)`, `expandAll()`, `hide()`
-- [ ] API-12 `separator()`
+- [x] API-01 `json($string)` and `toJson($value)`
+- [x] API-02 `xml($string)`
+- [x] API-03 `image($pathOrUrlOrBase64)`
+- [x] API-04 `file($path)`
+- [x] API-05 `link($url, $label)` / `url()`
+- [x] API-06 `date($dateTime)` (DateTimeInterface, Carbon included, via the DateTime caster)
+- [x] API-07 `className($object)`
+- [x] API-08 `raw($value)` (no casters)
+- [x] API-09 `invade($object)` for private properties and methods
+- [x] API-10 `phpinfo(...$keys)`
+- [x] API-11 `expand($levelOrKeys)`, `expandAll()`, `hide()`
+- [x] API-12 `separator()`
 
 Inspection:
-- [ ] API-13 `caller()`
-- [ ] API-14 `trace()` / `backtrace()`
-- [ ] API-15 `exception($throwable)` with source snippet
-- [ ] API-16 `measure()` and `measure(callable)` (hrtime with microtime fallback)
-- [ ] API-17 `count($name)` and `counterValue($name)`
-- [ ] API-18 `catch(callable, $filter)`: run a callback, send matching exceptions, rethrow others
+- [x] API-13 `caller()`
+- [x] API-14 `trace()` / `backtrace()`
+- [x] API-15 `exception($throwable)` with source snippet
+- [x] API-16 `measure()` and `measure(callable)` (hrtime with microtime fallback)
+- [x] API-17 `count($name)` and `counterValue($name)`
+- [x] API-18 `catch(callable, $filter)`: run a callback, send matching exceptions, rethrow others
 
 Control:
-- [ ] API-19 `pass($value)`
-- [ ] API-20 `die()` and `pd(...)` shortcut
-- [ ] API-21 `once()`
-- [ ] API-22 `limit($n)`
-- [ ] API-23 `rateLimiter()->max()`, `perSecond()`, `clear()`
-- [ ] API-24 `if($condition)` and `if($condition, $callback)`
-- [ ] API-25 `showIf($condition)`
-- [ ] API-26 `pause()` with Continue and Stop (`StopExecutionException`)
+- [x] API-19 `pass($value)`
+- [x] API-20 `die()` and `pd(...)` shortcut (exit status 1, like `dd()`)
+- [x] API-21 `once()`
+- [x] API-22 `limit($n)`
+- [x] API-23 `rateLimiter()->max()`, `perSecond()`, `clear()`
+- [x] API-24 `if($condition)` and `if($condition, $callback)`
+- [x] API-25 `showIf($condition)`
+- [x] API-26 `pause()` with Continue and Stop (`StopExecutionException`)
 
 Card updates:
-- [ ] API-27 `send($value)` replaces the content of a held instance
-- [ ] API-28 `remove()`, `removeIf()`, `removeWhen()`
+- [x] API-27 `send($value)` replaces the content of a held instance (the first `send()` on a card adds values, later ones replace them)
+- [x] API-28 `remove()`, `removeIf()`, `removeWhen()`
 
 Screens and app:
-- [ ] API-29 `newScreen($title)`
-- [ ] API-30 `clearScreen()` and `clearAll()`
-- [ ] API-31 `notify($message)`
-- [ ] API-32 `showApp()` and `hideApp()`
+- [x] API-29 `newScreen($title)`
+- [x] API-30 `clearScreen()` and `clearAll()`
+- [x] API-31 `notify($message)` (shown as a card; native and browser notifications are VF-14 and DT-10)
+- [x] API-32 `showApp()` and `hideApp()` (sent now; acted on by the desktop app, DT-07 and later)
 
 Extending:
-- [ ] API-33 `Peep::macro($name, $callable)`
-- [ ] API-34 Custom payload support (`sendCustom($value, $label)`)
+- [x] API-33 `Peep::macro($name, $callable)`
+- [x] API-34 Custom payload support (`sendCustom($value, $label)`)
 
 Serializer casters:
-- [ ] API-35 DateTime caster
-- [ ] API-36 Throwable caster
-- [ ] API-37 Closure caster
-- [ ] API-38 Enum caster (`instanceof \UnitEnum`, simply false below PHP 8.1)
+- [x] API-35 DateTime caster
+- [x] API-36 Throwable caster
+- [x] API-37 Closure caster
+- [x] API-38 Enum caster (`instanceof \UnitEnum`, simply false below PHP 8.1)
 
 ## LV: Laravel adapter (Phase 4)
 
@@ -189,15 +189,15 @@ Message list:
 - [ ] VF-03 Filter by color label
 - [ ] VF-04 Text search inside values
 - [ ] VF-05 Query view: SQL with bindings inlined, time, slow and duplicate badges
-- [ ] VF-06 Exception view with stack trace and source snippet
-- [ ] VF-07 Table, JSON, XML, HTML, image renderers
-- [ ] VF-08 Card updates and removal by `uuid`
+- [x] VF-06 Exception view with stack trace and source snippet
+- [x] VF-07 Table, JSON, XML, HTML, image renderers
+- [x] VF-08 Card updates and removal by `uuid`
 - [ ] VF-09 Copy value as text
 - [ ] VF-10 Virtualised list for 10,000+ messages
 
 Screens and controls:
 - [ ] VF-11 Screens: new screen, clear, archive of previous screens
-- [ ] VF-12 Pause banner with Continue and Stop
+- [x] VF-12 Pause banner with Continue and Stop
 - [ ] VF-13 Pause receiving (ignore incoming messages)
 - [ ] VF-14 In-app notifications for `notify()` and exceptions (browser Notification API)
 

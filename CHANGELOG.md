@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Full client API: `toJson()`, `xml()`, `image()`, `file()`, `link()`/`url()`, `date()`, `className()`, `raw()`, `invade()`, `phpinfo()`, `separator()`, `hide()`, `expand()`/`expandAll()`, `caller()`, `trace()`, `exception()`, `measure()`, `count()`/`counterValue()`, `catch()`, `pass()`, `die()` and `pd()`, `once()`, `limit()`, `rateLimiter()`, `if()`/`showIf()`, `pause()`, `remove()`/`removeIf()`, `newScreen()`, `clearScreen()`, `clearAll()`, `notify()`, `showApp()`/`hideApp()`, macros, `sendCustom()`.
+- Casters for dates, exceptions, closures and enums, with one-line summaries in the viewer.
+- Viewer: renderers for every new payload type, collapsed cards, expand levels and keys, pause banner with Continue and Stop, screen commands, counters that update in place.
 - Viewer (`server/`, PHP 8.5, AMPHP v3): `peep-server serve` with `--host`, `--port` and `--open=browser|window|none`; detects an already running viewer and a port used by another program; stops cleanly on Ctrl+C.
 - Viewer endpoints: health, envelope ingest (validated, 8 MB limit), Server-Sent Events stream with snapshot and replay after reconnect, clear.
 - Viewer security: Host header check (DNS rebinding), Origin check and a required UI header for UI actions, Content Security Policy, HTML payloads in sandboxed frames.

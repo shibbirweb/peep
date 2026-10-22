@@ -7,10 +7,22 @@
   let { card, ide } = $props();
 
   const link = $derived(card.origin ? ideUrl(ide, card.origin.file, card.origin.line) : null);
+
+  // peep()->hide() sends a card collapsed; the header toggles it.
+  let collapsed = $state(false);
+  let collapsedFromServer = $state(false);
+
+  $effect(() => {
+    if (card.hidden && !collapsedFromServer) {
+      collapsed = true;
+      collapsedFromServer = true;
+    }
+  });
 </script>
 
 <article class="card size-{card.size}" style:--card-color={card.color ? `var(--${card.color})` : 'var(--border)'}>
   <header>
+    <button class="collapse" type="button" onclick={() => (collapsed = !collapsed)} aria-expanded={!collapsed} title={collapsed ? 'Show' : 'Hide'}>{collapsed ? '▸' : '▾'}</button>
     {#if card.label}<span class="label">{card.label}</span>{/if}
     {#if card.origin}
       {#if link}
@@ -24,9 +36,11 @@
     <time>{clock(card.created_at)}</time>
   </header>
 
-  {#each card.payloads as payload, index (index)}
-    <Payload {payload} />
-  {/each}
+  {#if !collapsed}
+    {#each card.payloads as payload, index (index)}
+      <Payload {payload} {ide} expand={card.expand} />
+    {/each}
+  {/if}
 </article>
 
 <style>
@@ -46,6 +60,14 @@
     font-size: 12px;
     color: var(--muted);
     min-width: 0;
+  }
+
+  .collapse {
+    border: 0;
+    background: none;
+    padding: 0;
+    color: var(--muted);
+    width: 1em;
   }
 
   .label {

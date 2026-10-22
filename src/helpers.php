@@ -22,3 +22,16 @@ if (! function_exists('peep')) {
         return $peep;
     }
 }
+
+if (! function_exists('pd')) {
+    /**
+     * Show values in the Peep viewer, then stop the script (like dd()).
+     *
+     * @param mixed ...$values
+     * @return never
+     */
+    function pd(...$values): void
+    {
+        peep(...$values)->die();
+    }
+}

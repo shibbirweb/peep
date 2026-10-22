@@ -40,6 +40,16 @@ final class CurlTransport implements TransportInterface
 
     public function post(string $path, string $body): TransportResponse
     {
+        return $this->send($path, $body);
+    }
+
+    public function get(string $path): TransportResponse
+    {
+        return $this->send($path, null);
+    }
+
+    private function send(string $path, ?string $body): TransportResponse
+    {
         $host = strpos($this->host, ':') !== false && $this->host[0] !== '[' ? '[' . $this->host . ']' : $this->host;
 
         $handle = curl_init('http://' . $host . ':' . $this->port . $path);
@@ -47,9 +57,14 @@ final class CurlTransport implements TransportInterface
             throw new TransportException('curl_init() failed.');
         }
 
+        if ($body !== null) {
+            curl_setopt_array($handle, [
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => $body,
+            ]);
+        }
+
         curl_setopt_array($handle, [
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $body,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER => [
                 'Content-Type: application/json',

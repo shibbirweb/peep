@@ -21,8 +21,7 @@ All Peep endpoints are under `/_peep/`, so provider-compatible paths (Mailgun, T
 | `GET /_peep/health` | Is a Peep viewer listening here? | `200` |
 | `POST /_peep/envelope` | Send one envelope | `202` |
 | `GET /_peep/switches?project={project}` | Read the switches for a project | `200` |
-| `POST /_peep/locks` | Create a pause lock | `201` |
-| `GET /_peep/locks/{name}` | Poll a pause lock | `200` |
+| `GET /_peep/locks/{name}` | Poll a pause lock (created by a `lock` payload) | `200` |
 
 When the viewer is started with a token (needed when it listens on anything other than `127.0.0.1`), every request must send it in the `X-Peep-Token` header; otherwise the answer is `401`.
 
@@ -67,16 +66,7 @@ Same `switches` and `switches_ttl` fields as the envelope response. See [Switche
 
 ### Locks
 
-Create:
-
-```http
-POST /_peep/locks
-Content-Type: application/json
-
-{ "name": "a3f9c2d17b4e8a10", "project": "my-app", "card": "9b2f0c1e-6a4d-4c1b-9f53-2a7d1c0e8b11" }
-```
-
-Poll:
+A lock is created by sending a `lock` payload (`{"name": "a3f9c2d17b4e8a10"}`, 1 to 64 characters from `A-Z a-z 0-9 _ -`) in an envelope. The viewer shows the card with Continue and Stop buttons. The client then polls:
 
 ```http
 GET /_peep/locks/a3f9c2d17b4e8a10
@@ -172,8 +162,38 @@ Change an existing card. `origin` may be `null`. An update for a card the viewer
 | `size` | `{ "size": "small" }`: `small`, `normal` or `large` |
 | `replace` | `{ "values": [node, ...] }`: replace the card's content with these values |
 | `remove` | `{}`: remove the card |
+| `hide` | `{}`: show the card collapsed |
+| `expand` | `{ "level": int or null, "keys": ["user", "user.roles"], "all": bool }`: how far to open the card's values |
 
-Later protocol additions (still version 1) add more types, for example `trace`, `exception`, `measure`, `query`, `lock`, screen commands and mail previews. Receivers that do not know a type show it as raw JSON.
+### More content payloads
+
+| Type | Content |
+|------|---------|
+| `xml` | `{ "xml": "..." }`: shown indented |
+| `image` | `{ "src": "https://... or data:image/...", "error": null or "why it is not shown" }` |
+| `file` | `{ "path", "size", "binary", "contents", "truncated", "error" }`: text contents (first 1 MB), base64 when `binary` |
+| `link` | `{ "url", "label" }`: only `http`, `https` and `mailto` URLs become links |
+| `separator` | `{}` |
+| `trace` | `{ "frames": [ { "file", "line", "function", "class" }, ... ] }`: frame 0 is the call site |
+| `caller` | `{ "frames": [ frame ] }`: where the function containing the call was called; empty at the top level |
+| `exception` | `{ "class", "message", "code", "file", "line", "snippet": { "start", "highlight", "lines" } or null, "frames", "previous": [ ... same shape ... ] }` |
+| `measure` | `{ "started": true }` for the first stopwatch call; otherwise `{ "total_ms", "since_last_ms", "memory", "peak_memory" }`, or `{ "callable": true, "total_ms", "memory", "peak_memory" }` |
+| `count` | `{ "name": string or null, "count": int }`: a counter card keeps only its latest count |
+| `notify` | `{ "message" }` |
+| `lock` | `{ "name" }`: a pause lock (see Locks) |
+| `new_screen` | `{ "title" }`: clears the project, then this card shows the title |
+
+### Commands
+
+Commands act on the screen or the app and create no card.
+
+| Type | Effect |
+|------|--------|
+| `clear_screen` | Clear the project's cards |
+| `clear_all` | Clear every project's cards |
+| `show_app`, `hide_app` | Show or hide the desktop app window (ignored by the browser) |
+
+Later protocol additions (still version 1) add more types, for example `query` and mail previews. Receivers that do not know a type show it as raw JSON.
 
 ## Value tree
 
@@ -192,6 +212,7 @@ Values are sent as a typed tree, never as pre-rendered HTML, so the viewer can s
 | `truncated` | `string`, `binary`, `array`, `object` | How many characters, bytes or children were left out |
 | `redacted` | any | `true` when the value was hidden because its key is sensitive |
 | `lazy` | `object` | `true` for a PHP 8.4 lazy object that was not initialized (no children are read) |
+| `summary` | `object` | One-line description from a caster: a date, an exception message, a closure signature, an enum case |
 
 ### Node types
 

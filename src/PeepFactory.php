@@ -34,19 +34,9 @@ final class PeepFactory
     private $config;
 
     /**
-     * @var Dispatcher
+     * @var Services
      */
-    private $dispatcher;
-
-    /**
-     * @var SerializerInterface
-     */
-    private $serializer;
-
-    /**
-     * @var OriginResolver
-     */
-    private $originResolver;
+    private $services;
 
     /**
      * @var ExecutionContext
@@ -61,15 +51,22 @@ final class PeepFactory
     ) {
         $this->config = $config;
         $this->context = new ExecutionContext();
-        $this->serializer = $serializer !== null ? $serializer : ValueSerializer::fromConfig($config);
-        $this->originResolver = new OriginResolver(new PathMapper($config->remotePath(), $config->localPath()));
-        $this->dispatcher = new Dispatcher(
+
+        $valueSerializer = ValueSerializer::fromConfig($config);
+        $dispatcher = new Dispatcher(
             $config->enabled(),
             $config->endpointKey(),
             $transport !== null ? $transport : TransportFactory::create($config),
             $availability !== null ? $availability : new AvailabilityCache(),
             new EnvelopeEncoder(),
             new MetaFactory($config, $this->context)
+        );
+
+        $this->services = new Services(
+            $dispatcher,
+            $serializer !== null ? $serializer : $valueSerializer,
+            $valueSerializer->withoutCasters(),
+            new OriginResolver(new PathMapper($config->remotePath(), $config->localPath()))
         );
     }
 
@@ -95,7 +92,7 @@ final class PeepFactory
 
     public function make(): Peep
     {
-        return new Peep($this->dispatcher, $this->serializer, $this->originResolver);
+        return new Peep($this->services);
     }
 
     public function config(): Config
@@ -103,14 +100,19 @@ final class PeepFactory
         return $this->config;
     }
 
+    public function services(): Services
+    {
+        return $this->services;
+    }
+
     public function dispatcher(): Dispatcher
     {
-        return $this->dispatcher;
+        return $this->services->dispatcher;
     }
 
     public function originResolver(): OriginResolver
     {
-        return $this->originResolver;
+        return $this->services->originResolver;
     }
 
     public function context(): ExecutionContext

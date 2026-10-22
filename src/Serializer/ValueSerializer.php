@@ -4,6 +4,11 @@ namespace ShibbirWeb\Peep\Serializer;
 
 use ReflectionClass;
 use ShibbirWeb\Peep\Config\Config;
+use ShibbirWeb\Peep\Serializer\Caster\CasterInterface;
+use ShibbirWeb\Peep\Serializer\Caster\ClosureCaster;
+use ShibbirWeb\Peep\Serializer\Caster\DateTimeCaster;
+use ShibbirWeb\Peep\Serializer\Caster\EnumCaster;
+use ShibbirWeb\Peep\Serializer\Caster\ThrowableCaster;
 use SplObjectStorage;
 use Throwable;
 
@@ -45,6 +50,11 @@ final class ValueSerializer implements SerializerInterface
     private $redactKeys;
 
     /**
+     * @var list<CasterInterface>
+     */
+    private $casters;
+
+    /**
      * @var int
      */
     private $nodeCount = 0;
@@ -60,9 +70,11 @@ final class ValueSerializer implements SerializerInterface
 
     /**
      * @param list<string> $redactKeys
+     * @param list<CasterInterface>|null $casters Null uses the default casters.
      */
-    public function __construct(int $maxDepth, int $maxItems, int $maxStringLength, int $maxNodes, array $redactKeys)
+    public function __construct(int $maxDepth, int $maxItems, int $maxStringLength, int $maxNodes, array $redactKeys, ?array $casters = null)
     {
+        $this->casters = $casters !== null ? $casters : self::defaultCasters();
         $this->maxDepth = $maxDepth;
         $this->maxItems = $maxItems;
         $this->maxStringLength = $maxStringLength;
@@ -83,6 +95,36 @@ final class ValueSerializer implements SerializerInterface
             $config->maxNodes(),
             $config->redactKeys()
         );
+    }
+
+    /**
+     * @return list<CasterInterface>
+     */
+    public static function defaultCasters(): array
+    {
+        return [new DateTimeCaster(), new ThrowableCaster(), new ClosureCaster(), new EnumCaster()];
+    }
+
+    /**
+     * A copy that shows every object with its raw properties (peep()->raw()).
+     */
+    public function withoutCasters(): self
+    {
+        $copy = clone $this;
+        $copy->casters = [];
+
+        return $copy;
+    }
+
+    /**
+     * A copy with an extra caster tried first (framework adapters, e.g. Eloquent models).
+     */
+    public function withCaster(CasterInterface $caster): self
+    {
+        $copy = clone $this;
+        $copy->casters = array_merge([$caster], $this->casters);
+
+        return $copy;
     }
 
     public function serialize($value): array
@@ -257,7 +299,17 @@ final class ValueSerializer implements SerializerInterface
             return ['type' => 'object', 'class' => $class, 'id' => $id, 'length' => 0, 'children' => [], 'lazy' => true];
         }
 
-        $properties = self::properties($value);
+        $summary = null;
+        $caster = $this->casterFor($value);
+
+        if ($caster !== null) {
+            $cast = $caster->cast($value);
+            $summary = $cast['summary'];
+            $properties = $cast['properties'];
+        } else {
+            $properties = self::properties($value);
+        }
+
         $length = count($properties);
         $children = [];
         $added = 0;
@@ -277,11 +329,33 @@ final class ValueSerializer implements SerializerInterface
 
         $node = ['type' => 'object', 'class' => $class, 'id' => $id, 'length' => $length, 'children' => $children];
 
+        if ($summary !== null) {
+            $node['summary'] = $summary;
+        }
+
         if ($added < $length) {
             $node['truncated'] = $length - $added;
         }
 
         return $node;
+    }
+
+    /**
+     * @param object $value
+     */
+    private function casterFor($value): ?CasterInterface
+    {
+        foreach ($this->casters as $caster) {
+            try {
+                if ($caster->supports($value)) {
+                    return $caster;
+                }
+            } catch (Throwable $exception) {
+                continue;
+            }
+        }
+
+        return null;
     }
 
     /**

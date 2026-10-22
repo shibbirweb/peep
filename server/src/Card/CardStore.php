@@ -31,22 +31,44 @@ final class CardStore
     public function apply(Envelope $envelope, float $now): array
     {
         $project = $envelope->project;
-        $card = $this->projects[$project][$envelope->card] ?? null;
-        $isNew = $card === null;
+        $events = [];
+        $cardPayloads = [];
 
         foreach ($envelope->payloads as $payload) {
             if ($payload->type === 'remove') {
                 return $this->remove($project, $envelope->card);
             }
+
+            // Screen and app commands act on the screen, not on a card.
+            if ($payload->isCommand()) {
+                $events = [...$events, ...$this->command($payload->type, $project)];
+                continue;
+            }
+
+            // A new screen clears the project, then shows its title as the first card.
+            if ($payload->type === 'new_screen') {
+                $events = [...$events, ...$this->clear($project)];
+            }
+
+            $cardPayloads[] = $payload;
         }
 
+        if ($cardPayloads === []) {
+            return $events;
+        }
+
+        $card = $this->projects[$project][$envelope->card] ?? null;
+        $isNew = $card === null;
         $card ??= Card::fromEnvelope($envelope, $now);
 
-        foreach ($envelope->payloads as $payload) {
+        foreach ($cardPayloads as $payload) {
             $card->apply($payload, $now);
         }
 
-        $events = $isNew ? $this->add($card) : [];
+        if ($isNew) {
+            $events = [...$events, ...$this->add($card)];
+        }
+
         $events[] = new ServerEvent($isNew ? 'card.created' : 'card.updated', $card->toArray());
 
         return $events;
@@ -93,6 +115,19 @@ final class CardStore
     public function projects(): array
     {
         return array_map(strval(...), array_keys($this->projects));
+    }
+
+    /**
+     * @return list<ServerEvent>
+     */
+    private function command(string $type, string $project): array
+    {
+        return match ($type) {
+            'clear_screen' => $this->clear($project),
+            'clear_all' => $this->clear(),
+            // show_app / hide_app are for the desktop app (DT-07 and later); the browser ignores them.
+            default => [new ServerEvent('app.command', ['command' => $type, 'project' => $project])],
+        };
     }
 
     /**

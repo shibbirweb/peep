@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { hasChildren, prettyJson, summary, tableOf, visibilityMarker } from './format.js';
+import { formatBytes, formatXml, hasChildren, isSafeUrl, prettyJson, startsOpen, summary, tableOf, visibilityMarker } from './format.js';
 
 describe('summary', () => {
   test('scalars and containers', () => {
@@ -63,4 +63,41 @@ describe('tableOf', () => {
     expect(table.columns).toEqual(['#', 'id', 'name', 'role']);
     expect(table.rows[1].cells).toEqual([scalar('2'), null, scalar('editor')]);
   });
+});
+
+describe('startsOpen', () => {
+  test('first two levels by default', () => {
+    expect(startsOpen(0, '', null)).toBe(true);
+    expect(startsOpen(1, 'a', null)).toBe(true);
+    expect(startsOpen(2, 'a.b', null)).toBe(false);
+  });
+
+  test('level, keys and all', () => {
+    expect(startsOpen(3, 'a.b.c', { level: 4 })).toBe(true);
+    expect(startsOpen(1, 'a', { level: 1 })).toBe(false);
+    expect(startsOpen(3, 'user.roles', { level: null, keys: ['user.roles.admin'] })).toBe(true);
+    expect(startsOpen(3, 'user.name', { level: null, keys: ['user.roles'] })).toBe(false);
+    expect(startsOpen(9, 'x.y', { all: true })).toBe(true);
+  });
+});
+
+test('formatBytes', () => {
+  expect(formatBytes(512)).toBe('512 B');
+  expect(formatBytes(2048)).toBe('2.0 KB');
+  expect(formatBytes(5 * 1024 * 1024)).toBe('5.0 MB');
+});
+
+test('formatXml indents nested tags and keeps text inline', () => {
+  expect(formatXml('<?xml version="1.0"?><a><b>text</b><c/></a>')).toBe('<?xml version="1.0"?>\n<a>\n  <b>text</b>\n  <c/>\n</a>');
+});
+
+test('isSafeUrl', () => {
+  expect(isSafeUrl('https://example.com')).toBe(true);
+  expect(isSafeUrl('mailto:a@b.c')).toBe(true);
+  expect(isSafeUrl('javascript:alert(1)')).toBe(false);
+  expect(isSafeUrl('data:text/html,x')).toBe(false);
+});
+
+test('summary shows caster summaries for objects', () => {
+  expect(summary({ type: 'object', class: 'DateTime', id: 1, summary: '2026-10-22' })).toBe('DateTime #1 · 2026-10-22');
 });

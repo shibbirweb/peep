@@ -11,4 +11,9 @@ final class NullTransport implements TransportInterface
     {
         return new TransportResponse(204, '');
     }
+
+    public function get(string $path): TransportResponse
+    {
+        return new TransportResponse(204, '');
+    }
 }

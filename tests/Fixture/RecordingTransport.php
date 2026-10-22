@@ -27,6 +27,16 @@ final class RecordingTransport implements TransportInterface
      */
     public $raiseWarning = false;
 
+    /**
+     * @var list<string> Paths requested with GET.
+     */
+    public $gets = [];
+
+    /**
+     * @var list<TransportResponse> Answers for the next GET requests, in order; 404 when empty.
+     */
+    public $getResponses = [];
+
     public function post(string $path, string $body): TransportResponse
     {
         if ($this->raiseWarning) {
@@ -45,6 +55,18 @@ final class RecordingTransport implements TransportInterface
         $this->requests[] = ['path' => $path, 'body' => $decoded];
 
         return new TransportResponse(202, '{"accepted":true}');
+    }
+
+    public function get(string $path): TransportResponse
+    {
+        if ($this->failWith !== null) {
+            throw $this->failWith;
+        }
+
+        $this->gets[] = $path;
+        $response = array_shift($this->getResponses);
+
+        return $response !== null ? $response : new TransportResponse(404, '{}');
     }
 
     /**

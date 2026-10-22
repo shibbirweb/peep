@@ -98,6 +98,35 @@ final class ViewerTest extends TestCase
         $this->assertSame([], $this->application->cards->cards());
     }
 
+    public function testPauseLockFlow(): void
+    {
+        $lockPayload = [['type' => 'lock', 'content' => ['name' => 'lock-1'], 'origin' => ['file' => '/app/a.php', 'line' => 3]]];
+        $post = new Request($this->application->url() . '/_peep/envelope', 'POST', (string) json_encode(EnvelopeDecoderTest::envelope(payloads: $lockPayload)));
+        $this->client->request($post)->getBody()->buffer();
+
+        $this->assertSame(['active' => true, 'stop' => false], $this->json('/_peep/locks/lock-1'));
+
+        $withoutHeader = $this->client->request(new Request($this->application->url() . '/_peep/ui/locks/lock-1/stop', 'POST'));
+        $this->assertSame(403, $withoutHeader->getStatus());
+
+        $stop = new Request($this->application->url() . '/_peep/ui/locks/lock-1/stop', 'POST');
+        $stop->setHeader('x-peep-ui', '1');
+        $this->assertSame(200, $this->client->request($stop)->getStatus());
+
+        $this->assertSame(['active' => false, 'stop' => true], $this->json('/_peep/locks/lock-1'));
+        $this->assertSame(404, $this->client->request(new Request($this->application->url() . '/_peep/locks/unknown'))->getStatus());
+    }
+
+    /**
+     * @return array<mixed>|null
+     */
+    private function json(string $path): ?array
+    {
+        $decoded = json_decode($this->client->request(new Request($this->application->url() . $path))->getBody()->buffer(), true);
+
+        return is_array($decoded) ? $decoded : null;
+    }
+
     public function testStopEndsOpenStreams(): void
     {
         $stream = $this->client->request(new Request($this->application->url() . '/_peep/stream'));

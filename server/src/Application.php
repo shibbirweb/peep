@@ -17,11 +17,13 @@ use ShibbirWeb\PeepServer\Event\EventHub;
 use ShibbirWeb\PeepServer\Http\Controller\ClearController;
 use ShibbirWeb\PeepServer\Http\Controller\EnvelopeController;
 use ShibbirWeb\PeepServer\Http\Controller\HealthController;
+use ShibbirWeb\PeepServer\Http\Controller\LockController;
 use ShibbirWeb\PeepServer\Http\Controller\StaticFileController;
 use ShibbirWeb\PeepServer\Http\Controller\StreamController;
 use ShibbirWeb\PeepServer\Http\Guard\HostGuard;
 use ShibbirWeb\PeepServer\Http\Guard\OriginGuard;
 use ShibbirWeb\PeepServer\Http\Router;
+use ShibbirWeb\PeepServer\Lock\LockRegistry;
 use ShibbirWeb\PeepServer\Protocol\EnvelopeDecoder;
 
 use function Amp\Http\Server\Middleware\stackMiddleware;
@@ -37,6 +39,8 @@ final class Application
 
     public readonly EventHub $hub;
 
+    public readonly LockRegistry $locks;
+
     private ?SocketHttpServer $server = null;
 
     private ?string $keepAliveTimer = null;
@@ -49,6 +53,7 @@ final class Application
     ) {
         $this->cards = new CardStore();
         $this->hub = new EventHub();
+        $this->locks = new LockRegistry();
     }
 
     public function start(): void
@@ -93,11 +98,15 @@ final class Application
 
     public function requestHandler(): RequestHandler
     {
+        $locks = new LockController($this->locks, $this->hub);
+
         $router = new Router()
             ->add('GET', '/_peep/health', new HealthController())
-            ->add('POST', '/_peep/envelope', new EnvelopeController(new EnvelopeDecoder(), $this->cards, $this->hub))
-            ->add('GET', '/_peep/stream', new StreamController($this->cards, $this->hub))
+            ->add('POST', '/_peep/envelope', new EnvelopeController(new EnvelopeDecoder(), $this->cards, $this->hub, $this->locks))
+            ->add('GET', '/_peep/stream', new StreamController($this->cards, $this->hub, $this->locks))
+            ->add('GET', '/_peep/locks/*', $locks)
             ->add('POST', '/_peep/ui/clear', new ClearController($this->cards, $this->hub))
+            ->add('POST', '/_peep/ui/locks/*', $locks)
             ->add('GET', '/*', new StaticFileController($this->publicDirectory));
 
         return stackMiddleware(

@@ -114,7 +114,7 @@ All Peep endpoints live under `/_peep/` so the provider-compatible paths (Mailgu
 | `GET /_peep/health` | client, CLI, Tauri | `200 {"app":"peep","protocol":1,"version":"x.y.z"}` [PR-06] |
 | `POST /_peep/envelope` | client | Ingest one envelope. `202` with switches in the body [PR-07] |
 | `GET /_peep/switches?project=` | client | Current switches when nothing was sent recently |
-| `POST /_peep/locks` / `GET /_peep/locks/{name}` | client | Create and poll a pause lock [PR-05] |
+| `GET /_peep/locks/{name}` | client | Poll a pause lock created by a `lock` payload [PR-05] |
 | `GET /_peep/stream` | UI | Server-Sent Events |
 | `POST /_peep/ui/*` | UI | UI actions (`/_peep/ui/clear` so far; later continue, stop, settings, switches, webhooks) |
 | `POST /_peep/mail`, `POST /_peep/sms` | client, any app | Generic mail and SMS capture |
@@ -348,7 +348,7 @@ public function resolve(): ?Origin
 `pause()` [API-26]:
 
 1. If the viewer is unavailable, return immediately.
-2. `$name = bin2hex(random_bytes(8))`; send a `lock` payload; the viewer shows a Continue / Stop banner.
+2. `$name = bin2hex(random_bytes(8))`; send a `lock` payload; the viewer registers the lock and shows a Continue / Stop banner (`POST /_peep/ui/locks/{name}/continue` or `/stop`).
 3. `set_time_limit(0)` where allowed (pause is an explicit developer action), then poll `GET /_peep/locks/{name}` every 500 ms.
 4. `{"active": false}` returns; `{"active": false, "stop": true}` throws `StopExecutionException`; the viewer becoming unreachable returns.
 

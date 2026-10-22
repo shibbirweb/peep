@@ -1,14 +1,14 @@
 <script>
   import { untrack } from 'svelte';
-  import { hasChildren, summary, visibilityMarker } from '../lib/format.js';
+  import { hasChildren, startsOpen, summary, visibilityMarker } from '../lib/format.js';
   import ValueTree from './ValueTree.svelte';
 
-  /** @type {{ node: object, depth?: number }} */
-  let { node, depth = 0 } = $props();
+  /** @type {{ node: object, depth?: number, path?: string, expand?: object|null }} */
+  let { node, depth = 0, path = '', expand = null } = $props();
 
-  // The first two levels start open, deeper ones on click. Only the starting depth matters,
-  // so later changes of depth must not reopen or close the node.
-  let open = $state(untrack(() => depth < 2));
+  // Whether a node starts open follows the card's expand setting (default: two levels).
+  // Only the starting state matters; later prop changes must not reopen or close the node.
+  let open = $state(untrack(() => startsOpen(depth, path, expand)));
   const expandable = $derived(hasChildren(node));
 </script>
 
@@ -25,7 +25,7 @@
             {#if child.visibility}<span class="visibility" title={child.visibility}>{visibilityMarker(child.visibility)}</span>{/if}
             <span class="key">{typeof child.key === 'string' && node.type === 'array' ? JSON.stringify(child.key) : child.key}</span>
             <span class="arrow">{node.type === 'array' ? '=>' : ':'}</span>
-            <ValueTree node={child.node} depth={depth + 1} />
+            <ValueTree node={child.node} depth={depth + 1} path={path === '' ? String(child.key) : `${path}.${child.key}`} {expand} />
           </li>
         {/each}
       </ul>

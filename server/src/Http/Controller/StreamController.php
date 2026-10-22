@@ -12,6 +12,7 @@ use ShibbirWeb\PeepServer\Card\Card;
 use ShibbirWeb\PeepServer\Card\CardStore;
 use ShibbirWeb\PeepServer\Event\EventHub;
 use ShibbirWeb\PeepServer\Event\ServerEvent;
+use ShibbirWeb\PeepServer\Lock\LockRegistry;
 
 /**
  * GET /_peep/stream: Server-Sent Events for the UI.
@@ -27,6 +28,7 @@ final readonly class StreamController implements RequestHandler
     public function __construct(
         private CardStore $cards,
         private EventHub $hub,
+        private LockRegistry $locks,
     ) {}
 
     public function handleRequest(Request $request): Response
@@ -72,6 +74,7 @@ final readonly class StreamController implements RequestHandler
         return new ServerEvent('snapshot', [
             'cards' => array_map(static fn(Card $card): array => $card->toArray(), $this->cards->cards(limit: self::SNAPSHOT_LIMIT)),
             'projects' => $this->cards->projects(),
+            'active_locks' => $this->locks->active(microtime(true)),
         ], $this->hub->lastId());
     }
 }

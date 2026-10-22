@@ -65,6 +65,41 @@ final class OriginResolver
         return null;
     }
 
+    /**
+     * The backtrace from the user's call site outwards, with paths mapped.
+     * Frame 0 is the call site; frame 1 is where the function containing it was called.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function userFrames(int $limit = 50): array
+    {
+        $frames = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, self::BACKTRACE_LIMIT + $limit);
+
+        foreach ($frames as $index => $frame) {
+            if (! isset($frame['file']) || $this->isSkipped($frame['file'])) {
+                continue;
+            }
+
+            $userFrames = [];
+            foreach (array_slice($frames, $index, $limit) as $userFrame) {
+                if (isset($userFrame['file'])) {
+                    $userFrame['file'] = $this->pathMapper->map($userFrame['file']);
+                }
+
+                $userFrames[] = $userFrame;
+            }
+
+            return $userFrames;
+        }
+
+        return [];
+    }
+
+    public function pathMapper(): PathMapper
+    {
+        return $this->pathMapper;
+    }
+
     private function isSkipped(string $file): bool
     {
         foreach ($this->skippedPrefixes as $prefix) {

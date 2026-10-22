@@ -23,6 +23,15 @@ final class Card
 
     public private(set) string $size = 'normal';
 
+    public private(set) bool $hidden = false;
+
+    /**
+     * How far to open the card's values: level, keys or all (peep()->expand()).
+     *
+     * @var array<string, mixed>|null
+     */
+    public private(set) ?array $expand = null;
+
     public private(set) float $updatedAt;
 
     /**
@@ -64,6 +73,10 @@ final class Card
             'label' => $this->label = self::stringContent($payload, 'label'),
             'size' => $this->size = self::stringContent($payload, 'size') ?? 'normal',
             'replace' => $this->payloads = [new Payload('log', ['values' => $payload->content['values'] ?? []], $this->origin())],
+            'hide' => $this->hidden = true,
+            'expand' => $this->expand = $payload->content,
+            // A counter card shows only its latest count.
+            'count' => $this->payloads = [...array_values(array_filter($this->payloads, static fn(Payload $existing): bool => $existing->type !== 'count')), $payload],
             default => $this->payloads[] = $payload,
         };
     }
@@ -79,7 +92,7 @@ final class Card
     }
 
     /**
-     * @return array{id: string, project: string, request: array{id: string, kind: string, label: string, started_at: float}, hostname: string, php_version: string, origin: array{file: string, line: int, function: string|null, class: string|null}|null, color: string|null, label: string|null, size: string, payloads: list<array{type: string, content: array<string, mixed>, origin: array{file: string, line: int, function: string|null, class: string|null}|null}>, created_at: float, updated_at: float}
+     * @return array{id: string, project: string, request: array{id: string, kind: string, label: string, started_at: float}, hostname: string, php_version: string, origin: array{file: string, line: int, function: string|null, class: string|null}|null, color: string|null, label: string|null, size: string, hidden: bool, expand: array<string, mixed>|null, payloads: list<array{type: string, content: array<string, mixed>, origin: array{file: string, line: int, function: string|null, class: string|null}|null}>, created_at: float, updated_at: float}
      */
     public function toArray(): array
     {
@@ -93,6 +106,8 @@ final class Card
             'color' => $this->color,
             'label' => $this->label,
             'size' => $this->size,
+            'hidden' => $this->hidden,
+            'expand' => $this->expand,
             'payloads' => array_map(static fn(Payload $payload): array => $payload->toArray(), $this->payloads),
             'created_at' => $this->createdAt,
             'updated_at' => $this->updatedAt,
