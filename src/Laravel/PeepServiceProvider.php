@@ -7,6 +7,7 @@ use ShibbirWeb\Peep\Config\Config;
 use ShibbirWeb\Peep\Laravel\Blade\PeepDirectives;
 use ShibbirWeb\Peep\Laravel\Caster\CollectionCaster;
 use ShibbirWeb\Peep\Laravel\Caster\ModelCaster;
+use ShibbirWeb\Peep\Laravel\Mail\MailTransportRegistrar;
 use ShibbirWeb\Peep\Laravel\Macro\FrameworkMacros;
 use ShibbirWeb\Peep\Laravel\Macro\PeepMacros;
 use ShibbirWeb\Peep\Laravel\Watcher\CacheWatcher;
@@ -20,6 +21,7 @@ use ShibbirWeb\Peep\Laravel\Watcher\LogWatcher;
 use ShibbirWeb\Peep\Laravel\Watcher\MailWatcher;
 use ShibbirWeb\Peep\Laravel\Watcher\QueryWatcher;
 use ShibbirWeb\Peep\Laravel\Watcher\RequestWatcher;
+use ShibbirWeb\Peep\Laravel\Watcher\SmsWatcher;
 use ShibbirWeb\Peep\Laravel\Watcher\ViewWatcher;
 use ShibbirWeb\Peep\Laravel\Watcher\WatcherInterface;
 use ShibbirWeb\Peep\PeepFactory;
@@ -43,6 +45,7 @@ class PeepServiceProvider extends ServiceProvider
         LogWatcher::class,
         ExceptionWatcher::class,
         MailWatcher::class,
+        SmsWatcher::class,
         DumpWatcher::class,
         DeprecationWatcher::class,
     ];
@@ -64,6 +67,9 @@ class PeepServiceProvider extends ServiceProvider
                 return new $class($app->make(PeepFactory::class), self::settings($app));
             });
         }
+
+        // Registered even when Peep is off: an app with MAIL_MAILER=peep must still resolve its mailer.
+        MailTransportRegistrar::register($this->app);
     }
 
     public function boot(): void

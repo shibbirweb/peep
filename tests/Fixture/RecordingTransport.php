@@ -72,6 +72,11 @@ final class RecordingTransport implements TransportInterface
     {
         $payloads = [];
         foreach ($this->requests as $request) {
+            // Mail and SMS posts carry no payloads.
+            if (! isset($request['body']['payloads'])) {
+                continue;
+            }
+
             foreach ($request['body']['payloads'] as $payload) {
                 $payloads[] = $payload;
             }

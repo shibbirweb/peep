@@ -18,10 +18,14 @@ use ShibbirWeb\PeepServer\Event\EventHub;
 use ShibbirWeb\PeepServer\Http\Controller\ClearController;
 use ShibbirWeb\PeepServer\Http\Controller\EnvelopeController;
 use ShibbirWeb\PeepServer\Http\Controller\HealthController;
+use ShibbirWeb\PeepServer\Http\Controller\InboxController;
 use ShibbirWeb\PeepServer\Http\Controller\LockController;
+use ShibbirWeb\PeepServer\Http\Controller\MailController;
+use ShibbirWeb\PeepServer\Http\Controller\MailgunController;
 use ShibbirWeb\PeepServer\Http\Controller\ReceivingController;
 use ShibbirWeb\PeepServer\Http\Controller\ScreenController;
 use ShibbirWeb\PeepServer\Http\Controller\SettingsController;
+use ShibbirWeb\PeepServer\Http\Controller\SmsController;
 use ShibbirWeb\PeepServer\Http\Controller\StaticFileController;
 use ShibbirWeb\PeepServer\Http\Controller\StreamController;
 use ShibbirWeb\PeepServer\Http\Controller\SwitchController;
@@ -30,9 +34,15 @@ use ShibbirWeb\PeepServer\Http\Guard\HostGuard;
 use ShibbirWeb\PeepServer\Http\Guard\OriginGuard;
 use ShibbirWeb\PeepServer\Http\Guard\TokenGuard;
 use ShibbirWeb\PeepServer\Http\Router;
+use ShibbirWeb\PeepServer\Inbox\Catcher;
 use ShibbirWeb\PeepServer\Lock\LockRegistry;
+use ShibbirWeb\PeepServer\Mail\MailParser;
+use ShibbirWeb\PeepServer\Mail\MailStore;
 use ShibbirWeb\PeepServer\Protocol\EnvelopeDecoder;
 use ShibbirWeb\PeepServer\Settings\SettingsStore;
+use ShibbirWeb\PeepServer\Smtp\CaughtMessage;
+use ShibbirWeb\PeepServer\Smtp\SmtpServer;
+use ShibbirWeb\PeepServer\Sms\SmsStore;
 use ShibbirWeb\PeepServer\Storage\CardStorage;
 use ShibbirWeb\PeepServer\Storage\NullCardStorage;
 use ShibbirWeb\PeepServer\Switch\SwitchStore;
@@ -59,7 +69,11 @@ final class Application
 
     public readonly Receiving $receiving;
 
+    public readonly Catcher $catcher;
+
     private ?SocketHttpServer $server = null;
+
+    private ?SmtpServer $smtp = null;
 
     private ?string $keepAliveTimer = null;
 
@@ -81,6 +95,7 @@ final class Application
         $this->locks = new LockRegistry();
         $this->switches = new SwitchStore($settings->settings->switches);
         $this->receiving = new Receiving();
+        $this->catcher = new Catcher(new MailStore(), new SmsStore(), $this->hub);
     }
 
     public function start(): void
@@ -103,6 +118,44 @@ final class Application
         // A comment line keeps idle SSE connections from being closed by proxies and webviews.
         $this->keepAliveTimer = EventLoop::repeat(self::KEEP_ALIVE_SECONDS, fn() => $this->hub->broadcast(": keep-alive\n\n"));
         $this->flushTimer = EventLoop::repeat(self::FLUSH_SECONDS, $this->flush(...));
+    }
+
+    /**
+     * Starts the SMTP listener on the settings' port.
+     *
+     * @return string|null Why it could not start (the port is taken), or null.
+     */
+    public function startSmtp(?int $port = null): ?string
+    {
+        $parser = new MailParser();
+        $this->smtp = new SmtpServer(
+            $this->host,
+            $port ?? $this->settings->settings->smtpPort,
+            function (CaughtMessage $message) use ($parser): void {
+                try {
+                    $this->catcher->mail($parser->parse($message->raw, $message->username, $message->recipients, 'smtp', microtime(true)));
+                } catch (Throwable $exception) {
+                    $this->logger->warning('Could not read a mail sent over SMTP: ' . $exception->getMessage());
+                }
+            },
+            $this->logger,
+            $this->settings->settings->token,
+        );
+
+        try {
+            $this->smtp->start();
+        } catch (Throwable $exception) {
+            $this->smtp = null;
+
+            return $exception->getMessage();
+        }
+
+        return null;
+    }
+
+    public function smtpAddress(): ?string
+    {
+        return $this->smtp?->address();
     }
 
     /**
@@ -132,6 +185,8 @@ final class Application
         $this->flush();
 
         $this->hub->closeAll();
+        $this->smtp?->stop();
+        $this->smtp = null;
         $this->server?->stop();
         $this->server = null;
     }
@@ -153,12 +208,22 @@ final class Application
         $locks = new LockController($this->locks, $this->hub);
         $settings = new SettingsController($this->settings, $this->hub, $this->cards->storage(), $this->url());
         $screens = new ScreenController($this->cards, $this->hub);
+        $sms = new SmsController($this->catcher);
+        $inbox = new InboxController($this->catcher, $this->hub);
 
         $router = new Router()
             ->add('GET', '/_peep/health', new HealthController())
             ->add('POST', '/_peep/envelope', new EnvelopeController(new EnvelopeDecoder(), $this->cards, $this->hub, $this->locks, $this->switches, $this->receiving))
             ->add('GET', '/_peep/switches', new SwitchController($this->switches))
-            ->add('GET', '/_peep/stream', new StreamController($this->cards, $this->hub, $this->locks, $this->switches, $this->receiving, $this->settings))
+            ->add('GET', '/_peep/stream', new StreamController($this->cards, $this->hub, $this->locks, $this->switches, $this->receiving, $this->settings, $this->catcher))
+            ->add('POST', '/_peep/mail', new MailController($this->catcher))
+            ->add('POST', '/v3/*', new MailgunController($this->catcher))
+            ->add('POST', '/_peep/sms', $sms)
+            ->add('POST', '/2010-04-01/*', $sms)
+            ->add('POST', '/sms/json', $sms)
+            ->add('GET', '/_peep/ui/mail/*', $inbox)
+            ->add('POST', '/_peep/ui/mail/*', $inbox)
+            ->add('POST', '/_peep/ui/sms/*', $inbox)
             ->add('GET', '/_peep/locks/*', $locks)
             ->add('POST', '/_peep/ui/clear', new ClearController($this->cards, $this->hub))
             ->add('POST', '/_peep/ui/locks/*', $locks)

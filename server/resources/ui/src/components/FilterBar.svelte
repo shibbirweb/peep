@@ -30,9 +30,13 @@
     {/each}
   </div>
 
+  {#if filters.request}
+    <button type="button" class="chip on" onclick={() => (filters.request = '')} title="Show cards of every request">Request {filters.request.slice(0, 8)} ×</button>
+  {/if}
+
   {#if isFiltering(filters)}
     <span class="count">{shown} of {total}</span>
-    <button type="button" class="reset" onclick={() => (filters = { kinds: [], colors: [], search: '' })}>Reset</button>
+    <button type="button" class="reset" onclick={() => (filters = { kinds: [], colors: [], search: '', request: '' })}>Reset</button>
   {/if}
 </div>
 

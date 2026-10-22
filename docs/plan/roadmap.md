@@ -122,7 +122,6 @@ Exit criteria:
 
 | # | Decision | Needed before |
 |---|----------|---------------|
-| D5 | Default SMTP port (Mailpit uses 1025, Herd uses 2525; both may already be running) | Phase 7 |
 
 ## Decided
 
@@ -137,4 +136,5 @@ Exit criteria:
 - Viewer server: PHP 8.5 with AMPHP v3 (fibers; HTTP server, SSE, SMTP sockets and HTTPS client from one library family). Decision D6, 2026-10-22.
 - Viewer UI: Svelte 5, built with Vite and run through Bun (`bun install`, `bun run build`); the build output ships inside the PHAR and the desktop app. Decision D3, 2026-10-22.
 - The viewer does not accept the Ray or Symfony VarDumper server protocols for now (VF-23 and VF-24 dropped); `dump()` reaches Peep through the VarDumper bridge instead. Decision D2, 2026-10-22; can be revisited after 1.0.
+- SMTP listens on port 23525 by default, next to the viewer's 23517, so it never clashes with Mailpit (1025) or Herd (2525); changeable in the settings. Decision D5, 2026-10-22.
 - History across restarts in SQLite (`history.sqlite` next to `settings.json`) when `pdo_sqlite` is available, memory only otherwise or when switched off. Decision D4, 2026-10-22.

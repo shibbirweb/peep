@@ -14,7 +14,7 @@ How each feature works is described in [implementation.md](implementation.md). T
 | LV: Laravel adapter | 4 | 31 / 31 |
 | BR: Bridges for any PHP app | 5 | 7 / 7 |
 | VF: Full viewer | 6 | 23 / 23 (2 dropped) |
-| MS: Mail and SMS catching | 7 | 0 / 15 |
+| MS: Mail and SMS catching | 7 | 15 / 15 |
 | WH: Webhook simulator | 7 | 0 / 13 |
 | DT: Desktop app (Tauri) | 8 | 0 / 15 |
 | RL: Release | 9 | 0 / 10 |
@@ -223,23 +223,23 @@ Storage and protocols:
 The viewer catches mail and SMS the app sends, so nothing reaches real people during development, and shows them in an inbox.
 
 Mail:
-- [ ] MS-01 SMTP server in the viewer (configurable port, accepts any login, no TLS required)
-- [ ] MS-02 Laravel mail transport `peep` (`MAIL_MAILER=peep`): sends mail to the viewer over HTTP, no SMTP setup
-- [ ] MS-03 Mailgun-compatible HTTP API endpoint (`POST /v3/{domain}/messages`) with a Mailgun-style response, for apps that use the Mailgun API instead of SMTP
-- [ ] MS-04 Generic HTTP mail endpoint (JSON) for any app
-- [ ] MS-05 Mail inbox UI: list, search, HTML, text and raw source views, headers, attachments download
-- [ ] MS-06 HTML preview in a sandboxed iframe, desktop and mobile widths
-- [ ] MS-07 Unread count, mark read, delete, clear inbox
-- [ ] MS-08 Link from a mail to the request / job that sent it (its queries, logs, exceptions)
+- [x] MS-01 SMTP server in the viewer (port 23525 by default, decision D5; accepts any login, the username picks the project; no TLS)
+- [x] MS-02 Laravel mail transport `peep` (`MAIL_MAILER=peep`): sends mail to the viewer over HTTP, no SMTP setup
+- [x] MS-03 Mailgun-compatible HTTP API endpoint (`POST /v3/{domain}/messages` and `messages.mime`) with a Mailgun-style response, for apps that use the Mailgun API (SDK or plain HTTP) instead of SMTP
+- [x] MS-04 Generic HTTP mail endpoint (JSON or raw MIME) for any app
+- [x] MS-05 Mail inbox UI: list, search, HTML, text and raw source views, headers, attachments download
+- [x] MS-06 HTML preview in a sandboxed iframe, desktop and mobile widths
+- [x] MS-07 Unread count, mark read, delete, clear inbox
+- [x] MS-08 Link from a mail to the request / job that sent it (its queries, logs, exceptions)
 
 SMS:
-- [ ] MS-09 Generic SMS endpoint (JSON or form: `to`, `from`, `body`)
-- [ ] MS-10 Twilio-compatible endpoint (`POST /2010-04-01/Accounts/{sid}/Messages.json`) returning a Twilio-style message resource, so app code continues normally
-- [ ] MS-11 Vonage-compatible endpoint
-- [ ] MS-12 Laravel: capture SMS notifications (`NotificationSending` for the Vonage and Twilio channels), with an option to stop the real send in local
-- [ ] MS-13 Client API `peep()->sms($to, $body, $from)` for apps with custom SMS code
-- [ ] MS-14 SMS inbox UI: thread per phone number, length and segment count, Unicode detection
-- [ ] MS-15 Link from an SMS to the request / job that sent it
+- [x] MS-09 Generic SMS endpoint (JSON or form: `to`, `from`, `body`)
+- [x] MS-10 Twilio-compatible endpoint (`POST /2010-04-01/Accounts/{sid}/Messages.json`) returning a Twilio-style message resource, so app code continues normally
+- [x] MS-11 Vonage-compatible endpoint (`POST /sms/json`)
+- [x] MS-12 Laravel: capture SMS notifications (`NotificationSending` for the Vonage and Twilio channels), with an option to stop the real send in local
+- [x] MS-13 Client API `peep()->sms($to, $body, $from)` for apps with custom SMS code
+- [x] MS-14 SMS inbox UI: thread per phone number, length and segment count, Unicode detection
+- [x] MS-15 Link from an SMS to the request / job that sent it
 
 ## WH: Webhook simulator (Phase 7)
 

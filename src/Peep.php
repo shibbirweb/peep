@@ -781,6 +781,19 @@ final class Peep
         return $this->update(new GenericPayload('clear_all'));
     }
 
+    /**
+     * Send an SMS to the viewer's SMS inbox instead of a provider, for apps with their own
+     * SMS code. Nothing is sent to a phone. The viewer may then simulate delivery webhooks.
+     */
+    public function sms(string $to, string $body, ?string $from = null): self
+    {
+        if ($this->isActive()) {
+            $this->services->dispatcher->postJson('/_peep/sms', ['to' => $to, 'body' => $body, 'from' => $from !== null ? $from : '', 'source' => 'peep']);
+        }
+
+        return $this;
+    }
+
     public function notify(string $message): self
     {
         return $this->content(function (?Origin $origin) use ($message) {

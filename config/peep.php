@@ -45,6 +45,11 @@ return [
     'send_logs' => env('PEEP_LOGS', true),
     'send_exceptions' => env('PEEP_EXCEPTIONS', true),
     'send_mail' => env('PEEP_MAIL', true),
+
+    // SMS notifications (Vonage / Nexmo, Twilio channel) go to the viewer's SMS inbox.
+    // block_real_sms also skips the real send (never in production), so no phone gets them.
+    'send_sms' => env('PEEP_SMS', true),
+    'block_real_sms' => env('PEEP_BLOCK_SMS', false),
     'send_dumps' => env('PEEP_DUMPS', true),
     'send_deprecations' => env('PEEP_DEPRECATIONS', false),
 

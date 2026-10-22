@@ -93,13 +93,28 @@ GET /_peep/locks/a3f9c2d17b4e8a10
 
 Clients poll every 500 ms. Locks expire after one hour.
 
+### Mail and SMS
+
+Apps send mail and SMS to the viewer instead of a provider. These endpoints are part of the client API (other machines may use them with the token).
+
+| Method and path | Body | Answer |
+|-----------------|------|--------|
+| `POST /_peep/mail` | Raw MIME (`Content-Type: message/rfc822`), JSON `{"raw_base64": "..."}`, or JSON `{"from", "to", "cc", "bcc", "subject", "text", "html"}` (`to`, `cc`, `bcc`: a list or a comma-separated string) | `202 {"id", "message_id"}` |
+| `POST /v3/{domain}/messages` | Mailgun's fields, multipart or form | `200 {"id": "<...>", "message": "Queued. Thank you."}` |
+| `POST /v3/{domain}/messages.mime` | Mailgun's `to` and `message` (file) | as above |
+| `POST /_peep/sms` | JSON or form: `to`, `body`, `from`, `status_callback` | `202` with the stored SMS |
+| `POST /2010-04-01/Accounts/{sid}/Messages.json` | Twilio's form fields | `201` Twilio message resource |
+| `POST /sms/json` | Vonage's fields, form or JSON | `200` Vonage answer |
+
+The project is taken from the `X-Peep-Project` header, then a `project` field (or, for mail, the `X-Peep-Project` message header), then `default`. A `request_id` field (SMS) or `X-Peep-Request-Id` message header (mail) links the message to the request that sent it. Mail is also accepted over SMTP on port 23525 (the `smtp_port` setting), where the login username is the project.
+
 ### Viewer UI endpoints
 
 These serve the viewer's own page and are not part of the client contract; they are listed so other tools (the desktop app) can use them. They answer only to this machine, and every `POST` needs the `X-Peep-UI: 1` header.
 
 | Method and path | Purpose |
 |-----------------|---------|
-| `GET /_peep/stream` | Server-Sent Events: `snapshot` first (cards, projects, active locks, switches, receiving state, screens, public settings), then `card.created`, `card.updated`, `card.removed`, `screen.cleared`, `screen.archived`, `lock.released`, `switches.changed`, `receiving.changed`, `settings.changed`, `app.command` |
+| `GET /_peep/stream` | Server-Sent Events: `snapshot` first (cards, projects, active locks, switches, receiving state, screens, public settings, mails, SMS), then `card.created`, `card.updated`, `card.removed`, `screen.cleared`, `screen.archived`, `lock.released`, `switches.changed`, `receiving.changed`, `settings.changed`, `app.command`, `mail.received`, `mail.updated`, `mail.removed`, `mail.cleared`, `sms.received`, `sms.updated`, `sms.removed`, `sms.cleared` |
 | `POST /_peep/ui/clear` | `{"project": "shop"}`, or `null` for every project |
 | `POST /_peep/ui/locks/{name}/continue`, `.../stop` | Release a pause lock |
 | `POST /_peep/ui/switches` | `{"project": "shop", "switches": {"queries": "on"}}`; saved in the settings |
@@ -108,6 +123,10 @@ These serve the viewer's own page and are not part of the client contract; they 
 | `GET /_peep/ui/screens/{id}` | A previous screen with its cards (the last 10 per project are kept, in memory) |
 | `GET /_peep/ui/settings` | Settings, with the token, where history is kept and which changes need a restart |
 | `POST /_peep/ui/settings` | `{"changes": {...}}`; `422` with `setting` and `message` when a value is invalid |
+| `GET /_peep/ui/mail/{id}` | A mail with HTML, text, headers and attachments |
+| `GET /_peep/ui/mail/{id}/source`, `.../attachments/{index}` | The raw message as text; an attachment as a download |
+| `POST /_peep/ui/mail/{id}/read`, `.../delete`, `POST /_peep/ui/mail/clear` | Inbox actions (`{"read": false}` marks unread) |
+| `POST /_peep/ui/sms/read`, `/_peep/ui/sms/{id}/delete`, `/_peep/ui/sms/clear` | SMS actions (`read` takes `{"project", "to"}`) |
 
 ## Envelope format
 

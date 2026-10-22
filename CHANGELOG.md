@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Mail catching: SMTP on port 23525, the Laravel `peep` mailer (`MAIL_MAILER=peep`, Laravel 5.5 to 13), a Mailgun-compatible API and a generic `/_peep/mail` endpoint. A mail inbox with HTML (desktop and mobile width), text, source, headers and attachment downloads, unread counts, and a link to the request that sent the mail.
+- SMS catching: generic `/_peep/sms`, Twilio- and Vonage-compatible APIs that answer like the real ones, Laravel SMS notifications (Vonage, Nexmo, Twilio channel; optionally blocking the real send), and `peep()->sms()`. An SMS inbox with a thread per number, segment counts and GSM-7 or UCS-2 encoding.
 - Full viewer: cards grouped by request, filters by kind and color, search, copy as text, a virtual list that stays smooth with 10,000+ cards, project tabs with counts, and the card limit per project.
 - Query debugging switches in the viewer toolbar (all, slow with threshold, duplicates), saved and applied to running apps within seconds.
 - Pause receiving, New screen with the last 10 previous screens per project, and desktop notifications for `notify()` and exceptions.

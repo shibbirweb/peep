@@ -84,3 +84,69 @@ export async function loadSettings() {
 export function saveSettings(changes) {
   return post('/_peep/ui/settings', { changes });
 }
+
+/**
+ * @param {string} id
+ */
+export async function loadMail(id) {
+  const response = await fetch(`/_peep/ui/mail/${encodeURIComponent(id)}`);
+
+  if (!response.ok) {
+    throw new Error('This mail is no longer in the inbox.');
+  }
+
+  return response.json();
+}
+
+/**
+ * @param {string} id
+ */
+export async function loadMailSource(id) {
+  const response = await fetch(`/_peep/ui/mail/${encodeURIComponent(id)}/source`);
+
+  return response.text();
+}
+
+/**
+ * @param {string} id
+ * @param {boolean} read
+ */
+export function markMailRead(id, read = true) {
+  return post(`/_peep/ui/mail/${encodeURIComponent(id)}/read`, { read });
+}
+
+/**
+ * @param {string} id
+ */
+export function deleteMail(id) {
+  return post(`/_peep/ui/mail/${encodeURIComponent(id)}/delete`);
+}
+
+/**
+ * @param {string|null} project Null clears every project.
+ */
+export function clearMail(project) {
+  return post('/_peep/ui/mail/clear', { project });
+}
+
+/**
+ * @param {string} project
+ * @param {string} to
+ */
+export function markThreadRead(project, to) {
+  return post('/_peep/ui/sms/read', { project, to });
+}
+
+/**
+ * @param {string} id
+ */
+export function deleteSms(id) {
+  return post(`/_peep/ui/sms/${encodeURIComponent(id)}/delete`);
+}
+
+/**
+ * @param {string|null} project Null clears every project.
+ */
+export function clearSms(project) {
+  return post('/_peep/ui/sms/clear', { project });
+}

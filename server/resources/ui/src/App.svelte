@@ -2,6 +2,8 @@
   import { onMount } from 'svelte';
   import Card from './components/Card.svelte';
   import FilterBar from './components/FilterBar.svelte';
+  import MailInbox from './components/MailInbox.svelte';
+  import SmsInbox from './components/SmsInbox.svelte';
   import QuerySwitches from './components/QuerySwitches.svelte';
   import SettingsDialog from './components/SettingsDialog.svelte';
   import VirtualList from './components/VirtualList.svelte';
@@ -18,6 +20,7 @@
   let collapsedGroups = $state(new Set());
   let archived = $state(null);
   let showSettings = $state(false);
+  let tab = $state('cards');
 
   // Typing in the search box filters after a short pause, so long lists never block typing.
   let searchTimer = 0;
@@ -48,6 +51,15 @@
   // The switches need one project: the selected one, or the only one there is.
   const switchProject = $derived(project !== '' ? project : projects.length === 1 ? projects[0] : null);
   const screens = $derived(viewer.screens.filter((screen) => project === '' || screen.project === project));
+  const unreadMail = $derived(viewer.mails.filter((mail) => !mail.read && (project === '' || mail.project === project)).length);
+  const unreadSms = $derived(viewer.sms.filter((sms) => !sms.read && (project === '' || sms.project === project)).length);
+
+  // From a mail or SMS to the cards of the request or job that sent it (MS-08, MS-15).
+  function showRequest(requestId) {
+    archived = null;
+    filters = { ...emptyFilters(), request: requestId };
+    tab = 'cards';
+  }
 
   onMount(() => connect());
 
@@ -101,6 +113,12 @@
     <strong class="brand">Peep</strong>
     <span class="status" class:online={viewer.connected} title={viewer.connected ? 'Connected' : 'Reconnecting'}></span>
 
+    <nav class="views" aria-label="Views">
+      <button type="button" class:active={tab === 'cards'} onclick={() => (tab = 'cards')}>Cards</button>
+      <button type="button" class:active={tab === 'mail'} onclick={() => (tab = 'mail')}>Mail{#if unreadMail > 0} <span class="badge">{unreadMail}</span>{/if}</button>
+      <button type="button" class:active={tab === 'sms'} onclick={() => (tab = 'sms')}>SMS{#if unreadSms > 0} <span class="badge">{unreadSms}</span>{/if}</button>
+    </nav>
+
     <nav class="projects" aria-label="Projects">
       <button type="button" class:active={project === ''} onclick={() => (project = '')}>All <span class="count">{viewer.cards.length}</span></button>
       {#each projects as name (name)}
@@ -126,11 +144,13 @@
     <button type="button" onclick={() => (showSettings = true)} aria-label="Settings" title="Settings">Settings</button>
   </div>
 
-  <div class="line">
-    <FilterBar bind:filters shown={visible.length} total={inProject.length} />
-    <span class="spacer"></span>
-    {#if switchProject !== null}<QuerySwitches project={switchProject} switches={viewer.switches[switchProject]} />{/if}
-  </div>
+  {#if tab === 'cards'}
+    <div class="line">
+      <FilterBar bind:filters shown={visible.length} total={inProject.length} />
+      <span class="spacer"></span>
+      {#if switchProject !== null}<QuerySwitches project={switchProject} switches={viewer.switches[switchProject]} />{/if}
+    </div>
+  {/if}
 </header>
 
 <main>
@@ -145,7 +165,11 @@
     </div>
   {/if}
 
-  {#if rows.length === 0}
+  {#if tab === 'mail'}
+    <MailInbox mails={viewer.mails} {project} smtpPort={viewer.settings.smtp_port} onrequest={showRequest} />
+  {:else if tab === 'sms'}
+    <SmsInbox messages={viewer.sms} {project} onrequest={showRequest} />
+  {:else if rows.length === 0}
     <div class="empty">
       {#if inProject.length > 0}
         <p>No cards match the filters.</p>
@@ -209,6 +233,35 @@
 
   .status.online {
     background: var(--green);
+  }
+
+  .views {
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    background: var(--surface-2);
+    border-radius: 8px;
+  }
+
+  .views button {
+    border: 0;
+    background: none;
+    padding: 3px 12px;
+  }
+
+  .views button.active {
+    background: var(--surface);
+    box-shadow: 0 0 0 1px var(--border);
+    font-weight: 600;
+  }
+
+  .badge {
+    font-size: 11px;
+    border-radius: 999px;
+    padding: 0 6px;
+    background: var(--accent);
+    color: white;
+    font-weight: 600;
   }
 
   .projects {

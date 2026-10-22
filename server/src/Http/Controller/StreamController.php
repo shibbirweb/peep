@@ -13,7 +13,10 @@ use ShibbirWeb\PeepServer\Card\CardStore;
 use ShibbirWeb\PeepServer\Card\Receiving;
 use ShibbirWeb\PeepServer\Event\EventHub;
 use ShibbirWeb\PeepServer\Event\ServerEvent;
+use ShibbirWeb\PeepServer\Inbox\Catcher;
 use ShibbirWeb\PeepServer\Lock\LockRegistry;
+use ShibbirWeb\PeepServer\Mail\Mail;
+use ShibbirWeb\PeepServer\Sms\Sms;
 use ShibbirWeb\PeepServer\Settings\SettingsStore;
 use ShibbirWeb\PeepServer\Switch\SwitchStore;
 
@@ -26,6 +29,8 @@ use ShibbirWeb\PeepServer\Switch\SwitchStore;
  */
 final readonly class StreamController implements RequestHandler
 {
+    public const int INBOX_LIMIT = 1000;
+
     public function __construct(
         private CardStore $cards,
         private EventHub $hub,
@@ -33,6 +38,7 @@ final readonly class StreamController implements RequestHandler
         private SwitchStore $switches = new SwitchStore(),
         private Receiving $receiving = new Receiving(),
         private SettingsStore $settings = new SettingsStore(),
+        private ?Catcher $catcher = null,
     ) {}
 
     public function handleRequest(Request $request): Response
@@ -83,6 +89,8 @@ final readonly class StreamController implements RequestHandler
             'receiving_paused' => $this->receiving->paused,
             'screens' => $this->cards->screens(),
             'settings' => $this->settings->public(),
+            'mails' => array_map(static fn(Mail $mail): array => $mail->summary(), array_slice($this->catcher?->mails->all() ?? [], 0, self::INBOX_LIMIT)),
+            'sms' => array_map(static fn(Sms $sms): array => $sms->toArray(), array_slice($this->catcher?->sms->all() ?? [], 0, self::INBOX_LIMIT)),
         ], $this->hub->lastId());
     }
 }

@@ -92,6 +92,13 @@ final readonly class ServeCommand
 
         $this->write(sprintf('Peep %s is running at %s. Press Ctrl+C to stop.', Version::VERSION, $application->url()));
         $this->write('History: ' . $application->cards->storage()->describe() . ($restored > 0 ? ", {$restored} cards restored" : '') . '.');
+
+        if ($settings->smtp) {
+            $smtpError = $application->startSmtp();
+            $this->write($smtpError === null
+                ? "SMTP: catching mail on {$application->smtpAddress()} (any login; the username picks the project)."
+                : "SMTP: not started, port {$settings->smtpPort} is not free ({$smtpError}). Change it in the settings.");
+        }
         $this->write('Settings: ' . $settingsFile->path());
         $this->openView($options->open, $application->url());
 

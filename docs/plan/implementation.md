@@ -527,30 +527,32 @@ PHP 7 lesson from this phase: never call `set_error_handler()` inside Peep's sen
 
 ## 10. Mail and SMS catching (Phase 7)
 
-All mail ends up as raw MIME and goes through one parser (`zbateson/mail-mime-parser`), whatever way it arrived.
+All mail ends up as raw MIME and goes through one parser (`zbateson/mail-mime-parser` 3), whatever way it arrived. `Inbox\Catcher` stores what was caught, publishes it to the UI and tells listeners (the webhook simulator).
 
 ### Ways mail arrives
 
 | Way | Logic |
 |-----|-------|
-| SMTP [MS-01] | Minimal ESMTP on the configured port (decision D5): `220` greeting, `EHLO`/`HELO` (advertises `AUTH PLAIN LOGIN`, `8BITMIME`, `SIZE`), any login accepted (the username becomes the project), `MAIL FROM`, multiple `RCPT TO`, `DATA` read until `\r\n.\r\n` with dot-unstuffing, `RSET`, `NOOP`, `QUIT`. No `STARTTLS`. Bcc recipients = RCPT addresses not in To/Cc headers |
-| Laravel `peep` transport [MS-02] | `Mail::extend('peep', ...)`. Laravel 9+ (Symfony Mailer): a `Symfony\Component\Mailer\Transport\AbstractTransport` subclass posting `$message->toString()` to `/_peep/mail` as `message/rfc822`. Laravel 6 to 8 (SwiftMailer): a `Swift_Transport` implementation doing the same. Picked by checking which mailer classes exist |
-| Mailgun API [MS-03] | `POST /v3/{domain}/messages` (multipart: `from`, `to`, `cc`, `bcc`, `subject`, `text`, `html`, `attachment[]`, `h:*`, `v:*`, `o:*`) built into MIME; `/messages.mime` takes MIME directly. Response `200 {"id":"<{timestamp}.{random}@{domain}>","message":"Queued. Thank you."}`. Any API key accepted. Laravel 9+: `MAILGUN_ENDPOINT=127.0.0.1:23517` and `MAILGUN_SCHEME=http` |
-| Generic [MS-04] | `POST /_peep/mail` with raw MIME or JSON (`from`, `to`, `subject`, `html`, `text`) |
+| SMTP [MS-01] | `Smtp\SmtpSession` is a line-based state machine without sockets (unit tested); `Smtp\SmtpServer` feeds it from an AMPHP socket on the `smtp_port` setting (default 23525, decision D5) on the viewer's host. `220` greeting, `EHLO`/`HELO` (advertises `AUTH PLAIN LOGIN`, `SIZE` 25 MB, `8BITMIME`, `SMTPUTF8`), any login accepted and its username becomes the project, `MAIL FROM`, up to 1,000 `RCPT TO`, `DATA` read until a lone `.` with dot-unstuffing, `RSET`, `NOOP`, `QUIT`; `STARTTLS` is refused. Bcc = RCPT addresses not in To or Cc. Clients on other machines must log in with the token as password; without a token they are refused |
+| Laravel `peep` transport [MS-02] | `Laravel\Mail\MailTransportRegistrar` extends the mail manager (Laravel 7+) or the Swift transport manager (5.5 to 6) when they are resolved, and adds a `mailers.peep` entry when the app has none, so `MAIL_MAILER=peep` (or `MAIL_DRIVER=peep`) works without editing `config/mail.php`. Symfony Mailer (9+): `PeepSymfonyTransport`; SwiftMailer (5.5 to 8): `PeepSwiftTransport`. Both post the finished message (base64) to `/_peep/mail`, even when Peep's cards are off, and drop it when the viewer is closed. Registered even when Peep is disabled, so the mailer always resolves |
+| Mailgun API [MS-03] | `POST /v3/{domain}/messages` (multipart or form: `from`, `to` repeated or comma separated, `cc`, `bcc`, `subject`, `text`, `html`, files `attachment` and `inline`, `h:*` headers, `v:*` variables as `X-Mailgun-Variables`) built into MIME by `Mail\MimeBuilder`; `/messages.mime` takes the `message` file. Answer `200 {"id": "<{YmdHis}.{16 hex}@{domain}>", "message": "Queued. Thank you."}`; the id is the stored Message-ID. Any API key is accepted. For apps using the Mailgun PHP SDK (its endpoint is configurable) or plain HTTP; Laravel's and Symfony's Mailgun transports always use `https://`, so Laravel apps use `MAIL_MAILER=peep` or SMTP instead |
+| Generic [MS-04] | `POST /_peep/mail` with raw MIME (`message/rfc822`), JSON `{"raw_base64"}`, or JSON fields (`from`, `to`, `cc`, `bcc`, `subject`, `text`, `html`) |
 
-Stored mail: `{id, project, requestId, messageId, from, to[], cc[], bcc[], subject, html, text, headers, attachments[], size, receivedAt, read}`. Attachments are written to the viewer's data directory and served for download. `requestId` comes from the `X-Peep-Request-Id` header added by the Laravel mail watcher [MS-08].
+Project: SMTP username, then `X-Peep-Project` (HTTP header, or the message header the Laravel mail watcher adds), then `default`. The request id comes from the `X-Peep-Request-Id` message header the mail watcher adds [MS-08].
+
+Stored mail (`Mail\Mail`): id, project, request id, Message-ID, from, to, cc, bcc, subject, HTML, text, headers, attachment list, source and the raw message. The inbox (`Mail\MailStore`) is in memory: at most 1,000 mails or 256 MB, oldest dropped. Attachments are taken from the raw message when downloaded, and are always served as `application/octet-stream` with `Content-Disposition: attachment`, `nosniff` and a sandbox CSP, so app content never runs on the viewer's origin. The HTML body is shown in a sandboxed iframe without scripts, at desktop width or 375 px [MS-06].
 
 ### Ways SMS arrives
 
 | Way | Logic |
 |-----|-------|
-| Generic [MS-09] | `POST /_peep/sms` JSON or form: `to`, `from`, `body`, optional `project`, `status_callback` |
-| Twilio [MS-10] | `POST /2010-04-01/Accounts/{sid}/Messages.json` with form fields `To`, `From` or `MessagingServiceSid`, `Body`, `MediaUrl`, `StatusCallback`. Response `201` Twilio message resource: `sid` = `SM` + 32 hex, `status: "queued"`, `to`, `from`, `body`, `num_segments`, `direction: "outbound-api"`, `api_version: "2010-04-01"`, `date_created` (RFC 2822), `uri`, `price: null`, `error_code: null` |
-| Vonage [MS-11] | `POST /sms/json` (`api_key`, `api_secret`, `from`, `to`, `text`). Response `{"message-count":"1","messages":[{"to":..,"message-id":..,"status":"0","remaining-balance":"10.00","message-price":"0.00","network":"00000"}]}` |
-| Laravel notifications [MS-12] | Listener on `NotificationSending`: for channels in a configurable list (`vonage`, `nexmo`, `twilio`), read the recipient with `$notifiable->routeNotificationFor($channel, $notification)` and the text from known message classes (Vonage `content`, Twilio SMS message `content`), send it to `/_peep/sms`. When `peep.sms.block_real_send` is true and the environment is not production, the listener returns `false`, which makes Laravel skip the real send |
-| Client API [MS-13] | `peep()->sms($to, $body, $from)` posts to `/_peep/sms` |
+| Generic [MS-09] | `POST /_peep/sms` JSON or form: `to`, `body` (or `text`), `from`, `project`, `request_id`, `status_callback` |
+| Twilio [MS-10] | `POST /2010-04-01/Accounts/{sid}/Messages.json` with form fields `To`, `From` or `MessagingServiceSid`, `Body`, `MediaUrl`, `StatusCallback`. Answer `201` with a Twilio message resource: `sid` = `SM` + 32 hex, `status: "queued"`, `num_segments`, `direction: "outbound-api"`, `api_version`, `date_created` (RFC 2822), `uri`, `price: null`, `error_code: null`. Twilio's own errors for a missing `To` (21604) or body (21602). Project from the `X-Peep-Project` header |
+| Vonage [MS-11] | `POST /sms/json` (form or JSON: `from`, `to`, `text`, `callback`). Answer `{"message-count", "messages": [{"to", "message-id", "status": "0", ...}]}` with one entry per part |
+| Laravel notifications [MS-12] | `SmsWatcher` listens to `NotificationSending`. For the `vonage`, `nexmo` and `twilio` channels (names or channel classes), it calls `toVonage()` / `toNexmo()` / `toTwilio()`, reads `content` and `from` (properties or getters), gets the number from `routeNotificationFor()`, and posts to `/_peep/sms`. With `block_real_sms` (`PEEP_BLOCK_SMS`) on and outside production it returns `false`, which makes Laravel skip the real send |
+| Client API [MS-13] | `peep()->sms($to, $body, $from)` posts to `/_peep/sms` through `Dispatcher::postJson()`, which adds the project and request id |
 
-SMS details [MS-14]: segments computed as GSM-7 (160 per message, 153 when split) unless any character is outside GSM-7, then UCS-2 (70, 67 when split).
+SMS details [MS-14]: segments counted as GSM-7 (160 per message, 153 per part; `^{}\[~]|€` and form feed count twice) unless any character is outside GSM-7, then UCS-2 in UTF-16 units (70, 67 per part). The inbox (`Sms\SmsStore`) is in memory, at most 2,000 messages. The UI shows one thread per project and number; opening a thread marks it read.
 
 ## 11. Webhook simulator (Phase 7)
 

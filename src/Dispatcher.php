@@ -157,6 +157,46 @@ final class Dispatcher
     }
 
     /**
+     * POST a JSON object to another viewer endpoint (SMS, mail), with the project and the
+     * request id added. Same rules as dispatch(): nothing is sent when disabled or down.
+     *
+     * @param array<string, mixed> $data
+     * @param bool $evenWhenDisabled For things the app chose to send to Peep (the "peep" mailer).
+     * @return array<string, mixed>|null The viewer's answer, or null when nothing was sent.
+     */
+    public function postJson(string $path, array $data, bool $evenWhenDisabled = false): ?array
+    {
+        if (! $this->availability->isUp($this->endpoint)) {
+            return null;
+        }
+
+        if (! $evenWhenDisabled && (! $this->enabled || ! $this->rateLimiter->allow())) {
+            return null;
+        }
+
+        try {
+            $meta = $this->metaFactory->create();
+            $body = $this->encoder->encodeArray($data + ['project' => $meta['project'], 'request_id' => $meta['request']['id']]);
+
+            if ($body === null) {
+                return null;
+            }
+
+            $response = $this->transport->post($path, $body);
+            $this->availability->markUp($this->endpoint);
+            $answer = json_decode($response->body(), true);
+
+            return $response->isSuccessful() && is_array($answer) ? $answer : null;
+        } catch (TransportException $exception) {
+            $this->availability->markDown($this->endpoint);
+        } catch (Throwable $exception) {
+            // A bug inside Peep must never break the app.
+        }
+
+        return null;
+    }
+
+    /**
      * GET a viewer endpoint and decode its JSON. Null when the viewer is unreachable,
      * answers with an error, or sends something that is not a JSON object.
      *

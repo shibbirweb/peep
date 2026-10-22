@@ -115,7 +115,7 @@ abstract class LaravelTestCase extends TestCase
     {
         $found = [];
         foreach ($this->transport->requests as $request) {
-            if ($request['body']['payloads'][0]['type'] === $type) {
+            if (isset($request['body']['payloads'][0]['type']) && $request['body']['payloads'][0]['type'] === $type) {
                 $found[] = $request['body'];
             }
         }

@@ -41,6 +41,7 @@
     const changes = {
       ...form,
       port: Number.parseInt(String(form.port), 10),
+      smtp_port: Number.parseInt(String(form.smtp_port), 10),
       max_cards: Number.parseInt(String(form.max_cards), 10),
       token: form.token.trim() === '' ? null : form.token.trim(),
       path_mappings: form.path_mappings.filter((mapping) => mapping.from.trim() !== '' || mapping.to.trim() !== ''),
@@ -123,6 +124,10 @@
         <div class="pair">
           <label class="row"><span>Host</span><input bind:value={form.host} /></label>
           <label class="row"><span>Port</span><input type="number" min="1" max="65535" bind:value={form.port} /></label>
+        </div>
+        <div class="pair">
+          <label class="row check"><input type="checkbox" bind:checked={form.smtp} /><span>Catch mail over SMTP</span></label>
+          <label class="row"><span>SMTP port</span><input type="number" min="1" max="65535" bind:value={form.smtp_port} disabled={!form.smtp} /></label>
         </div>
         <label class="row">
           <span>Token</span>

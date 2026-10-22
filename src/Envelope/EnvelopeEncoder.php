@@ -9,8 +9,14 @@ final class EnvelopeEncoder
 {
     public function encode(Envelope $envelope): ?string
     {
-        $data = $envelope->toArray();
+        return $this->encodeArray($envelope->toArray());
+    }
 
+    /**
+     * @param array<string, mixed> $data
+     */
+    public function encodeArray(array $data): ?string
+    {
         $json = json_encode($data, self::flags());
         if (is_string($json)) {
             return $json;

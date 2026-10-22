@@ -30,3 +30,6 @@ parameters:
             # meaningless (Monolog 3 has PeepLogRecordHandler). It is covered by the test
             # runs on PHP versions that install Monolog 1 and 2.
             - src/Bridge/Monolog/PeepHandler.php
+            # The SwiftMailer transport (Laravel 5.5 to 8); the installed Laravel uses Symfony
+            # Mailer. Covered by the Laravel 5.5 to 8 test runs.
+            - src/Laravel/Mail/PeepSwiftTransport.php

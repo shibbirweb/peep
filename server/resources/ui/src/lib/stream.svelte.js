@@ -1,5 +1,6 @@
 import { applyEvent } from './cards.js';
 import { setPathMappings } from './ide.js';
+import { MAIL_EVENTS, SMS_EVENTS, applyInboxEvent } from './inbox.js';
 import { maybeNotify } from './notify.js';
 
 const CARD_EVENTS = ['snapshot', 'card.created', 'card.updated', 'card.removed', 'screen.cleared'];
@@ -11,6 +12,8 @@ export const DEFAULT_SETTINGS = {
   host: '127.0.0.1',
   port: 23517,
   theme: 'system',
+  smtp: true,
+  smtp_port: 23525,
   max_cards: 10000,
   history: true,
   notifications: false,
@@ -32,6 +35,9 @@ export const viewer = $state({
   // Archived screens, newest first, without their cards.
   screens: [],
   settings: { ...DEFAULT_SETTINGS },
+  // Caught mail (summaries) and SMS, newest first.
+  mails: [],
+  sms: [],
 });
 
 export function connect() {
@@ -82,6 +88,18 @@ export function connect() {
     applySettings(data);
   });
 
+  for (const name of MAIL_EVENTS) {
+    on(source, name, (data) => {
+      viewer.mails = applyInboxEvent(viewer.mails, name, data);
+    });
+  }
+
+  for (const name of SMS_EVENTS) {
+    on(source, name, (data) => {
+      viewer.sms = applyInboxEvent(viewer.sms, name, data);
+    });
+  }
+
   return () => source.close();
 }
 
@@ -97,6 +115,8 @@ function applySnapshot(data) {
   viewer.switches = data.switches ?? {};
   viewer.receivingPaused = data.receiving_paused === true;
   viewer.screens = data.screens ?? [];
+  viewer.mails = data.mails ?? [];
+  viewer.sms = data.sms ?? [];
 
   if (data.settings) {
     applySettings(data.settings);

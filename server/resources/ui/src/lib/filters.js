@@ -38,7 +38,7 @@ const NOT_CONTENT = new Set(['color', 'label', 'size', 'lock', 'new_screen']);
 const kindCache = new WeakMap();
 
 export function emptyFilters() {
-  return { kinds: [], colors: [], search: '' };
+  return { kinds: [], colors: [], search: '', request: '' };
 }
 
 /**
@@ -64,6 +64,10 @@ export function kindsOf(card) {
  * @returns {boolean}
  */
 export function matches(card, filters) {
+  if (filters.request && card.request?.id !== filters.request) {
+    return false;
+  }
+
   if (filters.kinds.length > 0 && !kindsOf(card).some((kind) => filters.kinds.includes(kind))) {
     return false;
   }
@@ -82,7 +86,7 @@ export function matches(card, filters) {
  * @returns {boolean}
  */
 export function isFiltering(filters) {
-  return filters.kinds.length > 0 || filters.colors.length > 0 || filters.search.trim() !== '';
+  return Boolean(filters.request) || filters.kinds.length > 0 || filters.colors.length > 0 || filters.search.trim() !== '';
 }
 
 /**

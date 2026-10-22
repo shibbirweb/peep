@@ -18,7 +18,7 @@ final class Settings
     /**
      * Settings that only take effect when the viewer starts again.
      */
-    public const array RESTART_REQUIRED = ['host', 'port', 'token', 'history', 'max_cards'];
+    public const array RESTART_REQUIRED = ['host', 'port', 'token', 'history', 'max_cards', 'smtp', 'smtp_port'];
 
     public const int MIN_TOKEN_LENGTH = 16;
 
@@ -65,6 +65,21 @@ final class Settings
     }
 
     public Theme $theme = Theme::System;
+
+    /**
+     * Catch mail sent over SMTP (Mailpit uses 1025 and Herd 2525, so Peep's default is neither).
+     */
+    public bool $smtp = true;
+
+    public int $smtpPort = 23525 {
+        set {
+            if ($value < 1 || $value > 65535) {
+                throw new InvalidSettingException('smtp_port', 'The SMTP port must be a number from 1 to 65535.');
+            }
+
+            $this->smtpPort = $value;
+        }
+    }
 
     /**
      * Shared secret that apps on other machines (or Docker on Linux) send as X-Peep-Token.
@@ -164,7 +179,7 @@ final class Settings
     }
 
     /**
-     * @return array{display_mode: string, ide: string, path_mappings: list<array{from: string, to: string}>, host: string, port: int, theme: string, token: string|null, max_cards: int, history: bool, notifications: bool, switches: array<string, array<string, string|int|null>>}
+     * @return array{display_mode: string, ide: string, path_mappings: list<array{from: string, to: string}>, host: string, port: int, theme: string, smtp: bool, smtp_port: int, token: string|null, max_cards: int, history: bool, notifications: bool, switches: array<string, array<string, string|int|null>>}
      */
     public function toArray(): array
     {
@@ -175,6 +190,8 @@ final class Settings
             'host' => $this->host,
             'port' => $this->port,
             'theme' => $this->theme->value,
+            'smtp' => $this->smtp,
+            'smtp_port' => $this->smtpPort,
             'token' => $this->token,
             'max_cards' => $this->maxCards,
             'history' => $this->history,
@@ -196,6 +213,8 @@ final class Settings
                 'host' => $this->host = self::string($key, $value),
                 'port' => $this->port = is_int($value) ? $value : throw new InvalidSettingException($key, 'The port must be a number.'),
                 'theme' => $this->theme = Theme::from(self::string($key, $value)),
+                'smtp' => $this->smtp = is_bool($value) ? $value : throw new InvalidSettingException($key, 'SMTP must be true or false.'),
+                'smtp_port' => $this->smtpPort = is_int($value) ? $value : throw new InvalidSettingException($key, 'The SMTP port must be a number.'),
                 'token' => $this->token = $value === null ? null : self::string($key, $value),
                 'max_cards' => $this->maxCards = is_int($value) ? $value : throw new InvalidSettingException($key, 'Max cards must be a number.'),
                 'history' => $this->history = is_bool($value) ? $value : throw new InvalidSettingException($key, 'History must be true or false.'),
