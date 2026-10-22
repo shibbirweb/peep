@@ -7,6 +7,7 @@
 [![PHP 7.1 to 8.5](https://img.shields.io/badge/PHP-7.1%20to%208.5-777bb4?logo=php&logoColor=white)](docs/wiki/usage/Version-Support.md)
 [![Laravel 5.5 to 13](https://img.shields.io/badge/Laravel-5.5%20to%2013-ff2d20?logo=laravel&logoColor=white)](docs/wiki/usage/Version-Support.md#laravel-and-php)
 [![License: MIT](https://img.shields.io/github/license/shibbirweb/peep)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/shibbirweb/peep?style=social)](https://github.com/shibbirweb/peep/stargazers)
 
 Debug any PHP app in a separate window. Call `peep($value)` anywhere and watch values, database queries, jobs, logs and exceptions arrive live, in your browser or in a desktop app. Peep also catches the mail and SMS your app sends, and can call your app back with signed provider webhooks.
 
@@ -97,9 +98,16 @@ The [wiki](https://github.com/shibbirweb/peep/wiki) has everything, with screens
 - [Releasing](docs/wiki/developer/Releasing.md): betas from `develop`, stable releases from `main`
 - [Protocol](docs/protocol.md), [roadmap](docs/plan/roadmap.md), [feature list](docs/plan/features.md) and [implementation plan](docs/plan/implementation.md)
 
+## Support Peep
+
+- **Star the repository.** If Peep saves you time, a [star on GitHub](https://github.com/shibbirweb/peep/stargazers) helps other PHP developers find it.
+- **Report a bug.** Something wrong? [Open a bug report](https://github.com/shibbirweb/peep/issues/new?template=bug_report.yml) with your Peep and PHP versions and the steps to reproduce.
+- **Request a feature.** Missing something? [Suggest a feature](https://github.com/shibbirweb/peep/issues/new?template=feature_request.yml), starting with the problem it would solve.
+- **Security problem?** Please report it privately: see [SECURITY.md](SECURITY.md).
+
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Pull requests go into `develop`. Security issues: see [SECURITY.md](SECURITY.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md). Pull requests go into `develop`.
 
 ## License
 
