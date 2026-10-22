@@ -7,7 +7,7 @@ Peep is a debugger for PHP: call `peep($value)` anywhere in a PHP app and see va
 - Viewer: `server/` folder, PHP 8.5, released as `peep-server.phar`
 - Desktop app: `desktop/` folder, Tauri (macOS, Windows, Linux)
 
-The feature checklist is in [features.md](features.md). Each feature has an ID (e.g. `CL-03`) to reference in commits and pull requests.
+The feature checklist is in [features.md](features.md) and how each part works is in [implementation.md](implementation.md). Each feature has an ID (e.g. `CL-03`) to reference in commits and pull requests.
 
 ## How to track progress
 
@@ -127,6 +127,7 @@ Exit criteria:
 | D3 | UI technology for the viewer page (plain JS, Alpine.js, Vue, ...) and whether it has a build step | Phase 2 |
 | D4 | Event storage in the viewer: memory only, or SQLite history across restarts | Phase 6 |
 | D5 | Default SMTP port (Mailpit uses 1025, Herd uses 2525; both may already be running) | Phase 7 |
+| D6 | Async library for the viewer: AMPHP v3 (recommended: fibers, HTTP server, SMTP sockets and TLS HTTP client in one family) or ReactPHP | Phase 2 |
 
 ## Decided
 

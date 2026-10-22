@@ -1,6 +1,6 @@
 # Peep Feature List
 
-Tick a feature when it is merged with tests. Add `(in progress)` after the name while working on it. Reference the ID in commits and pull requests. Phases are described in [roadmap.md](roadmap.md).
+How each feature works is described in [implementation.md](implementation.md). Tick a feature when it is merged with tests. Add `(in progress)` after the name while working on it. Reference the ID in commits and pull requests. Phases are described in [roadmap.md](roadmap.md).
 
 ## Progress
 
@@ -100,7 +100,7 @@ Inspection:
 - [ ] API-15 `exception($throwable)` with source snippet
 - [ ] API-16 `measure()` and `measure(callable)` (hrtime with microtime fallback)
 - [ ] API-17 `count($name)` and `counterValue($name)`
-- [ ] API-18 `peep(callable)->catch(...)` and `throwExceptions()`
+- [ ] API-18 `catch(callable, $filter)`: run a callback, send matching exceptions, rethrow others
 
 Control:
 - [ ] API-19 `pass($value)`
@@ -130,7 +130,7 @@ Serializer casters:
 - [ ] API-35 DateTime caster
 - [ ] API-36 Throwable caster
 - [ ] API-37 Closure caster
-- [ ] API-38 Enum caster (loaded only on PHP 8.1+)
+- [ ] API-38 Enum caster (`instanceof \UnitEnum`, simply false below PHP 8.1)
 
 ## LV: Laravel adapter (Phase 4)
 
@@ -152,7 +152,7 @@ Watchers (each with a config key and a runtime toggle such as `peep()->showQueri
 - [ ] LV-13 Events
 - [ ] LV-14 Jobs (dispatched, processed, failed)
 - [ ] LV-15 Cache (hit, miss, write, forget)
-- [ ] LV-16 HTTP client requests and responses (Laravel 7+)
+- [ ] LV-16 HTTP client requests and responses (Laravel 8+, when the client events exist)
 - [ ] LV-17 Views with data
 - [ ] LV-18 Incoming requests (route, controller, middleware, status, duration, memory)
 - [ ] LV-19 Log calls
