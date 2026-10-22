@@ -241,11 +241,9 @@ Resolved once per process, later sources win:
 ### Dispatcher and transport [CL-05 to CL-07]
 
 ```php
-public function dispatch(Envelope $envelope): void
+public function dispatch(string $card, array $payloads): void
 {
-    $endpoint = $this->config->endpoint();
-
-    if (! $this->availability->isUp($endpoint)) {
+    if (! $this->enabled || $payloads === [] || ! $this->availability->isUp($this->endpoint)) {
         return;
     }
 
@@ -255,11 +253,14 @@ public function dispatch(Envelope $envelope): void
     });
 
     try {
-        $response = $this->transport->send($endpoint, $this->encoder->encode($envelope));
-        $this->availability->markUp($endpoint);
-        $this->switches->update($response);
+        $body = $this->encoder->encode(new Envelope($card, $payloads, $this->metaFactory->create()));
+
+        if ($body !== null) {
+            $this->transport->post(self::ENVELOPE_PATH, $body);
+            $this->availability->markUp($this->endpoint);
+        }
     } catch (TransportException $exception) {
-        $this->availability->markDown($endpoint);
+        $this->availability->markDown($this->endpoint);
     } catch (\Throwable $exception) {
         // A bug inside Peep must never break the app.
     } finally {
@@ -271,6 +272,8 @@ public function dispatch(Envelope $envelope): void
 - **Transport choice:** `StreamTransport` when `stream_socket_client` is available and not in `disable_functions`, else `CurlTransport` when ext-curl is loaded, else `NullTransport`.
 - **StreamTransport:** `stream_socket_client('tcp://host:port', $errno, $errstr, 0.05)`, `stream_set_timeout($socket, 0, 500000)`, writes a minimal HTTP/1.1 request (`Content-Type: application/json`, `Content-Length`, `Connection: close`), reads the status line and body, checks `stream_get_meta_data()['timed_out']`. Throws `TransportException` on any failure.
 - **CurlTransport:** `CURLOPT_CONNECTTIMEOUT_MS => 50`, `CURLOPT_TIMEOUT_MS => 500`. Calls `curl_close()` only when `PHP_VERSION_ID < 80000` (deprecated in 8.5).
+- **Fast path:** `Peep` asks `Dispatcher::isActive()` (enabled and the viewer not known to be down) before serializing a value or walking the backtrace. Measured: 100 `peep()` calls with the viewer closed take about 3 ms on PHP 7.1 and 8.5; with Peep disabled, about 0.1 ms.
+- Switches from the envelope response (PR-07) are read by the client from Phase 4 (LV-31).
 - **AvailabilityCache:** after a failed connect the endpoint is "down" for 30 seconds and every send returns immediately. Stored in a static array (resets per request under FPM, survives in workers), plus APCu when `apcu_enabled()` so FPM requests share it. A refused connect on localhost costs well under 1 ms, so even without APCu a closed viewer costs one fast failure per request.
 - **Encoding:** `json_encode` with `JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION`, plus `JSON_INVALID_UTF8_SUBSTITUTE` when defined (7.2+). On 7.1, strings are checked with `preg_match('//u', $string)` first and invalid ones sent as `binary` (base64). `json_last_error()` is checked after encoding (no `JSON_THROW_ON_ERROR` on 7.1).
 
@@ -308,7 +311,7 @@ public function resolve(): ?Origin
 
 - **Objects** are read with an `(array)` cast. It returns public, protected and private properties in every PHP version from 7.1 to 8.5 without Reflection and without `setAccessible()`. Mangled keys give the visibility: `"\0*\0name"` is protected, `"\0Class\0name"` is private. Integer keys are cast to string first.
 - `__debugInfo()` is used when defined (called inside `try`), matching `var_dump`.
-- **Loops:** object ids (`spl_object_hash`) on the current path; an object seen again becomes a `ref` node.
+- **Loops and repeats:** objects are numbered in a `SplObjectStorage` (used through `ArrayAccess`, because `attach()` and `contains()` are deprecated in 8.5); it keeps a reference to each object, so a freed object can never be mistaken for a new one. An object seen again becomes a `ref` node.
 - **Casters** run before the generic object logic, first match wins: `DateTimeCaster` (`DateTimeInterface`, Carbon included), `ThrowableCaster` (class, message, code, file, line, limited trace), `ClosureCaster` (`ReflectionFunction`: file, lines, parameters), `EnumCaster` (`$value instanceof \UnitEnum`, which is simply false on PHP below 8.1, so no version-specific file is needed), plus adapter casters (Laravel models, collections).
 - **Never trigger side effects:** generators and iterators show their class only (iterating would consume them); PHP 8.4 lazy objects are checked with `ReflectionClass::isUninitializedLazyObject()` when the method exists and shown as "lazy, not initialized"; Laravel models use `getAttributes()` / `getRelations()` (no accessors, no lazy loading).
 - **Numbers:** `INF`, `-INF`, `NAN` sent as strings with `type: float`; integers above 2^53 sent as strings with `type: int` (JavaScript precision).

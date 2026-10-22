@@ -20,7 +20,7 @@ The feature checklist is in [features.md](features.md) and how each part works i
 | Phase | Goal | Release | Status |
 |-------|------|---------|--------|
 | 0 | Project setup | | In progress (CI first run pending) |
-| 1 | Protocol and core client MVP | | Not started |
+| 1 | Protocol and core client MVP | | Done (CI first run pending) |
 | 2 | Viewer MVP in the browser | v0.1.0 | Not started |
 | 3 | Full client API | v0.2.0 | Not started |
 | 4 | Laravel adapter | v0.3.0 | Not started |
@@ -45,7 +45,7 @@ The wire protocol is written down first, then the smallest useful client: `peep(
 
 Exit criteria:
 - Protocol v1 spec merged (`docs/protocol.md`).
-- `peep('hello', ['a' => 1], $object)` sends three messages, with origin, from PHP 7.1 and from PHP 8.5.
+- `peep('hello', ['a' => 1], $object)` sends one card with three values, with origin, from PHP 7.1 and from PHP 8.5.
 - With the viewer closed, a request with 100 `peep()` calls is slowed by less than 5 ms in total.
 - Disabled by default; nothing is sent unless enabled.
 

@@ -7,8 +7,8 @@ How each feature works is described in [implementation.md](implementation.md). T
 | Area | Phase | Done |
 |------|-------|------|
 | SU: Project setup | 0 | 12 / 14 |
-| PR: Protocol | 1 | 0 / 7 |
-| CL: Core client MVP | 1 | 0 / 14 |
+| PR: Protocol | 1 | 7 / 7 |
+| CL: Core client MVP | 1 | 14 / 14 |
 | VW: Viewer MVP | 2 | 0 / 12 |
 | API: Full client API | 3 | 0 / 38 |
 | LV: Laravel adapter | 4 | 0 / 31 |
@@ -38,30 +38,30 @@ How each feature works is described in [implementation.md](implementation.md). T
 
 ## PR: Protocol (Phase 1)
 
-- [ ] PR-01 Protocol v1 spec in `docs/protocol.md`: endpoints, envelope JSON, payload types, versioning
-- [ ] PR-02 Envelope: `uuid`, `payloads[]`, `meta` (protocol version, PHP version, hostname, project, request id)
-- [ ] PR-03 Value format: structured JSON tree (type, class, properties, depth and size limits), not HTML
-- [ ] PR-04 Card updates by `uuid` (color, size, label, hide, remove, replace content)
-- [ ] PR-05 Lock endpoints for `pause()`: create, poll (`active`, `stop_execution`)
-- [ ] PR-06 Availability endpoint and expected status code
-- [ ] PR-07 Viewer-to-client switches: the viewer tells clients which captures are on (e.g. queries), returned with each ingest response and cached by the client for a few seconds, so switches apply to running apps without a restart
+- [x] PR-01 Protocol v1 spec in `docs/protocol.md`: endpoints, envelope JSON, payload types, versioning
+- [x] PR-02 Envelope: `uuid`, `payloads[]`, `meta` (protocol version, PHP version, hostname, project, request id)
+- [x] PR-03 Value format: structured JSON tree (type, class, properties, depth and size limits), not HTML
+- [x] PR-04 Card updates by `uuid` (color, size, label, hide, remove, replace content)
+- [x] PR-05 Lock endpoints for `pause()`: create, poll (`active`, `stop`); specified here, used by API-26
+- [x] PR-06 Availability endpoint and expected status code
+- [x] PR-07 (specified; the client side is LV-31) Viewer-to-client switches: the viewer tells clients which captures are on (e.g. queries), returned with each ingest response and cached by the client for a few seconds, so switches apply to running apps without a restart
 
 ## CL: Core client MVP (Phase 1)
 
-- [ ] CL-01 `peep(...$values)` helper, guarded with `function_exists`, returns a `Peep` instance
-- [ ] CL-02 `Peep` fluent class and `PeepFactory`
-- [ ] CL-03 `Config` value object and `ConfigLoader` (env vars, `peep.php` file found by walking up from the working directory)
-- [ ] CL-04 Disabled unless explicitly enabled; `enable()`, `disable()`, `enabled()`, `disabled()`
-- [ ] CL-05 `TransportInterface`, `StreamTransport` (`stream_socket_client`), `CurlTransport` (when ext-curl exists), `NullTransport`
-- [ ] CL-06 Short timeouts (connect about 50 ms, total about 500 ms), never throws into the app (catches `\Throwable`)
-- [ ] CL-07 `AvailabilityCache`: viewer marked down for 30 s after a failed connect
-- [ ] CL-08 `OriginResolver`: file and line of the `peep()` call, skipping Peep's own frames
-- [ ] CL-09 `PathMapper`: `remote_path` to `local_path` for Docker and VMs
-- [ ] CL-10 `ValueSerializer`: scalars, arrays, objects, depth and size limits, loop detection
-- [ ] CL-11 `PrivateReader` (Closure::bind) for private and protected properties
-- [ ] CL-12 `ExecutionContext`: one request id per HTTP request or CLI run
-- [ ] CL-13 Payloads: log (default), text, html, json, table
-- [ ] CL-14 Styling: `red()`, `green()`, `blue()`, `orange()`, `purple()`, `gray()`, `yellow()`, `color()`, `label()`, `small()`, `large()`
+- [x] CL-01 `peep(...$values)` helper, guarded with `function_exists`, returns a `Peep` instance
+- [x] CL-02 `Peep` fluent class and `PeepFactory`
+- [x] CL-03 `Config` value object and `ConfigLoader` (env vars, `peep.php` file found by walking up from the working directory)
+- [x] CL-04 Disabled unless explicitly enabled; `enable()`, `disable()`, `enabled()`, `disabled()`
+- [x] CL-05 `TransportInterface`, `StreamTransport` (`stream_socket_client`), `CurlTransport` (when ext-curl exists), `NullTransport`
+- [x] CL-06 Short timeouts (connect about 50 ms, total about 500 ms), never throws into the app (catches `\Throwable`)
+- [x] CL-07 `AvailabilityCache`: viewer marked down for 30 s after a failed connect (shared through APCu when enabled); checked before any serializing, so a closed viewer costs about 3 ms per 100 calls
+- [x] CL-08 `OriginResolver`: file and line of the `peep()` call, skipping Peep's own frames
+- [x] CL-09 `PathMapper`: `remote_path` to `local_path` for Docker and VMs
+- [x] CL-10 `ValueSerializer`: scalars, arrays, objects, depth and size limits, loop detection
+- [x] CL-11 Private and protected properties read with an `(array)` cast (no Reflection, no `setAccessible()`, no getters)
+- [x] CL-12 `ExecutionContext`: one request id per HTTP request or CLI run
+- [x] CL-13 Payloads: log (default), text, html, json, table
+- [x] CL-14 Styling: `red()`, `green()`, `blue()`, `orange()`, `purple()`, `gray()`, `yellow()`, `color()`, `label()`, `small()`, `large()`
 
 ## VW: Viewer MVP (Phase 2)
 
