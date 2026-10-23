@@ -116,6 +116,7 @@ Exit criteria:
 Exit criteria:
 - Trademark search for "Peep" done (USPTO, EUIPO, class 9).
 - Documentation complete (install, API reference, Laravel, other frameworks, Docker, desktop app).
+- AI agents can debug with Peep: `vendor/bin/peep report`, the MCP server and the bundled skill.
 - Protocol v1 marked stable; semantic versioning from here on.
 
 ## Open decisions

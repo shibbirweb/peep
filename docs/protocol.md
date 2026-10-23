@@ -133,6 +133,21 @@ These serve the viewer's own page and are not part of the client contract; they 
 | `POST /_peep/ui/webhooks/import` | `{"rules": [...], "replace": false}` |
 | `GET /_peep/ui/webhooks/deliveries/{id}`, `POST .../{id}/resend`, `POST .../deliveries/clear` | The delivery log |
 
+### Agent endpoints
+
+What the `peep` command line and its MCP server read (see the wiki page [AI agents](wiki/usage/AI-Agents.md)). Like the UI endpoints they answer only to this machine, and they are not part of the client contract. Answers are plain text unless `format=json` is given.
+
+| Method and path | Purpose |
+|-----------------|---------|
+| `GET /_peep/agent/status` | Viewer version and address, receiving or paused, each project with its card, mail and SMS counts, the query switches, and `now` (the viewer's clock, for `since`) |
+| `GET /_peep/agent/cards` | Cards as text, oldest first; with `format=json`, each card's data and its `text` |
+| `GET /_peep/agent/report` | A Markdown debug report (`text/markdown`): summary, problems, every request with its cards, mail and SMS |
+| `GET /_peep/agent/mail` | Caught mail; `id=` for one mail with its body |
+| `GET /_peep/agent/sms` | Caught SMS |
+| `POST /_peep/agent/clear` | `{"project": "shop" or null, "what": "all" \| "cards" \| "mail" \| "sms"}`; `400` for anything else |
+
+Filters, in the query string: `project`, `since` (unix time, or an age such as `90s`, `5m`, `2h`, `1d`), `request` and `card` (the start of an id, dashes ignored), `search` (case-insensitive), `limit` (default 50, at most 1000) and `base` (a directory; paths under it are shown relative to it).
+
 ## Envelope format
 
 ```json

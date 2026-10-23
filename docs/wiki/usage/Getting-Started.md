@@ -42,4 +42,5 @@ The cards appear at once. Each call is one card; the calls of one request, job o
 - [Laravel](Laravel.md): queries, jobs, events and mail with no code, and switching query debugging from the viewer ([Query debugging](Query-Debugging.md)).
 - [API reference](API-Reference.md): every method of `peep()`.
 - [Mail and SMS](Mail-and-SMS.md) and [Webhooks](Webhooks.md): catch what your app sends and test its webhook handlers.
+- [AI agents](AI-Agents.md): let Claude Code, Codex, Cursor and other agents debug with Peep and report back.
 - [Version support](Version-Support.md): which PHP, Laravel and operating systems are covered.

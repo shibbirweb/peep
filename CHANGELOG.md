@@ -13,6 +13,7 @@ notes, and `bun scripts/version.ts notes` prints it. See the Releasing page of t
 
 ### Added
 
+- AI agents: `vendor/bin/peep` (and `php peep.phar`) reads the viewer as text with `status`, `report` (a Markdown debug report, problems first), `cards`, `mail`, `sms`, `wait` and `clear`; `peep mcp` runs the same as an MCP server; `peep skill` prints or installs the Peep skill that teaches an agent to debug with Peep and report back. The viewer answers them on the local-only `/_peep/agent/*` endpoints.
 - Leftover calls: `vendor/bin/peep-clean [--fix]` and `php artisan peep:clean` list `peep()`, `pd()`, `->peep()` and `@peep` calls and remove the safe ones; a PHPStan rule (`phpstan/rules.neon`) reports them.
 - Releases: betas from `develop` and stable releases from `main`, cut by the Beta release and Stable release workflows (version worked out from the commits, release pull request, then publish), with the PHARs, checksums and desktop apps attached. Release notes come from this changelog. `bun scripts/version.ts` shows, checks, bumps and sets the version everywhere it is written.
 - Packagist: the Release workflow can create and update the package itself (`PACKAGIST_AUTO_PUBLISH`).

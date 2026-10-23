@@ -18,6 +18,7 @@ How each feature works is described in [implementation.md](implementation.md). T
 | WH: Webhook simulator | 7 | 13 / 13 |
 | DT: Desktop app (Tauri) | 8 | 13 / 16 |
 | RL: Release | 9 | 12 / 15 |
+| AI: AI agents | 9 | 5 / 5 |
 
 ## SU: Project setup (Phase 0)
 
@@ -295,3 +296,11 @@ After the viewer catches a mail or SMS, it can call back a URL the user sets up,
 - [x] RL-14 Release notes from `CHANGELOG.md` (Unreleased for betas, the dated section for stable releases)
 - [x] RL-15 CI: every Laravel version on every PHP version it supports, and the client on PHP 7.1 to 8.5, as parallel jobs
 - [ ] RL-10 Homebrew cask `peep` (in progress: the name is free; cask in `packaging/homebrew/peep.rb`, published to a tap after the first release)
+
+## AI: AI agents (Phase 9)
+
+- [x] AI-01 Viewer agent endpoints `/_peep/agent/*`: status, cards, a Markdown debug report (problems first), mail, SMS and clear, as text or JSON, filtered by project, age, request, card and text; local only
+- [x] AI-02 `vendor/bin/peep` (and `php peep.phar`): `status`, `report [--output]`, `cards`, `mail`, `sms`, `wait`, `clear`, finding the viewer the way the app does
+- [x] AI-03 MCP server `peep mcp` on stdio: `peep_status`, `peep_report`, `peep_cards`, `peep_mail`, `peep_sms`, `peep_wait`, `peep_clear`
+- [x] AI-04 Peep skill for agents (`resources/skills/peep/SKILL.md`, Agent Skills format), printed or installed with `peep skill [--install]`
+- [x] AI-05 Docs: wiki page AI agents, README, protocol; `AGENTS.md` (imported by `CLAUDE.md`) with the rules for agents working on Peep itself
