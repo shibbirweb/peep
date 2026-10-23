@@ -67,6 +67,10 @@ PEEP_BLOCK_SMS=true   # SMS notifications go to the inbox only, never to a phone
 
 See [Mail and SMS](Mail-and-SMS.md) and, to simulate delivery webhooks back to your app, [Webhooks](Webhooks.md).
 
+## Log files
+
+The app reports `storage/logs` to the viewer, whose **Logs** tab then shows `laravel.log` and the daily files as colored entries, live. Set `PEEP_LOG_PATH` for another folder, or `false` for none. See [Logs](Logs.md).
+
 ## Docker (Sail)
 
 ```dotenv

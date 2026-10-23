@@ -129,6 +129,8 @@ class PeepServiceProvider extends ServiceProvider
             'local_path' => $settings['local_path'],
             'serializer' => $settings['serializer'],
             'token' => $settings['token'],
+            'log_path' => self::logPath($app, $settings),
+            'log_timezone' => $app->make('config')->get('app.timezone'),
         ]);
 
         // The Laravel casters (models without queries, collections) apply to Peep's serializer;
@@ -198,7 +200,31 @@ class PeepServiceProvider extends ServiceProvider
             'local_path' => null,
             'serializer' => 'peep',
             'token' => null,
+            'log_path' => null,
         ];
+    }
+
+    /**
+     * The log folder the viewer's Logs tab shows: storage/logs unless the config names
+     * another one, or false to show none.
+     *
+     * @param \Illuminate\Contracts\Foundation\Application $app
+     * @param array<string, mixed> $settings
+     */
+    private static function logPath($app, array $settings): ?string
+    {
+        $path = $settings['log_path'];
+
+        if ($path === false || $path === 'false') {
+            return null;
+        }
+
+        if (is_string($path) && $path !== '') {
+            return $path;
+        }
+
+        // storagePath() takes no argument on Laravel 5.5, so the path is joined here.
+        return rtrim($app->storagePath(), '/\\') . DIRECTORY_SEPARATOR . 'logs';
     }
 
     /**

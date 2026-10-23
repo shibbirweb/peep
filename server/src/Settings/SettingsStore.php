@@ -32,7 +32,7 @@ final class SettingsStore
     public function public(): array
     {
         $settings = $this->settings->toArray();
-        unset($settings['token'], $settings['switches'], $settings['webhooks']);
+        unset($settings['token'], $settings['switches'], $settings['webhooks'], $settings['log_folders']);
 
         return [...$settings, 'token_set' => $this->settings->token !== null];
     }

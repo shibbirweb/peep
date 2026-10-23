@@ -689,6 +689,12 @@ An AI agent debugs with Peep through text. The viewer renders it, so the client 
 - `Agent\McpServer` speaks MCP (protocol 2024-11-05 to 2025-06-18) over stdio, one JSON-RPC message per line, with tools that map one to one to `ViewerApi`. Only `peep_clear` is marked destructive.
 - The skill (`resources/skills/peep/SKILL.md`) is the agent's manual: check, clear, instrument, reproduce, read, fix, clean up with `peep-clean --fix`, and report. It ships in the Composer package and the PHAR.
 
+### Logs [VF-25 to VF-27, AI-06]
+
+The viewer reads log files itself, so it shows what was written before Peep was on. The client only says where they are: `log_path` (Laravel: `storage/logs`) and `log_timezone` (Laravel: `app.timezone`) go into `meta.logs`, the path mapped like origins. `Log\LogFolders` keeps one folder per project in the settings (`log_folders`); a folder chosen in the tab (`manual`) wins over the reported one, and only its time zone follows the app.
+
+`Log\LogParser` splits Monolog's line format at lines that start an entry (`[date] channel.LEVEL: `), so Laravel's multi-line exception context stays in its entry. The trailing context and extra JSON are decoded (raw line breaks inside it can only be inside strings, so they are escaped first), and Laravel's exception string becomes class, code, message, file, line, frames and previous exceptions. `Log\LogFiles` lists `.log` files directly in the folder and reads backwards from the end in 512 KB chunks until it has the entries asked for, so a file of any size opens at once; `after` reads what was added up to the last complete line and starts over when the file got shorter. The tab polls `after` every second while live. The parser is tested on files written by a real Monolog 1, 2 and 3 with Laravel's formatter (`server/tests/Fixture/logs`, made by `make.php`): Monolog 1, which Laravel 5.5 to 5.8 use, writes previous exceptions inside the same parentheses instead of `[previous exception]` blocks. `tests/Laravel/LogFormatTest` checks on every Laravel and PHP pair that the app's own log output still has the shape the viewer reads. Agents get `GET /_peep/agent/logs`, and the report adds error-level entries of each project's newest file written since its window starts (`since`, the last `peep clear`, the first card, or 15 minutes).
+
 ## 14. Testing strategy
 
 | Layer | How |

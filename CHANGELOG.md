@@ -13,6 +13,7 @@ notes, and `bun scripts/version.ts notes` prints it. See the Releasing page of t
 
 ### Added
 
+- Logs tab: your app's log files (Laravel's `storage/logs`, reported by the app, or any folder you choose) as colored entries with the exception and its stack, and the context as a tree, JSON or raw text. Watch a file live or pause it, newest or oldest first, filter by level and text; large files open at once. Agents read them with `peep logs` and `peep_logs`, and the debug report lists log file errors.
 - AI agents: `vendor/bin/peep` (and `php peep.phar`) reads the viewer as text with `status`, `report` (a Markdown debug report, problems first), `cards`, `mail`, `sms`, `wait` and `clear`; `peep mcp` runs the same as an MCP server; `peep skill` prints or installs the Peep skill that teaches an agent to debug with Peep and report back. The viewer answers them on the local-only `/_peep/agent/*` endpoints.
 - Leftover calls: `vendor/bin/peep-clean [--fix]` and `php artisan peep:clean` list `peep()`, `pd()`, `->peep()` and `@peep` calls and remove the safe ones; a PHPStan rule (`phpstan/rules.neon`) reports them.
 - Releases: betas from `develop` and stable releases from `main`, cut by the Beta release and Stable release workflows (version worked out from the commits, release pull request, then publish), with the PHARs, checksums and desktop apps attached. Release notes come from this changelog. `bun scripts/version.ts` shows, checks, bumps and sets the version everywhere it is written.

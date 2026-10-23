@@ -8,7 +8,9 @@ $finder = PhpCsFixer\Finder::create()
     ->in([
         __DIR__ . '/src',
         __DIR__ . '/tests',
-    ]);
+    ])
+    // Runs on the PHP and Monolog versions whose output it records, not on the viewer's.
+    ->notPath('Fixture/logs/make.php');
 
 return (new PhpCsFixer\Config())
     ->setRules([

@@ -227,3 +227,49 @@ export function clearDeliveries() {
 export function importRules(rules, replace) {
   return post('/_peep/ui/webhooks/import', { rules, replace });
 }
+
+/**
+ * @param {string} project
+ */
+export async function loadLogFiles(project) {
+  const response = await fetch(`/_peep/ui/logs/files?project=${encodeURIComponent(project)}`);
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message ?? 'Cannot list the log files.');
+  }
+
+  return data;
+}
+
+/**
+ * @param {string} project
+ * @param {string} file
+ * @param {{ before?: number, after?: number, limit?: number }} range Newest entries without one.
+ */
+export async function loadLogEntries(project, file, range = {}) {
+  const query = new URLSearchParams({ project, file });
+
+  for (const [name, value] of Object.entries(range)) {
+    if (value !== undefined && value !== null) {
+      query.set(name, String(value));
+    }
+  }
+
+  const response = await fetch(`/_peep/ui/logs/entries?${query}`);
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.message ?? 'Cannot read this log file.');
+  }
+
+  return data;
+}
+
+/**
+ * @param {string} project
+ * @param {string|null} path Null goes back to the folder the app reports.
+ */
+export function setLogFolder(project, path) {
+  return post('/_peep/ui/logs/folder', { project, path });
+}

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ShibbirWeb\PeepServer\Agent;
 
 use ShibbirWeb\PeepServer\Card\Card;
+use ShibbirWeb\PeepServer\Log\LogEntry;
 use ShibbirWeb\PeepServer\Mail\Mail;
 use ShibbirWeb\PeepServer\Sms\Sms;
 use ShibbirWeb\PeepServer\Version;
@@ -30,11 +31,18 @@ final readonly class Report
      * @param list<Card> $cards Oldest first.
      * @param list<Mail> $mails Newest first.
      * @param list<Sms> $messages Newest first.
+     * @param list<array{project: string, file: string, entry: LogEntry}> $logErrors Error-level log entries in the window.
      */
-    public function render(array $cards, array $mails, array $messages, CardQuery $query): string
+    public function render(array $cards, array $mails, array $messages, CardQuery $query, array $logErrors = []): string
     {
         $requests = self::byRequest($cards);
         $problems = $this->problems($cards, $requests);
+        foreach ($logErrors as $logError) {
+            $entry = $logError['entry'];
+            $problems['Log file errors'][] = strtoupper($entry->level) . ' `' . self::oneLine($entry->exception !== null ? $entry->exception['class'] . ': ' . $entry->exception['message'] : $entry->message) . '`'
+                . ($entry->exception !== null ? ' at ' . $this->renderer->path($entry->exception['file']) . ':' . $entry->exception['line'] : '')
+                . ' (' . $logError['project'] . ', ' . $logError['file'] . ', ' . $entry->time . ')';
+        }
         $queries = self::queryCounts($cards);
 
         $scope = [
@@ -53,14 +61,14 @@ final readonly class Report
             '- ' . self::plural(count($requests), 'request') . ', ' . self::plural(count($cards), 'card'),
             '- ' . self::plural($queries['total'], 'query card') . ' (' . $queries['slow'] . ' slow, ' . $queries['duplicate'] . ' repeated)'
                 . ', ' . self::plural(count($problems['Exceptions'] ?? []), 'exception') . ', ' . self::plural(count($problems['Failed jobs'] ?? []), 'failed job'),
-            '- ' . self::plural(count($mails), 'mail', 'mails') . ', ' . self::plural(count($messages), 'SMS', 'SMS'),
+            '- ' . self::plural(count($mails), 'mail', 'mails') . ', ' . self::plural(count($messages), 'SMS', 'SMS') . ', ' . self::plural(count($logErrors), 'log file error'),
             '',
             '## Problems',
             '',
         ];
 
         if ($problems === []) {
-            $lines[] = 'None found: no exceptions, failed jobs, slow or duplicate queries, failed HTTP calls, error logs or error responses.';
+            $lines[] = 'None found: no exceptions, failed jobs, slow or duplicate queries, failed HTTP calls, error logs, log file errors or error responses.';
             $lines[] = '';
         }
 
@@ -205,7 +213,7 @@ final readonly class Report
             $problems['Duplicate queries'] = array_values($duplicates);
         }
 
-        $order = ['Exceptions', 'Failed jobs', 'Error responses', 'Failed HTTP calls', 'Error logs', 'Slow queries', 'Duplicate queries'];
+        $order = ['Exceptions', 'Failed jobs', 'Error responses', 'Failed HTTP calls', 'Error logs', 'Log file errors', 'Slow queries', 'Duplicate queries'];
 
         return array_filter(array_merge(array_fill_keys($order, []), $problems), static fn(array $items): bool => $items !== []);
     }

@@ -15,7 +15,7 @@ return [
 ];
 ```
 
-`peep.php` is found by walking up from the working directory and from the directory of the script PHP runs. Environment variables (`PEEP_ENABLED`, `PEEP_HOST`, `PEEP_PORT`, `PEEP_PROJECT`, `PEEP_REMOTE_PATH`, `PEEP_LOCAL_PATH`, `PEEP_SERIALIZER`, `PEEP_TOKEN`) win over the file.
+`peep.php` is found by walking up from the working directory and from the directory of the script PHP runs. Environment variables (`PEEP_ENABLED`, `PEEP_HOST`, `PEEP_PORT`, `PEEP_PROJECT`, `PEEP_REMOTE_PATH`, `PEEP_LOCAL_PATH`, `PEEP_SERIALIZER`, `PEEP_TOKEN`, `PEEP_LOG_PATH`, `PEEP_LOG_TIMEZONE`) win over the file. `log_path` names the log folder the viewer's [Logs](Logs.md) tab shows.
 
 ## Apps in Docker or a VM
 

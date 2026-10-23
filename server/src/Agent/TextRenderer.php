@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ShibbirWeb\PeepServer\Agent;
 
 use ShibbirWeb\PeepServer\Card\Card;
+use ShibbirWeb\PeepServer\Log\LogEntry;
 use ShibbirWeb\PeepServer\Mail\Mail;
 use ShibbirWeb\PeepServer\Sms\Sms;
 
@@ -185,6 +186,32 @@ final readonly class TextRenderer
         }
 
         return implode("\n", $lines) . "\n\n" . self::cut(trim($body), self::MAX_BODY_CHARS * 5);
+    }
+
+    /**
+     * One log entry: its head line, the exception with its first frames, and the context as JSON.
+     */
+    public function logEntry(LogEntry $entry): string
+    {
+        $lines = ['[' . $entry->time . '] ' . strtoupper($entry->level) . ' ' . $entry->channel . ': ' . $entry->message];
+
+        if ($entry->exception !== null) {
+            $exception = $entry->exception;
+            $lines[] = '  ' . $exception['class'] . ': ' . $exception['message'] . ' at ' . $this->path($exception['file']) . ':' . $exception['line'];
+            foreach (array_slice($exception['frames'], 0, self::MAX_FRAMES) as $frame) {
+                $lines[] = '    at ' . $frame['call'] . ($frame['file'] !== null ? ' ' . $this->path($frame['file']) . ':' . $frame['line'] : '');
+            }
+            if (count($exception['frames']) > self::MAX_FRAMES) {
+                $lines[] = '    ... ' . (count($exception['frames']) - self::MAX_FRAMES) . ' more frames';
+            }
+        }
+
+        $context = is_array($entry->context) ? array_diff_key($entry->context, $entry->exception !== null ? ['exception' => true] : []) : $entry->context;
+        if ($context !== null && $context !== []) {
+            $lines[] = self::indent(self::cut((string) json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE), self::MAX_BODY_CHARS), '  ');
+        }
+
+        return implode("\n", $lines);
     }
 
     public function sms(Sms $sms): string

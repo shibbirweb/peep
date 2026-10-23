@@ -17,6 +17,10 @@ use ShibbirWeb\PeepServer\Event\EventHub;
 use ShibbirWeb\PeepServer\Http\JsonBody;
 use ShibbirWeb\PeepServer\Http\Responses;
 use ShibbirWeb\PeepServer\Inbox\Catcher;
+use ShibbirWeb\PeepServer\Log\LogEntry;
+use ShibbirWeb\PeepServer\Log\LogFiles;
+use ShibbirWeb\PeepServer\Log\LogFolders;
+use ShibbirWeb\PeepServer\Log\LogParser;
 use ShibbirWeb\PeepServer\Mail\Mail;
 use ShibbirWeb\PeepServer\Sms\Sms;
 use ShibbirWeb\PeepServer\Switch\SwitchStore;
@@ -31,11 +35,16 @@ use ShibbirWeb\PeepServer\Version;
  * GET  /_peep/agent/report         a Markdown debug report of the same cards, mail and SMS
  * GET  /_peep/agent/mail           mail (id=... for one, with its body)
  * GET  /_peep/agent/sms            SMS
+ * GET  /_peep/agent/logs           entries of a project's log file (file=, level=, since=, search=, limit=)
  * POST /_peep/agent/clear          {"project": "shop" or null, "what": "cards" | "mail" | "sms" | "all"}
  */
 final readonly class AgentController implements RequestHandler
 {
     private const int MAX_SCAN = 100000;
+
+    private const int LOG_SCAN = 500;
+
+    private const float LOG_WINDOW_SECONDS = 900.0;
 
     public function __construct(
         private CardStore $cards,
@@ -44,6 +53,7 @@ final readonly class AgentController implements RequestHandler
         private Receiving $receiving,
         private SwitchStore $switches,
         private string $url,
+        private ?LogFolders $logFolders = null,
     ) {}
 
     public function handleRequest(Request $request): Response
@@ -68,7 +78,8 @@ final readonly class AgentController implements RequestHandler
             '/_peep/agent/report' => self::text($this->report($query, $renderer), 'text/markdown'),
             '/_peep/agent/mail' => $this->mail($query, $renderer, $now, $json, is_string($parameters['id'] ?? null) ? $parameters['id'] : null),
             '/_peep/agent/sms' => $this->sms($query, $renderer, $now, $json),
-            default => Responses::error(404, 'not_found', 'Not found. Agent paths: status, cards, report, mail, sms, clear.'),
+            '/_peep/agent/logs' => $this->logs($query, $renderer, $now, $json, $parameters),
+            default => Responses::error(404, 'not_found', 'Not found. Agent paths: status, cards, report, mail, sms, logs, clear.'),
         };
     }
 
@@ -144,12 +155,111 @@ final readonly class AgentController implements RequestHandler
     {
         $all = new CardQuery($query->project, $query->since, $query->request, $query->card, $query->search, CardQuery::MAX_LIMIT, $query->base);
 
+        $cards = $all->cards($this->cards->cards($query->project, self::MAX_SCAN), $renderer);
+
         return new Report($renderer)->render(
-            $all->cards($this->cards->cards($query->project, self::MAX_SCAN), $renderer),
+            $cards,
             $query->mails($this->catcher->mails->all()),
             $query->sms($this->catcher->sms->all()),
             $query,
+            $this->logErrors($query, $cards, $renderer->now),
         );
+    }
+
+    /**
+     * Error-level entries of each project's newest log file, written since the report's window
+     * starts: "since", else the last `peep clear`, else the first card shown, else 15 minutes ago.
+     *
+     * @param list<Card> $cards
+     * @return list<array{project: string, file: string, entry: LogEntry}>
+     */
+    private function logErrors(CardQuery $query, array $cards, float $now): array
+    {
+        if ($this->logFolders === null) {
+            return [];
+        }
+
+        $errors = [];
+        foreach ($this->logFolders->all() as $folder) {
+            if ($query->project !== null && $folder['project'] !== $query->project) {
+                continue;
+            }
+
+            $files = LogFiles::list($folder['path']) ?? [];
+            $file = $files === [] ? null : LogFiles::resolve($folder['path'], $files[0]['name']);
+            if ($file === null) {
+                continue;
+            }
+
+            $from = $query->since ?? $this->logFolders->clearedAt($folder['project'])
+                ?? ($cards === [] ? $now - self::LOG_WINDOW_SECONDS : min(array_map(static fn(Card $card): float => $card->createdAt, $cards)));
+
+            foreach (LogFiles::before($file, null, self::LOG_SCAN, new LogParser($folder['timezone']))['entries'] as $entry) {
+                if ($entry->isAtLeast('error') && ($entry->timestamp === null || $entry->timestamp >= $from)) {
+                    $errors[] = ['project' => $folder['project'], 'file' => $files[0]['name'], 'entry' => $entry];
+                }
+            }
+        }
+
+        return $errors;
+    }
+
+    /**
+     * @param array<mixed> $parameters
+     */
+    private function logs(CardQuery $query, TextRenderer $renderer, float $now, bool $json, array $parameters): Response
+    {
+        $folders = $this->logFolders?->all() ?? [];
+        $folder = null;
+        foreach ($folders as $candidate) {
+            if ($query->project === null ? count($folders) === 1 : $candidate['project'] === $query->project) {
+                $folder = $candidate;
+            }
+        }
+
+        if ($folder === null) {
+            $known = implode(', ', array_map(static fn(array $folder): string => $folder['project'], $folders));
+
+            return self::text($folders === []
+                ? "No project has a log folder yet. Send one card from the app (Laravel reports storage/logs), or choose a folder in the viewer's Logs tab.\n"
+                : 'Say which project: --project=' . ($query->project === null ? 'NAME (one of ' . $known . ')' : 'NAME; "' . $query->project . '" has no log folder (known: ' . $known . ')') . ".\n", 'text/plain', 404);
+        }
+
+        $files = LogFiles::list($folder['path']);
+        if ($files === null || $files === []) {
+            return self::text(($files === null ? 'Cannot read ' : 'No .log files in ') . $folder['path'] . ".\n", 'text/plain', 404);
+        }
+
+        $name = is_string($parameters['file'] ?? null) && $parameters['file'] !== '' ? $parameters['file'] : $files[0]['name'];
+        $file = LogFiles::resolve($folder['path'], $name);
+        if ($file === null) {
+            return self::text('No log file "' . $name . '". Files: ' . implode(', ', array_column($files, 'name')) . ".\n", 'text/plain', 404);
+        }
+
+        $level = is_string($parameters['level'] ?? null) && in_array(strtolower($parameters['level']), LogParser::LEVELS, true) ? strtolower($parameters['level']) : 'debug';
+        $filtered = $query->since !== null || $query->search !== null || $level !== 'debug';
+        $read = LogFiles::before($file, null, $filtered ? LogFiles::MAX_LIMIT : $query->limit, new LogParser($folder['timezone']));
+
+        $entries = array_values(array_filter($read['entries'], static fn(LogEntry $entry): bool => $entry->isAtLeast($level)
+            && ($query->since === null || $entry->timestamp === null || $entry->timestamp > $query->since)
+            && ($query->search === null || mb_stripos($entry->raw, $query->search) !== false)));
+        $entries = array_slice($entries, -$query->limit);
+
+        if ($json) {
+            return Responses::json(200, [
+                'now' => $now,
+                'project' => $folder['project'],
+                'file' => $name,
+                'files' => $files,
+                'entries' => array_map(static fn(LogEntry $entry): array => $entry->toArray(), $entries),
+            ]);
+        }
+
+        $head = $folder['project'] . ': ' . $folder['path'] . '/' . $name . ' (' . count($entries) . ' entries'
+            . ($level !== 'debug' ? ', ' . $level . ' and above' : '') . '; other files: '
+            . (count($files) > 1 ? implode(', ', array_slice(array_column(array_filter($files, static fn(array $file): bool => $file['name'] !== $name), 'name'), 0, 10)) : 'none') . ')';
+
+        return self::text($head . "\n\n" . ($entries === [] ? "No entries match.\n" : implode("\n\n", array_map($renderer->logEntry(...), $entries)) . "\n"));
     }
 
     private function mail(CardQuery $query, TextRenderer $renderer, float $now, bool $json, ?string $mailId): Response
@@ -197,6 +307,7 @@ final readonly class AgentController implements RequestHandler
 
         if ($what === 'all' || $what === 'cards') {
             $this->hub->publish($this->cards->clear($project));
+            $this->logFolders?->markCleared($project, microtime(true));
         }
         if ($what === 'all' || $what === 'mail') {
             $this->hub->publish($this->catcher->mails->clear($project));
@@ -208,9 +319,9 @@ final readonly class AgentController implements RequestHandler
         return Responses::json(200, ['cleared' => $what, 'project' => $project, 'now' => microtime(true)]);
     }
 
-    private static function text(string $text, string $type = 'text/plain'): Response
+    private static function text(string $text, string $type = 'text/plain', int $status = 200): Response
     {
-        return new Response(200, [
+        return new Response($status, [
             'content-type' => $type . '; charset=utf-8',
             'cache-control' => 'no-store',
             'x-content-type-options' => 'nosniff',

@@ -12,7 +12,7 @@
  * it is not in the default place.
  */
 
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -84,6 +84,13 @@ const SHOTS: Record<string, Step> = {
     await Bun.sleep(600);
     await page.eval("document.querySelector('.log').scrollIntoView()");
     await Bun.sleep(300);
+  },
+  logs: async (page) => {
+    await page.tab("Logs");
+    await page.project("shop");
+    await Bun.sleep(1500);
+    await page.click(".entry .head", "PaymentDeclined");
+    await Bun.sleep(400);
   },
   // Last: the paused request stays on screen.
   pause: async (page) => {
@@ -163,6 +170,42 @@ class Page {
   }
 }
 
+/** A storage/logs folder for the shop, reported the way the Laravel adapter does it. */
+async function demoLogs(viewer: string, config: string): Promise<void> {
+  const folder = join(config, "shop-logs");
+  mkdirSync(folder);
+  writeFileSync(join(folder, "laravel-2026-10-22.log"), "[2026-10-22 18:02:11] local.INFO: Deployed {\"release\":\"v2.14.0\"} \n");
+  const yesterday = new Date(Date.now() - 86400000);
+  utimesSync(join(folder, "laravel-2026-10-22.log"), yesterday, yesterday);
+  writeFileSync(
+    join(folder, "laravel.log"),
+    String.raw`[2026-10-23 09:41:02] local.INFO: Order placed {"order_id":1042,"total":129.9,"items":3} 
+[2026-10-23 09:41:02] local.DEBUG: Cache miss {"key":"shipping.rates.de"} 
+[2026-10-23 09:41:03] local.WARNING: Slow payment gateway response {"gateway":"stripe","ms":2380} 
+[2026-10-23 09:41:05] local.ERROR: Card declined {"order_id":1042,"customer":{"id":77,"email":"ada@example.test"},"exception":"[object] (App\\Exceptions\\PaymentDeclined(code: 402): Card declined at /Users/you/code/shop/app/Services/PaymentService.php:58)
+[stacktrace]
+#0 /Users/you/code/shop/app/Http/Controllers/CheckoutController.php(34): App\\Services\\PaymentService->charge()
+#1 /Users/you/code/shop/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): App\\Http\\Controllers\\CheckoutController->store()
+#2 {main}
+"} 
+[2026-10-23 09:41:06] local.NOTICE: Customer notified {"customer":"ada@example.test","channel":"mail"} 
+[2026-10-23 09:41:09] local.INFO: Order placed {"order_id":1043,"total":49,"items":1} 
+[2026-10-23 09:41:12] local.CRITICAL: Queue worker stopped {"queue":"default","reason":"Allowed memory size exhausted"} 
+`,
+  );
+
+  const now = Date.now() / 1000;
+  await fetch(`${viewer}/_peep/envelope`, {
+    method: "POST",
+    body: JSON.stringify({
+      protocol: 1,
+      card: "logs-card",
+      payloads: [{ type: "log", content: { values: [{ type: "string", value: "Logs ready", length: 10 }] }, origin: { file: "/Users/you/code/shop/routes/web.php", line: 8 } }],
+      meta: { project: "shop", hostname: "dev", php_version: "8.4.12", peep_version: "1.0.0", request: { id: "logs", kind: "cli", label: "artisan about", started_at: now }, sent_at: now, logs: { path: folder, timezone: "UTC" } },
+    }),
+  });
+}
+
 function freePort(): Promise<number> {
   return new Promise((resolve) => {
     const server = createServer();
@@ -216,6 +259,7 @@ async function main(): Promise<void> {
     await post(`${viewer}/_peep/ui/webhooks/rules/${mailgun.rule.id}/test`, { event: "accepted" });
     await post(`${viewer}/_peep/ui/webhooks/rules/${mailgun.rule.id}/test`, { event: "delivered" });
     await post(`${viewer}/_peep/ui/switches`, { project: "shop", switches: { slow_query_ms: 250 } });
+    await demoLogs(viewer, config);
 
     const profile = mkdtempSync(join(tmpdir(), "peep-chrome-"));
     processes.push(
