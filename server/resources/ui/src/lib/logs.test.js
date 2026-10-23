@@ -1,7 +1,43 @@
 import { describe, expect, test } from 'bun:test';
-import { appendEntries, contextOf, firstLine, jsonNode, levelCounts, prependEntries, visibleEntries } from './logs.js';
+import { appendEntries, contextOf, firstLine, jsonNode, levelCounts, pathCrumbs, prependEntries, projectFromLogPath, visibleEntries } from './logs.js';
 
 const entry = (offset, level = 'info', raw = `entry ${offset}`) => ({ offset, level, raw, message: raw });
+
+describe('projectFromLogPath', () => {
+  test('names the app that owns storage/logs or a logs folder', () => {
+    expect(projectFromLogPath('/Users/me/Projects/shop/storage/logs')).toBe('shop');
+    expect(projectFromLogPath('/Users/me/Projects/shop/storage/logs/')).toBe('shop');
+    expect(projectFromLogPath('C:\\Sites\\shop\\storage\\logs')).toBe('shop');
+    expect(projectFromLogPath('/var/www/blog/logs')).toBe('blog');
+  });
+
+  test('otherwise uses the folder name', () => {
+    expect(projectFromLogPath('/tmp')).toBe('tmp');
+    expect(projectFromLogPath('/srv/app-logs')).toBe('app-logs');
+    expect(projectFromLogPath('  ')).toBe('');
+    expect(projectFromLogPath('/')).toBe('');
+  });
+});
+
+describe('pathCrumbs', () => {
+  test('splits a path into folders to go back to', () => {
+    expect(pathCrumbs('/Users/me/shop')).toEqual([
+      { name: '/', path: '/' },
+      { name: 'Users', path: '/Users' },
+      { name: 'me', path: '/Users/me' },
+      { name: 'shop', path: '/Users/me/shop' },
+    ]);
+    expect(pathCrumbs('/')).toEqual([{ name: '/', path: '/' }]);
+  });
+
+  test('keeps the drive of a Windows path', () => {
+    expect(pathCrumbs('C:\\Sites\\shop')).toEqual([
+      { name: 'C:\\', path: 'C:\\' },
+      { name: 'Sites', path: 'C:\\Sites' },
+      { name: 'shop', path: 'C:\\Sites\\shop' },
+    ]);
+  });
+});
 
 describe('jsonNode', () => {
   test('turns JSON into value tree nodes', () => {

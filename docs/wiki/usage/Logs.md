@@ -10,6 +10,8 @@ A Laravel app reports its log folder with every card it sends: `storage/logs`, m
 
 Choose another folder in the tab with **Change** (any app, any framework, as long as it writes Monolog's line format). **Use app's** goes back to the folder the app reports. The choice is kept in the viewer's settings.
 
+An app that reports no folder (one running on the [global install](Global-Install.md), or one that has not sent a card yet) can still be read: **Add a log folder** in the tab takes a folder and a project name. The name is filled in from the folder (`shop` for `/Sites/shop/storage/logs`); use the name the app sends its cards with, so cards and logs show together. **Browse…** picks the folder by clicking instead of typing: the desktop app opens the system's folder dialog, and in a browser the viewer shows its own folder picker (from your home folder, with Laravel apps marked and **Use its storage/logs** one click away).
+
 | Setting | Does |
 |---------|------|
 | `log_path` in `config/peep.php` (`PEEP_LOG_PATH`) | Another folder than `storage/logs`; `false` reports none |
@@ -43,4 +45,4 @@ Times without an offset are read in the app's time zone (Laravel's `app.timezone
 
 ## Safety
 
-The viewer only lists and reads files ending in `.log` directly inside a project's folder, and only the viewer's own machine can ask for them, like the rest of the viewer page.
+The viewer only lists and reads files ending in `.log` directly inside a project's folder, and only the viewer's own machine can ask for them, like the rest of the viewer page. The folder picker shows folder names and how many `.log` files a folder has, never other files, and only the viewer page can ask for it.

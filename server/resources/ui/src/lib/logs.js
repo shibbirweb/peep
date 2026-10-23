@@ -6,6 +6,48 @@ export const LEVELS = ['debug', 'info', 'notice', 'warning', 'error', 'critical'
 export const MAX_ENTRIES = 5000;
 
 /**
+ * A project name for a log folder chosen by hand: the app's folder for storage/logs (or a
+ * logs folder), otherwise the folder's own name.
+ *
+ * @param {string} path
+ * @returns {string}
+ */
+export function projectFromLogPath(path) {
+  const parts = path.trim().split(/[\\/]+/).filter((part) => part !== '');
+
+  if (parts.length >= 3 && parts.at(-2) === 'storage' && parts.at(-1) === 'logs') {
+    return parts.at(-3);
+  }
+
+  if (parts.length >= 2 && ['log', 'logs'].includes(parts.at(-1))) {
+    return parts.at(-2);
+  }
+
+  return parts.at(-1) ?? '';
+}
+
+/**
+ * The folder picker's path bar: each folder of an absolute path, with the path to go back to it.
+ *
+ * @param {string} path "/Users/me" or "C:\\Sites"
+ * @returns {{ name: string, path: string }[]}
+ */
+export function pathCrumbs(path) {
+  const windows = /^[A-Za-z]:[\\/]/.test(path);
+  const separator = windows ? '\\' : '/';
+  const parts = path.split(/[\\/]+/).filter((part) => part !== '');
+  const crumbs = windows ? [] : [{ name: '/', path: '/' }];
+  let current = windows ? '' : '/';
+
+  for (const part of parts) {
+    current = windows && current === '' ? `${part}${separator}` : `${current}${current.endsWith(separator) ? '' : separator}${part}`;
+    crumbs.push({ name: windows && crumbs.length === 0 ? current : part, path: current });
+  }
+
+  return crumbs;
+}
+
+/**
  * A JSON value as a value tree node, so ValueTree can show it as a collapsible array.
  *
  * @param {*} value

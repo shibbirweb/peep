@@ -42,6 +42,16 @@ export function checkUpdates() {
 }
 
 /**
+ * A native folder picker (the Logs tab's "Browse"). Null when cancelled, or outside the app.
+ *
+ * @param {string} start The folder to open it at; ignored when it does not exist.
+ * @returns {Promise<string|null>}
+ */
+export function pickFolder(start) {
+  return invoke('pick_folder', { start: start.trim() !== '' ? start.trim() : null });
+}
+
+/**
  * peep()->showApp() and peep()->hideApp().
  *
  * @param {string} command "show_app" or "hide_app"

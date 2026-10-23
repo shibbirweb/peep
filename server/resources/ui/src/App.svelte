@@ -182,7 +182,7 @@
   {:else if tab === 'webhooks'}
     <WebhookPage rules={viewer.webhooks.rules} deliveries={viewer.webhooks.deliveries} {project} />
   {:else if tab === 'logs'}
-    <LogsPage {project} ide={viewer.settings.ide} />
+    <LogsPage {project} {projects} ide={viewer.settings.ide} />
   {:else if rows.length === 0}
     <div class="empty">
       {#if inProject.length > 0}
