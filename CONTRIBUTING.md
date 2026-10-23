@@ -2,7 +2,7 @@
 
 Thanks for helping. This guide covers the setup, the layout and the rules every change must follow. The wiki's [Contributing](docs/wiki/developer/Contributing.md) and [Releasing](docs/wiki/developer/Releasing.md) pages add what CI runs and how releases are cut.
 
-Pull requests go into `develop`, the beta line; `main` holds stable releases and only takes merges from `develop` when a release is promoted. Add every user-visible change under **Unreleased** in `CHANGELOG.md` in the same pull request: it becomes the release notes.
+Pull requests go into `develop`, the beta line; `main` holds stable releases and only takes merges from `develop` when a release is promoted. Once there is a stable release, `main` is the repository's default branch and GitHub suggests it as the base of a new pull request: change it to `develop`. Add every user-visible change under **Unreleased** in `CHANGELOG.md` in the same pull request: it becomes the release notes.
 
 ## Setup
 
