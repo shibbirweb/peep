@@ -11,6 +11,8 @@
 
 Debug any PHP app in a separate window. Call `peep($value)` anywhere and watch values, database queries, jobs, logs and exceptions arrive live, in your browser or in a desktop app. Peep also catches the mail and SMS your app sends, and can call your app back with signed provider webhooks.
 
+[![Watch the 2-minute tour of Peep](https://raw.githubusercontent.com/shibbirweb/peep/main/demo/peep-tour.png)](https://github.com/shibbirweb/peep/blob/main/demo/peep-tour.mp4)
+
 ![The Peep viewer showing cards from a shop app, grouped by request](https://raw.githubusercontent.com/shibbirweb/peep/main/docs/wiki/images/viewer.png)
 
 Works with PHP 7.1 to 8.5 and Laravel 5.5 to 13. More screenshots are in the [wiki](https://github.com/shibbirweb/peep/wiki).
@@ -24,6 +26,14 @@ Peep has two parts: the **viewer**, where the cards appear, and the **client**, 
 Pick one:
 
 - **Desktop app** for macOS, Windows and Linux: download it from the [releases page](https://github.com/shibbirweb/peep/releases) and open it. It brings its own PHP, so nothing else is needed.
+
+  The app is not signed with an Apple or Microsoft certificate yet, so macOS and Windows stop it the first time:
+
+  - **macOS**: open Peep from Applications and click **Done**. Then open **System Settings → Privacy & Security**, scroll down to *"Peep" was blocked*, click **Open Anyway** and confirm. If macOS says Peep *is damaged*, run `xattr -dr com.apple.quarantine /Applications/Peep.app` in Terminal and open it again.
+  - **Windows**: when *Windows protected your PC* appears, click **More info**, then **Run anyway**.
+  - **Linux** needs no extra step.
+
+  Every step, with the downloads for each system: [Desktop app: install](docs/wiki/usage/Desktop-App.md#install).
 - **`peep-server.phar`**, with PHP 8.5: download it from the same page and run it.
 
   ```bash
