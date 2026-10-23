@@ -6,7 +6,7 @@
  * viewer, the desktop app and its Cargo files carry the same number so nothing drifts.
  *
  *     bun scripts/version.ts show               print the version
- *     bun scripts/version.ts check [x.y.z]      verify every file agrees (and, given, is x.y.z with a changelog section)
+ *     bun scripts/version.ts check [x.y.z]      verify every file agrees (and, given, is x.y.z, with a changelog section unless a beta)
  *     bun scripts/version.ts set 1.2.0          move every file at once
  *     bun scripts/version.ts notes [1.2.0]      print a changelog section (Unreleased by default): the release notes
  *     bun scripts/version.ts pending            say whether a release is due, and which
@@ -96,7 +96,8 @@ function check(expected?: string): number {
     console.error(`\nRun \`bun scripts/version.ts set ${target ?? "x.y.z"}\` and commit.`);
   }
 
-  if (expected !== undefined && changelogSection(read("CHANGELOG.md"), expected) === null) {
+  // A beta is published with the [Unreleased] notes; only a stable release has a section of its own.
+  if (expected !== undefined && !expected.includes("-") && changelogSection(read("CHANGELOG.md"), expected) === null) {
     console.error(`CHANGELOG.md has no [${expected}] section.`);
     failed = true;
   }
