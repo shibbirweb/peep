@@ -61,6 +61,7 @@ The cards show up at once. If your app runs in Docker, see [Docker and other mac
 - Any PHP app through PSR-3, Monolog, Symfony VarDumper and a plain error handler.
 - A mail and SMS catcher (SMTP, a Laravel mailer, and Mailgun-, Twilio- and Vonage-style APIs), with a webhook simulator that calls your app back with signed, templated payloads.
 - The viewer in a browser tab or in the desktop app; choose in Settings.
+- Debugging by AI agents: `vendor/bin/peep report` and an MCP server give Claude Code, Codex, Cursor and others what Peep caught as text, and the bundled skill teaches them to use it.
 - Safe by default: off in production, and it never slows down or breaks your app when the viewer is closed.
 
 ## Requirements
@@ -87,6 +88,15 @@ collect($rows)->peep()->map(...);
 
 Logs, reported exceptions, `dump()` and sent mail show up without any call. Set `MAIL_MAILER=peep` to send every mail to the viewer's inbox. To change what is captured, publish the config with `php artisan vendor:publish --tag=peep-config`. More in the [Laravel guide](docs/wiki/usage/Laravel.md).
 
+## Debugging with an AI agent
+
+```bash
+vendor/bin/peep skill --install          # the Peep skill, for Claude Code (.claude/skills/peep)
+claude mcp add peep -- php vendor/bin/peep mcp   # optional: Peep's MCP tools
+```
+
+Then ask: "Use Peep to find out why checkout fails, fix it, and show me the report." The agent adds `peep()` calls, runs the code, reads `vendor/bin/peep report` (problems first, then every request), fixes the bug and removes its calls. See [AI agents](docs/wiki/usage/AI-Agents.md).
+
 ## Documentation
 
 The [wiki](https://github.com/shibbirweb/peep/wiki) has everything, with screenshots. It is written in [docs/wiki](docs/wiki) and published by CI.
@@ -94,7 +104,7 @@ The [wiki](https://github.com/shibbirweb/peep/wiki) has everything, with screens
 - [Getting started](docs/wiki/usage/Getting-Started.md) and [Installation](docs/wiki/usage/Installation.md)
 - [Version support](docs/wiki/usage/Version-Support.md): PHP 7.1 to 8.5, Laravel 5.5 to 13
 - [API reference](docs/wiki/usage/API-Reference.md)
-- [Laravel](docs/wiki/usage/Laravel.md), [other frameworks and plain PHP](docs/wiki/usage/Configuration.md), [mail and SMS](docs/wiki/usage/Mail-and-SMS.md), [webhooks](docs/wiki/usage/Webhooks.md), [desktop app](docs/wiki/usage/Desktop-App.md)
+- [Laravel](docs/wiki/usage/Laravel.md), [other frameworks and plain PHP](docs/wiki/usage/Configuration.md), [mail and SMS](docs/wiki/usage/Mail-and-SMS.md), [webhooks](docs/wiki/usage/Webhooks.md), [desktop app](docs/wiki/usage/Desktop-App.md), [AI agents](docs/wiki/usage/AI-Agents.md)
 - [Releasing](docs/wiki/developer/Releasing.md): betas from `develop`, stable releases from `main`
 - [Protocol](docs/protocol.md), [roadmap](docs/plan/roadmap.md), [feature list](docs/plan/features.md) and [implementation plan](docs/plan/implementation.md)
 

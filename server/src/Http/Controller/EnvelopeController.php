@@ -14,6 +14,7 @@ use ShibbirWeb\PeepServer\Card\Receiving;
 use ShibbirWeb\PeepServer\Event\EventHub;
 use ShibbirWeb\PeepServer\Http\Responses;
 use ShibbirWeb\PeepServer\Lock\LockRegistry;
+use ShibbirWeb\PeepServer\Log\LogFolders;
 use ShibbirWeb\PeepServer\Protocol\EnvelopeDecoder;
 use ShibbirWeb\PeepServer\Protocol\InvalidEnvelopeException;
 use ShibbirWeb\PeepServer\Switch\SwitchStore;
@@ -32,6 +33,7 @@ final readonly class EnvelopeController implements RequestHandler
         private LockRegistry $locks,
         private SwitchStore $switches,
         private Receiving $receiving = new Receiving(),
+        private ?LogFolders $logFolders = null,
     ) {}
 
     public function handleRequest(Request $request): Response
@@ -53,6 +55,10 @@ final readonly class EnvelopeController implements RequestHandler
                 'message' => $exception->getMessage(),
                 'supported' => [EnvelopeDecoder::PROTOCOL],
             ]);
+        }
+
+        if ($envelope->logs !== null && $this->logFolders !== null) {
+            $this->hub->publish($this->logFolders->reported($envelope->project, $envelope->logs));
         }
 
         if ($this->receiving->paused) {

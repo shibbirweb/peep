@@ -45,8 +45,8 @@ final class SettingsController implements RequestHandler
             return Responses::error(400, 'invalid_request', 'Send the changed settings as {"changes": {...}}.');
         }
 
-        // Switches and webhooks have their own endpoints, which keep the running stores in sync.
-        unset($changes['switches'], $changes['webhooks']);
+        // Switches, webhooks and log folders have their own endpoints, which keep the running stores in sync.
+        unset($changes['switches'], $changes['webhooks'], $changes['log_folders']);
 
         try {
             $restart = $this->store->settings->update($changes);

@@ -674,11 +674,26 @@ Releases follow two branches [RL-03, RL-13]: `develop` is the beta line, `main` 
 
 `scripts/version.ts` (Bun, helpers in `versioning.ts` with tests) keeps the version in `src/Version.php` (the source of truth), `server/src/Version.php`, `tauri.conf.json`, `desktop/package.json`, `Cargo.toml` and `Cargo.lock`. `bump` works the next version out from the commits since the last tag (feat: minor, fix: patch, `feat!:` major) and refuses when `[Unreleased]` is empty; `untried` lists the commits a stable release would ship without a beta. Release commits use `REL-n` tickets. Release notes always come from `CHANGELOG.md` [RL-14].
 
-Packagist [RL-12]: `POST https://packagist.org/api/update-package` with the repository URL; when the package does not exist yet, `create-package`. Composer installs the tag's archive, which `.gitattributes` keeps to client files (plus `bin/peep-clean` and `phpstan/rules.neon`).
+Packagist [RL-12]: `POST https://packagist.org/api/update-package` with the repository URL; when the package does not exist yet, `create-package`. Composer installs the tag's archive, which `.gitattributes` keeps to client files (plus `bin/peep`, `bin/peep-clean`, `resources/skills` and `phpstan/rules.neon`).
 
 ### Leftover calls [RL-09]
 
 `Clean\CallFinder` reads PHP files with `token_get_all()` (PHP 7.1+), so strings, comments, methods named `peep` and other namespaces' functions are never matched. It removes a `peep()` / `pd()` call only when it is a whole statement (`peep($x)->red();`), taking its line with it, and a `->peep()` step in a chain (the macro returns its target); other uses are reported to fix by hand. `Clean\Cleaner` walks paths (skipping `vendor/`, `node_modules/`, `storage/`, `.git/`), handles `@peep`, `@peepAll` and `@peepMeasure` in Blade files, and reports `file:line`. `bin/peep-clean` and `php artisan peep:clean` exit with 1 while calls remain, for CI. `PHPStan\NoPeepCallsRule` (identifier `peep.leftoverCall`) is opt-in through `phpstan/rules.neon`.
+
+### AI agents [AI-01 to AI-05]
+
+An AI agent debugs with Peep through text. The viewer renders it, so the client stays small and PHP 7.1 compatible:
+
+- `Agent\TextRenderer` (viewer) turns cards, mail and SMS into text, following the UI's Copy text (`resources/ui/src/lib/text.js`) plus the Laravel payloads; paths under `base` are shown relative. `Agent\CardQuery` reads the filters, `Agent\Report` writes the Markdown report: summary, problems (exceptions, failed jobs, error responses, failed HTTP calls, error logs, slow and repeated queries), each request with its cards (at most 40 per request), mail and SMS. `AgentController` serves `/_peep/agent/*`; like the UI paths they are local only (TokenGuard, HostGuard, OriginGuard).
+- `Agent\ViewerApi` (client) calls those endpoints with a longer timeout than the app's transport (1 s to connect, 15 s to answer) and turns every failure into a sentence that says what to do. `wait` takes the viewer's clock from `status` as its cursor, so the two clocks never need to agree. `Agent\AgentCli` is the `peep` command; `bin/peep` runs it from Composer and from `peep.phar`, where `install`, `uninstall` and `status` keep their global-install meaning.
+- `Agent\McpServer` speaks MCP (protocol 2024-11-05 to 2025-06-18) over stdio, one JSON-RPC message per line, with tools that map one to one to `ViewerApi`. Only `peep_clear` is marked destructive.
+- The skill (`resources/skills/peep/SKILL.md`) is the agent's manual: check, clear, instrument, reproduce, read, fix, clean up with `peep-clean --fix`, and report. It ships in the Composer package and the PHAR.
+
+### Logs [VF-25 to VF-27, AI-06]
+
+The viewer reads log files itself, so it shows what was written before Peep was on. The client only says where they are: `log_path` (Laravel: `storage/logs`) and `log_timezone` (Laravel: `app.timezone`) go into `meta.logs`, the path mapped like origins. `Log\LogFolders` keeps one folder per project in the settings (`log_folders`); a folder chosen in the tab (`manual`) wins over the reported one, and only its time zone follows the app.
+
+`Log\LogParser` splits Monolog's line format at lines that start an entry (`[date] channel.LEVEL: `), so Laravel's multi-line exception context stays in its entry. The trailing context and extra JSON are decoded (raw line breaks inside it can only be inside strings, so they are escaped first), and Laravel's exception string becomes class, code, message, file, line, frames and previous exceptions. `Log\LogFiles` lists `.log` files directly in the folder and reads backwards from the end in 512 KB chunks until it has the entries asked for, so a file of any size opens at once; `after` reads what was added up to the last complete line and starts over when the file got shorter. The tab polls `after` every second while live. The parser is tested on files written by a real Monolog 1, 2 and 3 with Laravel's formatter (`server/tests/Fixture/logs`, made by `make.php`): Monolog 1, which Laravel 5.5 to 5.8 use, writes previous exceptions inside the same parentheses instead of `[previous exception]` blocks. `tests/Laravel/LogFormatTest` checks on every Laravel and PHP pair that the app's own log output still has the shape the viewer reads. Agents get `GET /_peep/agent/logs`, and the report adds error-level entries of each project's newest file written since its window starts (`since`, the last `peep clear`, the first card, or 15 minutes).
 
 ## 14. Testing strategy
 

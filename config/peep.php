@@ -23,6 +23,10 @@ return [
     'remote_path' => env('PEEP_REMOTE_PATH'),
     'local_path' => env('PEEP_LOCAL_PATH'),
 
+    // The log folder the viewer's Logs tab shows (Laravel's own .log files, read by the viewer).
+    // Null: storage/logs. False: show none.
+    'log_path' => env('PEEP_LOG_PATH'),
+
     // "peep" never calls code on the values it shows. "var-dumper" uses Symfony VarDumper's
     // casters (richer for Doctrine, Carbon, DOM, ...), which may call methods on values.
     'serializer' => env('PEEP_SERIALIZER', 'peep'),

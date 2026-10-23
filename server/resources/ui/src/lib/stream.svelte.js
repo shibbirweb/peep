@@ -44,6 +44,8 @@ export const viewer = $state({
   sms: [],
   // Webhook rules and the latest deliveries, newest first.
   webhooks: { rules: [], deliveries: [] },
+  // Each project's log folder for the Logs tab.
+  logFolders: [],
 });
 
 export function connect() {
@@ -99,6 +101,10 @@ export function connect() {
     applySettings(data);
   });
 
+  on(source, 'logs.folders', (data) => {
+    viewer.logFolders = data.folders ?? [];
+  });
+
   for (const name of MAIL_EVENTS) {
     on(source, name, (data) => {
       viewer.mails = applyInboxEvent(viewer.mails, name, data);
@@ -135,6 +141,7 @@ function applySnapshot(data) {
   viewer.mails = data.mails ?? [];
   viewer.sms = data.sms ?? [];
   viewer.webhooks = data.webhooks ?? { rules: [], deliveries: [] };
+  viewer.logFolders = data.log_folders ?? [];
 
   if (data.settings) {
     applySettings(data.settings);

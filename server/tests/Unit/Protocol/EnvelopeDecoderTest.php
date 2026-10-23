@@ -29,6 +29,17 @@ final class EnvelopeDecoderTest extends TestCase
         $this->assertNull($envelope->payloads[1]->origin);
     }
 
+    public function testReadsTheLogFolderAndIgnoresABadOne(): void
+    {
+        $decode = static fn(mixed $logs): ?array => new EnvelopeDecoder()->decode((string) json_encode(array_replace_recursive(self::envelope(), ['meta' => ['logs' => $logs]])))->logs;
+
+        $this->assertNull(new EnvelopeDecoder()->decode((string) json_encode(self::envelope()))->logs);
+        $this->assertSame(['path' => '/app/storage/logs', 'timezone' => 'Europe/Berlin'], $decode(['path' => '/app/storage/logs', 'timezone' => 'Europe/Berlin']));
+        $this->assertSame(['path' => 'C:\\shop\\storage\\logs', 'timezone' => 'UTC'], $decode(['path' => 'C:\\shop\\storage\\logs', 'timezone' => 'Mars/Olympus']));
+        $this->assertNull($decode(['path' => 'storage/logs']), 'A relative path means nothing to the viewer.');
+        $this->assertNull($decode('/app/storage/logs'));
+    }
+
     public function testIgnoresUnknownFields(): void
     {
         $data = self::envelope();

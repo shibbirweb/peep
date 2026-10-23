@@ -51,6 +51,16 @@ final class Config
     private $localPath;
 
     /**
+     * @var string|null The app's log folder (Laravel: storage/logs), shown in the viewer's Logs tab.
+     */
+    private $logPath;
+
+    /**
+     * @var string|null Time zone of the times in the log files.
+     */
+    private $logTimezone;
+
+    /**
      * @var int
      */
     private $maxDepth;
@@ -100,6 +110,8 @@ final class Config
         $this->project = self::toNonEmptyString($options['project'], $defaults['project']);
         $this->remotePath = self::toNullableString($options['remote_path']);
         $this->localPath = self::toNullableString($options['local_path']);
+        $this->logPath = self::toNullableString($options['log_path']);
+        $this->logTimezone = self::toNullableString($options['log_timezone']);
         $this->maxDepth = self::toIntInRange($options['max_depth'], $defaults['max_depth'], 1, 100);
         $this->maxItems = self::toIntInRange($options['max_items'], $defaults['max_items'], 1, 100000);
         $this->maxStringLength = self::toIntInRange($options['max_string_length'], $defaults['max_string_length'], 1, 10000000);
@@ -110,7 +122,7 @@ final class Config
     }
 
     /**
-     * @return array{enabled: bool, host: string, port: int, connect_timeout_ms: int, timeout_ms: int, project: string, remote_path: null, local_path: null, max_depth: int, max_items: int, max_string_length: int, max_nodes: int, redact_keys: list<string>, serializer: string, token: null}
+     * @return array{enabled: bool, host: string, port: int, connect_timeout_ms: int, timeout_ms: int, project: string, remote_path: null, local_path: null, log_path: null, log_timezone: null, max_depth: int, max_items: int, max_string_length: int, max_nodes: int, redact_keys: list<string>, serializer: string, token: null}
      */
     public static function defaults(): array
     {
@@ -123,6 +135,8 @@ final class Config
             'project' => 'default',
             'remote_path' => null,
             'local_path' => null,
+            'log_path' => null,
+            'log_timezone' => null,
             'max_depth' => 5,
             'max_items' => 100,
             'max_string_length' => 10000,
@@ -204,6 +218,16 @@ final class Config
     public function localPath(): ?string
     {
         return $this->localPath;
+    }
+
+    public function logPath(): ?string
+    {
+        return $this->logPath;
+    }
+
+    public function logTimezone(): ?string
+    {
+        return $this->logTimezone;
     }
 
     public function maxDepth(): int

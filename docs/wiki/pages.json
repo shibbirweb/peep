@@ -16,8 +16,10 @@
     { "page": "usage/Global-Install.md", "summary": "peep() in every script of a PHP install, without Composer." },
     { "page": "usage/Mail-and-SMS.md", "summary": "Catch the mail and SMS your app sends: SMTP, the peep mailer, Mailgun, Twilio and Vonage." },
     { "page": "usage/Webhooks.md", "summary": "Call your app back with signed Mailgun, Twilio and Vonage events." },
+    { "page": "usage/Logs.md", "summary": "Your app's log files as colored entries, with exceptions, context trees, live watching and filters." },
     { "page": "usage/Desktop-App.md", "summary": "The viewer in its own window: display mode, tray, hotkey, notifications and updates." },
     { "page": "usage/Finding-Leftover-Calls.md", "summary": "peep-clean, artisan peep:clean and the PHPStan rule." },
+    { "page": "usage/AI-Agents.md", "summary": "Let an AI agent debug with Peep: the skill, vendor/bin/peep, the debug report and the MCP server." },
     { "page": "usage/Troubleshooting.md", "summary": "No cards, Docker, editor links, ports and failing webhooks." }
   ],
   "developer": [

@@ -22,6 +22,24 @@ final class ProviderTest extends LaravelTestCase
         $this->assertSame('Peep Laravel Tests', $factory->config()->project());
     }
 
+    public function testTheAppReportsItsLogFolder(): void
+    {
+        $config = $this->laravel()->make(PeepFactory::class)->config();
+
+        $this->assertSame(rtrim($this->laravel()->storagePath(), '/\\') . DIRECTORY_SEPARATOR . 'logs', $config->logPath());
+        $this->assertSame($this->laravel()->make('config')->get('app.timezone'), $config->logTimezone());
+
+        peep('with logs');
+        $mine = null;
+        foreach ($this->transport->requests as $request) {
+            if (isset($request['body']['payloads'][0]['content']['values'][0]['value']) && $request['body']['payloads'][0]['content']['values'][0]['value'] === 'with logs') {
+                $mine = $request;
+            }
+        }
+        $this->assertNotNull($mine, 'The card was sent.');
+        $this->assertSame(['path' => $config->logPath(), 'timezone' => $config->logTimezone()], $mine['body']['meta']['logs']);
+    }
+
     public function testPeepCallsFromTheAppAreSent(): void
     {
         $line = __LINE__ + 1;

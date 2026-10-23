@@ -86,5 +86,6 @@ Other machines can then send to the viewer, but the viewer page itself still ope
 | `remote_path`, `local_path` | `PEEP_REMOTE_PATH`, `PEEP_LOCAL_PATH` | none |
 | `serializer` | `PEEP_SERIALIZER` | `peep`; `var-dumper` uses Symfony VarDumper's casters |
 | `token` | `PEEP_TOKEN` | none |
+| `log_path`, `log_timezone` | `PEEP_LOG_PATH`, `PEEP_LOG_TIMEZONE` | none (Laravel: `storage/logs` and `app.timezone`); the folder the [Logs](Logs.md) tab shows |
 | `max_depth`, `max_items`, `max_string_length`, `max_nodes` | | 5, 100, 10,000, 5,000 |
 | `redact_keys` | | `password`, `secret`, `token`, `api_key`, `authorization`, `cookie` and more |

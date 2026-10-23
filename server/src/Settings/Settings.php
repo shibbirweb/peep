@@ -154,6 +154,13 @@ final class Settings
     public array $switches = [];
 
     /**
+     * Each project's log folder for the Logs tab: reported by the app, or chosen by hand (manual).
+     *
+     * @var array<string, array{path: string, timezone: string, manual: bool}>
+     */
+    public array $logFolders = [];
+
+    /**
      * Builds settings from the file. Invalid or unknown values are skipped, so a
      * hand-edited file with one mistake still loads.
      *
@@ -204,7 +211,7 @@ final class Settings
     }
 
     /**
-     * @return array{display_mode: string, ide: string, path_mappings: list<array{from: string, to: string}>, host: string, port: int, theme: string, smtp: bool, smtp_port: int, token: string|null, max_cards: int, history: bool, notifications: bool, update_channel: string, check_updates: bool, switches: array<string, array<string, string|int|null>>, webhooks: list<array<mixed>>}
+     * @return array{display_mode: string, ide: string, path_mappings: list<array{from: string, to: string}>, host: string, port: int, theme: string, smtp: bool, smtp_port: int, token: string|null, max_cards: int, history: bool, notifications: bool, update_channel: string, check_updates: bool, switches: array<string, array<string, string|int|null>>, webhooks: list<array<mixed>>, log_folders: array<string, array{path: string, timezone: string, manual: bool}>}
      */
     public function toArray(): array
     {
@@ -225,6 +232,7 @@ final class Settings
             'check_updates' => $this->checkUpdates,
             'switches' => $this->switches,
             'webhooks' => $this->webhooks,
+            'log_folders' => $this->logFolders,
         ];
     }
 
@@ -251,6 +259,7 @@ final class Settings
                 'check_updates' => $this->checkUpdates = is_bool($value) ? $value : throw new InvalidSettingException($key, 'Check updates must be true or false.'),
                 'switches' => $this->switches = self::switches($value),
                 'webhooks' => $this->webhooks = is_array($value) ? array_values(array_filter($value, is_array(...))) : throw new InvalidSettingException($key, 'Webhooks must be a list.'),
+                'log_folders' => $this->logFolders = self::logFolders($value),
                 default => throw new InvalidSettingException($key, 'Unknown setting: ' . $key . '.'),
             };
         } catch (ValueError | TypeError) {
@@ -285,6 +294,31 @@ final class Settings
         }
 
         return $mappings;
+    }
+
+    /**
+     * Entries that are not a folder path are dropped, so one bad entry never loses the others.
+     *
+     * @return array<string, array{path: string, timezone: string, manual: bool}>
+     */
+    private static function logFolders(mixed $value): array
+    {
+        if (! is_array($value)) {
+            throw new InvalidSettingException('log_folders', 'Log folders must be an object.');
+        }
+
+        $folders = [];
+        foreach ($value as $project => $folder) {
+            if (is_string($project) && is_array($folder) && is_string($folder['path'] ?? null) && $folder['path'] !== '') {
+                $folders[$project] = [
+                    'path' => $folder['path'],
+                    'timezone' => is_string($folder['timezone'] ?? null) ? $folder['timezone'] : 'UTC',
+                    'manual' => ($folder['manual'] ?? false) === true,
+                ];
+            }
+        }
+
+        return $folders;
     }
 
     /**
