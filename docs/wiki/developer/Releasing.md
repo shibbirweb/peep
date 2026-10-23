@@ -55,7 +55,7 @@ bun scripts/version.ts notes 1.1.0     # that version's release notes
 bun scripts/version.ts bump minor      # beta | release | patch | minor | major | x.y.z
 ```
 
-The version lives in `src/Version.php` (the source of truth), `server/src/Version.php`, `desktop/src-tauri/tauri.conf.json`, `desktop/package.json`, `desktop/src-tauri/Cargo.toml` and `Cargo.lock`. CI fails when they disagree.
+The version lives in `src/Version.php` (the source of truth), `server/src/Version.php`, `desktop/src-tauri/tauri.conf.json`, `desktop/package.json`, `desktop/src-tauri/Cargo.toml`, `Cargo.lock`, and the release tag in the README's tour video links (so each branch plays its own version's video). CI fails when they disagree.
 
 ## Repository settings
 

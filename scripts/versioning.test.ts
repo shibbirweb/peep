@@ -8,9 +8,11 @@ import {
   nextTicket,
   nextVersion,
   phpConstant,
+  readmeTourVersion,
   setCargoLockVersion,
   setCargoTomlVersion,
   setJsonVersion,
+  setReadmeTourVersion,
   setPhpConstant,
   suggestLevel,
   untriedSubjects,
@@ -40,6 +42,25 @@ describe("version places", () => {
     const lock = '[[package]]\nname = "other"\nversion = "0.3.0"\n\n[[package]]\nname = "peep-desktop"\nversion = "0.3.0"\n';
     expect(cargoLockVersion(lock, "peep-desktop")).toBe("0.3.0");
     expect(setCargoLockVersion(lock, "peep-desktop", "1.0.0")).toBe(lock.replace(/"0.3.0"\n$/, '"1.0.0"\n'));
+  });
+});
+
+describe("README tour video", () => {
+  const readme = [
+    "[![Tour](https://cdn.jsdelivr.net/gh/shibbirweb/peep@v0.1.0-beta.2/demo/peep-tour.png)](https://cdn.jsdelivr.net/gh/shibbirweb/peep@v0.1.0-beta.2/demo/peep-tour.mp4)",
+    "Or download [demo/peep-tour.mp4](demo/peep-tour.mp4).",
+  ].join("\n");
+
+  test("reads the tag both links name", () => {
+    expect(readmeTourVersion(readme)).toBe("0.1.0-beta.2");
+    expect(readmeTourVersion(readme.replace("@v0.1.0-beta.2/demo/peep-tour.png", "@v0.1.0-beta.1/demo/peep-tour.png"))).toBeNull();
+    expect(readmeTourVersion("no video here")).toBeNull();
+  });
+
+  test("moves both links to the new version, leaving the rest", () => {
+    const moved = setReadmeTourVersion(readme, "1.0.0");
+    expect(moved).toBe(readme.replaceAll("@v0.1.0-beta.2/", "@v1.0.0/"));
+    expect(setReadmeTourVersion("no video here", "1.0.0")).toBeNull();
   });
 });
 

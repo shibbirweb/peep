@@ -42,7 +42,7 @@ bun scripts/video.ts --poster         # only the poster
 
 The music comes from `scripts/music.ts`: an upbeat electronic track synthesized sample by sample (kick, clap, hats, bass, chords, arpeggio; 124 BPM in A minor), with the drop on the first cut and a whoosh on every transition. Nothing in it is sampled or copied, so the video can go to YouTube or anywhere else without a license or a Content ID claim. It is mixed to about -14 LUFS with peaks near -1 dB.
 
-The README shows the poster and links to the video in `demo/` (kept out of the Composer package). Record it again when the viewer changes; `TOUR_TIMES=1` prints when each scene starts and where it cuts, and `TOUR_KEEP=1` keeps the in-between files.
+The README shows the poster and plays the video in `demo/` (kept out of the Composer package) through jsDelivr, at the release tag: `cdn.jsdelivr.net/gh/shibbirweb/peep@v<version>/demo/...`. GitHub serves an MP4 from a repository only as a download, while jsDelivr serves it as `video/mp4`, so it plays in the browser. The tag in those links is one of the places `scripts/version.ts` keeps in step with the version, so `main` and `develop` each play the video of the version they are at; between merging a release pull request and its tag being created, the links wait for the tag. Record it again when the viewer changes; `TOUR_TIMES=1` prints when each scene starts and where it cuts, and `TOUR_KEEP=1` keeps the in-between files.
 
 ## Publishing
 
