@@ -15,6 +15,7 @@ use Revolt\EventLoop;
 use ShibbirWeb\PeepServer\Card\CardStore;
 use ShibbirWeb\PeepServer\Card\Receiving;
 use ShibbirWeb\PeepServer\Event\EventHub;
+use ShibbirWeb\PeepServer\Http\Controller\AgentController;
 use ShibbirWeb\PeepServer\Http\Controller\ClearController;
 use ShibbirWeb\PeepServer\Http\Controller\EnvelopeController;
 use ShibbirWeb\PeepServer\Http\Controller\HealthController;
@@ -219,6 +220,7 @@ final class Application
         $sms = new SmsController($this->catcher);
         $inbox = new InboxController($this->catcher, $this->hub);
         $webhooks = new WebhookController($this->webhooks, $this->catcher, $this->hub);
+        $agent = new AgentController($this->cards, $this->catcher, $this->hub, $this->receiving, $this->switches, $this->url());
 
         $router = new Router()
             ->add('GET', '/_peep/health', new HealthController())
@@ -244,6 +246,8 @@ final class Application
             ->add('POST', '/_peep/ui/receiving', new ReceivingController($this->receiving, $this->hub))
             ->add('POST', '/_peep/ui/screens', $screens)
             ->add('GET', '/_peep/ui/screens/*', $screens)
+            ->add('GET', '/_peep/agent/*', $agent)
+            ->add('POST', '/_peep/agent/*', $agent)
             ->add('GET', '/*', new StaticFileController($this->publicDirectory));
 
         return stackMiddleware(
