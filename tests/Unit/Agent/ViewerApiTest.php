@@ -118,6 +118,37 @@ final class ViewerApiTest extends TestCase
         $this->assertSame([500, 500], $this->slept);
     }
 
+    public function testWebhooksTakeARuleAndOneCall(): void
+    {
+        $this->transport->getResponses[] = new TransportResponse(200, '{"rules": []}');
+        $this->transport->getResponses[] = new TransportResponse(404, "No webhook call whd_x; the viewer keeps the last 500 calls.\n");
+
+        $this->assertTrue($this->viewer('/app', 'shop')->webhooks(['since' => '5m'], 'Mailgun events', 'whd_1', true)['ok']);
+        $this->assertSame(['ok' => false, 'text' => "No webhook call whd_x; the viewer keeps the last 500 calls.\n"], $this->viewer()->webhooks([], null, 'whd_x'));
+
+        $this->assertSame([
+            '/_peep/agent/webhooks?since=5m&project=shop&base=%2Fapp&format=json&rule=Mailgun%20events&id=whd_1',
+            '/_peep/agent/webhooks?id=whd_x',
+        ], $this->transport->gets);
+    }
+
+    public function testSendingAWebhookPostsTheRuleAndShowsTheAppsAnswer(): void
+    {
+        $this->transport->postResponses[] = new TransportResponse(200, "Sent \"Mailgun events\" event delivered with mail mail_1.\n");
+        $this->transport->postResponses[] = new TransportResponse(502, "Sent \"Mailgun events\" event delivered with sample data.\n\n[whd_2] ... -> 401 in 3 ms\n");
+
+        $sent = $this->viewer(null, 'shop')->sendWebhook('Mailgun events', 'delivered', 'last');
+        $failed = $this->viewer()->sendWebhook('Mailgun events', 'delivered', null, '', 'blog');
+
+        $this->assertSame(['ok' => true, 'text' => "Sent \"Mailgun events\" event delivered with mail mail_1.\n"], $sent);
+        $this->assertFalse($failed['ok'], 'The app answered with an error.');
+        $this->assertStringContainsString('-> 401 in 3 ms', $failed['text']);
+        $this->assertSame([
+            ['path' => '/_peep/agent/webhooks/send', 'body' => ['rule' => 'Mailgun events', 'event' => 'delivered', 'mail' => 'last', 'project' => 'shop']],
+            ['path' => '/_peep/agent/webhooks/send', 'body' => ['rule' => 'Mailgun events', 'event' => 'delivered', 'project' => 'blog']],
+        ], $this->transport->requests);
+    }
+
     public function testClear(): void
     {
         $result = $this->viewer(null, 'shop')->clear(null, 'mail');

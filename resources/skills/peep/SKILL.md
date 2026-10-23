@@ -1,6 +1,6 @@
 ---
 name: peep
-description: Debug a PHP app (Laravel, Symfony, Slim, WordPress or plain PHP) with the Peep debugger, then give the user a debug report. Add peep() calls, reproduce the problem, read what Peep caught (values, queries, exceptions, jobs, logs, mail, SMS) with `vendor/bin/peep` or the Peep MCP tools, fix, and clean up. Use when the user asks to debug with Peep, to "use peep", for a Peep report, or when a PHP project that requires shibbirweb/peep has a bug that needs runtime values.
+description: Debug a PHP app (Laravel, Symfony, Slim, WordPress or plain PHP) with the Peep debugger, then give the user a debug report. Add peep() calls, reproduce the problem, read what Peep caught (values, queries, exceptions, jobs, logs, mail, SMS, webhook calls) with `vendor/bin/peep` or the Peep MCP tools, send signed provider webhooks (Mailgun, Twilio, Vonage) to the app, fix, and clean up. Use when the user asks to debug with Peep, to "use peep", for a Peep report, to test a webhook handler, or when a PHP project that requires shibbirweb/peep has a bug that needs runtime values.
 ---
 
 # Debugging with Peep
@@ -77,6 +77,20 @@ vendor/bin/peep wait --count=5 --timeout=60 # or after five
 
 `wait` also helps with queued jobs, which run after the request.
 
+### Webhooks from providers
+
+When the bug is in a webhook handler (Mailgun events, Twilio status callbacks, Vonage receipts or the app's own callbacks), send the call through one of the user's webhook rules. Peep signs it the way the provider does, so the app's signature check passes:
+
+```bash
+vendor/bin/peep webhooks                                   # the user's rules, their events, and the calls made
+vendor/bin/peep send-webhook --rule="Mailgun events" --event=failed --mail=last
+vendor/bin/peep send-webhook --rule="Twilio status" --event=undelivered --sms=last
+vendor/bin/peep send-webhook --rule="Mailgun events"       # every step of the rule, on its schedule
+vendor/bin/peep webhooks --id=whd_4b1e9a20c7d3             # one call: request and response in full
+```
+
+With `--event`, the call goes out now and you get the app's status and body back (exit code 1 when it is not 2xx). `--mail=last` or `--sms=last` uses the newest caught message, an id uses that one, and without either the call carries sample data. When `peep webhooks` lists no rules, ask the user to create one in the viewer's Webhooks tab (presets for Mailgun, Twilio and Vonage): rules hold the app's signing secret, so you cannot create them and must not ask for the secret. Never call a webhook route with hand-made signatures instead.
+
 ## 5. Read what Peep caught
 
 ```bash
@@ -90,11 +104,11 @@ vendor/bin/peep logs --level=error         # the app's log file (storage/logs), 
 vendor/bin/peep logs --file=laravel-2026-10-22.log --search=checkout
 ```
 
-Each card starts with `[id]`, its age, the request (`POST /orders`, a command or a job), and the file and line of the call. File paths are relative to the project. The report's **Problems** section lists exceptions, failed jobs, error responses, failed HTTP calls, error logs, error entries in the app's log file, slow queries and repeated (N+1) queries.
+Each card starts with `[id]`, its age, the request (`POST /orders`, a command or a job), and the file and line of the call. File paths are relative to the project. The report's **Problems** section lists exceptions, failed jobs, error responses, failed HTTP calls, failed webhook calls, error logs, error entries in the app's log file, slow queries and repeated (N+1) queries.
 
 The log file often holds what `peep()` calls do not: an exception the app caught and logged, or an error from a queued job. Read `peep logs --level=error` when the cards do not explain the bug.
 
-Add `--json` to `status`, `cards`, `mail`, `sms` and `logs` for machine-readable output.
+Add `--json` to `status`, `cards`, `mail`, `sms`, `logs` and `webhooks` for machine-readable output.
 
 ## 6. Fix and check again
 
@@ -130,7 +144,7 @@ Do not commit `peep-report.md` unless the user asks.
 
 ## MCP instead of the command line
 
-When you have the Peep MCP tools (`peep_status`, `peep_report`, `peep_cards`, `peep_mail`, `peep_sms`, `peep_logs`, `peep_wait`, `peep_clear`), use them the same way. They take the same filters (`project`, `since`, `request`, `search`, `limit`). To add them to an MCP client, run the server from the project directory:
+When you have the Peep MCP tools (`peep_status`, `peep_report`, `peep_cards`, `peep_mail`, `peep_sms`, `peep_logs`, `peep_webhooks`, `peep_send_webhook`, `peep_wait`, `peep_clear`), use them the same way. They take the same filters (`project`, `since`, `request`, `search`, `limit`). To add them to an MCP client, run the server from the project directory:
 
 ```json
 {
@@ -151,8 +165,10 @@ For Claude Code: `claude mcp add peep -- php vendor/bin/peep mcp`.
 | `peep cards` | Cards as text, oldest first |
 | `peep mail`, `peep sms` | Caught mail and SMS |
 | `peep logs` | The app's log file (`--file=NAME`, `--level=error`) |
+| `peep webhooks` | The user's webhook rules and the calls made (`--rule=NAME`, `--id=ID`) |
+| `peep send-webhook` | Call the app with a rule (`--rule=NAME`, `--event=E`, `--mail=ID\|last`, `--sms=ID\|last`) |
 | `peep wait` | Wait for new cards (`--timeout=30`, `--count=1`) |
-| `peep clear` | Empty the viewer (`--what=all\|cards\|mail\|sms`) |
+| `peep clear` | Empty the viewer (`--what=all\|cards\|mail\|sms\|webhooks`) |
 | `peep mcp` | MCP server on stdio |
 | `peep skill` | Print this skill; `--install` writes it to `.claude/skills/peep/` |
 

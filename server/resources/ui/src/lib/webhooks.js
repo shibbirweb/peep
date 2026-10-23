@@ -32,7 +32,8 @@ export function applyWebhookEvent(state, name, data) {
     case 'webhook.delivered':
       return { ...state, deliveries: [data, ...state.deliveries.filter((delivery) => delivery.id !== data.id)].slice(0, MAX_DELIVERIES) };
     case 'webhook.cleared':
-      return { ...state, deliveries: [] };
+      // One project (an agent's `peep clear --project=...`) or every project.
+      return { ...state, deliveries: data.project ? state.deliveries.filter((delivery) => delivery.project !== data.project) : [] };
     default:
       return state;
   }

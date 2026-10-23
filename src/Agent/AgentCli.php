@@ -10,7 +10,7 @@ use ShibbirWeb\Peep\Version;
  */
 final class AgentCli
 {
-    public const COMMANDS = ['status', 'cards', 'report', 'mail', 'sms', 'logs', 'wait', 'clear', 'mcp', 'skill'];
+    public const COMMANDS = ['status', 'cards', 'report', 'mail', 'sms', 'logs', 'webhooks', 'send-webhook', 'wait', 'clear', 'mcp', 'skill'];
 
     public const USAGE = <<<'TEXT'
 Debugging with an AI agent (or by hand):
@@ -20,12 +20,15 @@ Debugging with an AI agent (or by hand):
   mail [--id=ID]         Caught mail (one mail with its body when --id is given)
   sms                    Caught SMS
   logs                   The app's log file (--file=NAME, --level=error for error and above)
+  webhooks               Webhook rules made in the viewer and the calls they made (--rule=NAME, --id=ID for one call)
+  send-webhook           Call the app with a rule, signed like the provider: --rule=NAME [--event=delivered]
+                         [--mail=ID|last or --sms=ID|last]; without --event every step of the rule runs
   wait                   Wait for new cards and show them (--timeout=30, --count=1)
-  clear                  Empty the viewer before reproducing (--what=all|cards|mail|sms)
+  clear                  Empty the viewer before reproducing (--what=all|cards|mail|sms|webhooks)
   mcp                    Run as an MCP server on stdin and stdout
   skill                  Print the Peep skill for AI agents (--install to add it to this project)
 
-Filters for report, cards, mail, sms, logs and wait:
+Filters for report, cards, mail, sms, logs, webhooks and wait:
   --project=NAME         One project (default: PEEP_PROJECT, else every project)
   --since=5m             Only what came after: an age (30s, 5m, 2h, 1d) or a unix time
   --request=ID           One request (the id shown in cards and reports)
@@ -34,7 +37,7 @@ Filters for report, cards, mail, sms, logs and wait:
   --limit=50             How many of the newest
 
 Other options:
-  --json                 JSON instead of text (status, cards, mail, sms, logs)
+  --json                 JSON instead of text (status, cards, mail, sms, logs, webhooks)
   --output=FILE          report: also write the report to FILE
 
 The viewer is found the way the app finds it: peep.php, PEEP_HOST, PEEP_PORT, PEEP_TOKEN.
@@ -114,6 +117,20 @@ TEXT;
 
             case 'logs':
                 $result = $viewer->logs($options, isset($options['file']) ? $options['file'] : null, isset($options['level']) ? $options['level'] : null, $json);
+                break;
+
+            case 'webhooks':
+                $result = $viewer->webhooks($options, isset($options['rule']) ? $options['rule'] : null, isset($options['id']) ? $options['id'] : null, $json);
+                break;
+
+            case 'send-webhook':
+                $result = $viewer->sendWebhook(
+                    isset($options['rule']) ? $options['rule'] : null,
+                    isset($options['event']) ? $options['event'] : null,
+                    isset($options['mail']) ? $options['mail'] : null,
+                    isset($options['sms']) ? $options['sms'] : null,
+                    isset($options['project']) ? $options['project'] : null
+                );
                 break;
 
             case 'wait':

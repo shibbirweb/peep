@@ -7,6 +7,7 @@ namespace ShibbirWeb\PeepServer\Agent;
 use ShibbirWeb\PeepServer\Card\Card;
 use ShibbirWeb\PeepServer\Mail\Mail;
 use ShibbirWeb\PeepServer\Sms\Sms;
+use ShibbirWeb\PeepServer\Webhook\Delivery;
 
 /**
  * The filters of the agent endpoints, read from the query string:
@@ -115,6 +116,19 @@ final readonly class CardQuery
     {
         return array_slice(array_values(array_filter($messages, fn(Sms $sms): bool => $this->inbox($sms->project, $sms->receivedAt, $sms->requestId)
             && ($this->search === null || mb_stripos($sms->to . "\n" . $sms->body, $this->search) !== false))), 0, $this->limit);
+    }
+
+    /**
+     * Webhook calls; search looks in the rule, event, URL, both bodies and the error.
+     *
+     * @param list<Delivery> $deliveries Newest first.
+     * @return list<Delivery> Newest first.
+     */
+    public function deliveries(array $deliveries): array
+    {
+        return array_slice(array_values(array_filter($deliveries, fn(Delivery $delivery): bool => ($this->project === null || $delivery->project === $this->project)
+            && ($this->since === null || $delivery->at > $this->since)
+            && ($this->search === null || mb_stripos(implode("\n", [$delivery->ruleName, $delivery->event, $delivery->request['url'], $delivery->request['body'], $delivery->response['body'] ?? '', $delivery->error ?? '']), $this->search) !== false))), 0, $this->limit);
     }
 
     private function inbox(string $project, float $receivedAt, ?string $requestId): bool

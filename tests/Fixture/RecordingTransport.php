@@ -28,6 +28,11 @@ final class RecordingTransport implements TransportInterface
     public $postResponseBody = '{"accepted":true}';
 
     /**
+     * @var list<TransportResponse> Answers for the next POST requests, in order; 202 with $postResponseBody when empty.
+     */
+    public $postResponses = [];
+
+    /**
      * @var list<string> Paths requested with GET.
      */
     public $gets = [];
@@ -49,8 +54,9 @@ final class RecordingTransport implements TransportInterface
         }
 
         $this->requests[] = ['path' => $path, 'body' => $decoded];
+        $response = array_shift($this->postResponses);
 
-        return new TransportResponse(202, $this->postResponseBody);
+        return $response !== null ? $response : new TransportResponse(202, $this->postResponseBody);
     }
 
     public function get(string $path): TransportResponse
