@@ -30,6 +30,14 @@ Peep has two pieces. You set up each one once:
 
 > Peep is in beta. Until version 1.0, install the package with `:@beta` as shown below, and get the viewer from the newest [release](https://github.com/shibbirweb/peep/releases), marked *Pre-release*.
 
+> **Installing with an AI agent?** Paste this into Claude Code, Codex, Cursor or any other coding agent, in your project:
+>
+> ```text
+> Install Peep for this project and this machine, following https://github.com/shibbirweb/peep/blob/HEAD/llms-install.md
+> ```
+>
+> The agent picks the right download for your computer, adds the package, turns Peep on and checks that it works. The steps below are the same, by hand.
+
 ### Step 1: Install the viewer
 
 Choose **one** of these. Most people want the desktop app.

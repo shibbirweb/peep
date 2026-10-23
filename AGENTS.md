@@ -1,5 +1,7 @@
 # AGENTS.md
 
+> Asked to **install** Peep for a user, not to change Peep's code? Follow [llms-install.md](llms-install.md) instead.
+
 Guidance for AI coding agents (Claude Code, Codex, Cursor, Copilot, Gemini CLI and others) working in this repository. `CLAUDE.md` imports this file, so every agent follows the same rules.
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) first: it has the setup, the repository layout, the checks to run and the client rules (code in `src/` and `tests/` must parse on PHP 7.1 and run on PHP 8.5). The wiki pages [Contributing](docs/wiki/developer/Contributing.md) and [Releasing](docs/wiki/developer/Releasing.md) cover CI and releases. The rules below come on top of those.
