@@ -11,7 +11,9 @@
 
 Debug any PHP app in a separate window. Call `peep($value)` anywhere and watch values, database queries, jobs, logs and exceptions arrive live, in your browser or in a desktop app. Peep also catches the mail and SMS your app sends, and can call your app back with signed provider webhooks.
 
-[![Watch the 2-minute tour of Peep](https://raw.githubusercontent.com/shibbirweb/peep/main/demo/peep-tour.png)](https://github.com/shibbirweb/peep/blob/main/demo/peep-tour.mp4)
+[![Watch the 2-minute tour of Peep](https://cdn.jsdelivr.net/gh/shibbirweb/peep@v0.1.0-beta.1/demo/peep-tour.png)](https://cdn.jsdelivr.net/gh/shibbirweb/peep@v0.1.0-beta.1/demo/peep-tour.mp4)
+
+The poster plays the tour of this version in your browser. It is also in the repository: [demo/peep-tour.mp4](demo/peep-tour.mp4).
 
 ![The Peep viewer showing cards from a shop app, grouped by request](https://raw.githubusercontent.com/shibbirweb/peep/main/docs/wiki/images/viewer.png)
 

@@ -75,6 +75,21 @@ export function setCargoLockVersion(text: string, crate: string, version: string
   return entry.test(text) ? text.replace(entry, `$1"${version}"`) : null;
 }
 
+/**
+ * The release the README's tour video comes from: its jsDelivr links name the tag, as in
+ * `cdn.jsdelivr.net/gh/shibbirweb/peep@v1.2.3/demo/peep-tour.mp4`, so every branch plays the video of
+ * the version it is at. Null when there is no such link, or the links disagree.
+ */
+export function readmeTourVersion(text: string): string | null {
+  const versions = [...text.matchAll(/cdn\.jsdelivr\.net\/gh\/[^/@\s]+\/[^/@\s]+@v([^/\s)]+)\/demo\//g)].map((match) => match[1]);
+  return versions.length > 0 && versions.every((version) => version === versions[0]) ? versions[0] : null;
+}
+
+export function setReadmeTourVersion(text: string, version: string): string | null {
+  const link = /(cdn\.jsdelivr\.net\/gh\/[^/@\s]+\/[^/@\s]+@v)[^/\s)]+(\/demo\/)/g;
+  return link.test(text) ? text.replace(link, `$1${version}$2`) : null;
+}
+
 export function isBeta(version: string): boolean {
   return /-beta\.\d+$/.test(version);
 }

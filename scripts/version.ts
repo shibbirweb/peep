@@ -3,7 +3,8 @@
  * Read and change Peep's one version number, which several files carry.
  *
  * `src/Version.php` (the client, what Packagist users install) is the source of truth; the
- * viewer, the desktop app and its Cargo files carry the same number so nothing drifts.
+ * viewer, the desktop app and its Cargo files carry the same number so nothing drifts, and the
+ * README's tour video links name the matching release tag.
  *
  *     bun scripts/version.ts show               print the version
  *     bun scripts/version.ts check [x.y.z]      verify every file agrees (and, given, is x.y.z, with a changelog section unless a beta)
@@ -34,11 +35,13 @@ import {
   nextVersion,
   phpConstant,
   type Place,
+  readmeTourVersion,
   SEMVER,
   setCargoLockVersion,
   setCargoTomlVersion,
   setJsonVersion,
   setPhpConstant,
+  setReadmeTourVersion,
   suggestLevel,
   untriedSubjects,
 } from "./versioning";
@@ -61,6 +64,8 @@ const PLACES: Place[] = [
     read: (text) => cargoLockVersion(text, CRATE),
     write: (text, version) => setCargoLockVersion(text, CRATE, version),
   },
+  // The tour video's links name the release tag, so each branch plays its own version's video.
+  { file: "README.md", read: readmeTourVersion, write: setReadmeTourVersion },
 ];
 
 const read = (path: string) => readFileSync(join(ROOT, path), "utf8");
