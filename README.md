@@ -21,49 +21,116 @@ Works with PHP 7.1 to 8.5 and Laravel 5.5 to 13. More screenshots are in the [wi
 
 ## Installation
 
-Peep has two parts: the **viewer**, where the cards appear, and the **client**, the Composer package your app calls.
+Peep has two pieces. You set up each one once:
 
-### 1. Start the viewer
+| Piece | What it does | Where it goes |
+|-------|--------------|---------------|
+| **The viewer** | The window where everything your app sends shows up | On your computer |
+| **The `peep()` package** (`shibbirweb/peep`) | Adds `peep()` to your code and sends what you give it to the viewer | In each PHP project you want to debug |
 
-Pick one:
+> Peep is in beta. Until version 1.0, install the package with `:@beta` as shown below, and get the viewer from the newest [release](https://github.com/shibbirweb/peep/releases), marked *Pre-release*.
 
-- **Desktop app** for macOS, Windows and Linux: download it from the [releases page](https://github.com/shibbirweb/peep/releases) and open it. It brings its own PHP, so nothing else is needed.
+### Step 1: Install the viewer
 
-  The app is not signed with an Apple or Microsoft certificate yet, so macOS and Windows stop it the first time:
+Choose **one** of these. Most people want the desktop app.
 
-  - **macOS**: open Peep from Applications and click **Done**. Then open **System Settings → Privacy & Security**, scroll down to *"Peep" was blocked*, click **Open Anyway** and confirm. If macOS says Peep *is damaged*, run `xattr -dr com.apple.quarantine /Applications/Peep.app` in Terminal and open it again.
-  - **Windows**: when *Windows protected your PC* appears, click **More info**, then **Run anyway**.
-  - **Linux** needs no extra step.
+| | Desktop app (recommended) | Viewer in your browser |
+|---|---|---|
+| **Good for** | Everyone | Computers where you cannot install apps |
+| **You need** | macOS 11 or later, Windows 10 or 11, or Linux | PHP 8.5 on your computer |
+| **You get** | Its own window, a tray icon, notifications and updates | The viewer in a browser tab |
 
-  Every step, with the downloads for each system: [Desktop app: install](docs/wiki/usage/Desktop-App.md#install).
-- **`peep-server.phar`**, with PHP 8.5: download it from the same page and run it.
+<details open>
+<summary><b>Option A: the desktop app</b></summary>
 
-  ```bash
-  php peep-server.phar serve        # opens http://127.0.0.1:23517 in your browser
-  ```
+1. Open the [newest release](https://github.com/shibbirweb/peep/releases) and download the file for your computer from **Assets**:
 
-### 2. Add the client to your app
+   | Your computer | Download |
+   |---------------|----------|
+   | Mac with Apple silicon (M1 or later) | `Peep_<version>_aarch64.dmg` |
+   | Mac with an Intel chip | `Peep_<version>_x64.dmg` |
+   | Windows | `Peep_<version>_x64-setup.exe` |
+   | Ubuntu or Debian | `Peep_<version>_amd64.deb` |
+   | Any other Linux | `Peep_<version>_amd64.AppImage` |
+
+   Not sure which Mac you have? Apple menu → **About This Mac** shows the chip.
+
+2. Install it and open it. The app is not signed with an Apple or Microsoft certificate yet, so the first time your system asks you to confirm:
+
+   - **macOS**: open the `.dmg` and drag **Peep** into **Applications**. Open Peep; when macOS says it cannot open it, click **Done**. Go to **System Settings → Privacy & Security**, scroll down to *"Peep" was blocked*, click **Open Anyway** and enter your password. If macOS says Peep *is damaged*, run this in Terminal, then open Peep again:
+
+     ```bash
+     xattr -dr com.apple.quarantine /Applications/Peep.app
+     ```
+
+   - **Windows**: run the installer. When *Windows protected your PC* appears, click **More info**, then **Run anyway**.
+   - **Linux**: `sudo apt install ./Peep_<version>_amd64.deb`, or make the AppImage runnable with `chmod +x` and start it.
+
+   You only do this once. Every step in detail, and help when something goes wrong: [installing the desktop app](docs/wiki/usage/Desktop-App.md#install).
+
+3. Peep opens its window. It also lives in the tray (the menu bar on macOS) while it runs.
+
+The desktop app brings its own PHP, so you do not need to install PHP for it.
+
+</details>
+
+<details>
+<summary><b>Option B: the viewer in your browser</b></summary>
+
+1. Check that this computer has PHP 8.5: `php -v` should print `PHP 8.5`.
+2. Download `peep-server.phar` from the [newest release](https://github.com/shibbirweb/peep/releases).
+3. Start it in a terminal, from the folder you saved it to, and keep that terminal open:
+
+   ```bash
+   php peep-server.phar serve
+   ```
+
+   Your browser opens the viewer at http://127.0.0.1:23517. Press Ctrl+C in the terminal to stop it.
+
+</details>
+
+### Step 2: Add Peep to your project
+
+In your project's folder (the one with `composer.json`):
 
 ```bash
-composer require shibbirweb/peep --dev
+composer require shibbirweb/peep:@beta --dev
 ```
 
-Laravel picks the package up by itself. Any other PHP app only needs Composer's autoloader. Apps without Composer can use the [global install](docs/wiki/usage/Global-Install.md) instead.
+`--dev` keeps Peep out of your production install. Your project can use any PHP from 7.1 to 8.5; only the viewer cares about PHP 8.5, and the desktop app brings its own.
 
-### 3. Turn it on and send something
+No Composer in this project? The [global install](docs/wiki/usage/Global-Install.md) adds `peep()` to every PHP script on your computer instead.
 
-- **Laravel**: Peep is already on in every environment except `production`.
-- **Any other app**: set `PEEP_ENABLED=true`, or add a `peep.php` file returning `['enabled' => true]` to the project root.
+### Step 3: Turn Peep on
+
+- **Laravel**: nothing to do. Peep is on in every environment except `production`.
+- **Any other PHP app**: set the environment variable `PEEP_ENABLED=true` (in your `.env` file, if your app loads one), or create a `peep.php` file in the project's root folder:
+
+  ```php
+  <?php
+
+  return ['enabled' => true];
+  ```
+
+Peep is off until you turn it on, so it never runs on a live site by accident.
+
+### Step 4: See it work
+
+Put this anywhere in your code, then run that code (open the page, run the command or the test):
 
 ```php
-peep('Hello');
-peep($user)->green()->label('Signed in user');
-peep()->table($rows, 'Users');
+peep('Hello from my app');
 ```
 
-The cards show up at once. If your app runs in Docker, see [Docker and other machines](docs/wiki/usage/Installation.md#docker-and-other-machines).
+A card with *Hello from my app* appears in the viewer. From here, send anything: `peep($user)`, `peep($request->all())`, `peep()->table($rows)`. See the [API reference](docs/wiki/usage/API-Reference.md).
 
-> **Before the first release.** Nothing is published yet, so the releases page and Packagist are still empty. Until then, run the viewer from source (PHP 8.5 and [Bun](https://bun.sh)): `cd server && composer install && composer build:ui && php bin/peep-server serve`. Betas come first; while only betas exist, install the client with `composer require shibbirweb/peep:@beta --dev`.
+Nothing appears? Check that:
+
+1. The viewer is running (the desktop app is open, or `php peep-server.phar serve` is still running).
+2. Peep is on (Step 3).
+3. Your app runs on the same computer as the viewer. For Docker, Laravel Sail, a VM or another computer, see [Docker and other machines](docs/wiki/usage/Installation.md#docker-and-other-machines).
+
+More help: [Troubleshooting](docs/wiki/usage/Troubleshooting.md).
 
 ## What it does
 
@@ -78,13 +145,13 @@ The cards show up at once. If your app runs in Docker, see [Docker and other mac
 
 ## Requirements
 
-| Part | Needs |
-|------|-------|
-| Client (`shibbirweb/peep`, in your app) | PHP 7.1 to 8.5 |
-| Viewer (`peep-server.phar`) | PHP 8.5 |
-| Desktop app | macOS 11+, Windows 10 or 11, or Linux with WebKitGTK 4.1; brings its own PHP |
+| You use | It needs |
+|---------|----------|
+| Your PHP app, with the `peep()` package | PHP 7.1 to 8.5. Laravel 5.5 to 13 work out of the box |
+| The desktop app | macOS 11 or later, Windows 10 or 11, or Linux with WebKitGTK 4.1. It brings its own PHP |
+| The viewer in your browser (`peep-server.phar`) | PHP 8.5, on the computer that runs it |
 
-Every Laravel version from 5.5 to 13 is tested on every PHP version it supports: see [Version support](docs/wiki/usage/Version-Support.md).
+Your app does **not** need PHP 8.5. Only the browser viewer does, and only if you choose it over the desktop app. Every Laravel version from 5.5 to 13 is tested on every PHP version it supports: see [Version support](docs/wiki/usage/Version-Support.md).
 
 ## Laravel in a minute
 
