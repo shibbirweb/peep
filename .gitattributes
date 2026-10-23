@@ -6,6 +6,7 @@
 /.github                export-ignore
 /resources/global       export-ignore
 /box.json.dist          export-ignore
+/demo                   export-ignore
 /desktop                export-ignore
 /docs                   export-ignore
 /packaging              export-ignore

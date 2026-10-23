@@ -5,24 +5,14 @@
  *     bun scripts/screenshots.ts            every screenshot
  *     bun scripts/screenshots.ts mail sms   only these
  *
- * Starts the viewer from server/ (needs PHP 8.5, Composer dependencies and a built UI:
- * cd server && composer install && composer build:ui) with a scratch settings folder, sends
- * demo data (scripts/screenshots/demo.php), starts a small app that webhooks call back, and
- * drives headless Chrome over the DevTools protocol. Set CHROME to the browser binary when
- * it is not in the default place.
+ * The viewer, its demo data and Chrome come from scripts/demo.ts (see there for what it needs).
  */
 
-import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
-import { createServer } from "node:net";
-import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { DevTools, ROOT, sendCard, startChrome, startDemo } from "./demo.ts";
 
-const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const IMAGES = join(ROOT, "docs", "wiki", "images");
-const CHROME =
-  process.env.CHROME ??
-  (process.platform === "darwin" ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" : "google-chrome");
 const WIDTH = 1280;
 const HEIGHT = 820;
 
@@ -108,29 +98,17 @@ const SHOTS: Record<string, Step> = {
 };
 
 class Page {
-  private id = 0;
-  private pending = new Map<number, (value: { result?: { result?: { value?: unknown } } }) => void>();
-
   constructor(
-    private socket: WebSocket,
+    private devTools: DevTools,
     private viewer: string,
-  ) {
-    socket.onmessage = (event) => {
-      const message = JSON.parse(String(event.data));
-      this.pending.get(message.id)?.(message);
-      this.pending.delete(message.id);
-    };
+  ) {}
+
+  send(method: string, params: object = {}): Promise<{ result?: Record<string, unknown> }> {
+    return this.devTools.send(method, params);
   }
 
-  send(method: string, params: object = {}): Promise<{ result?: { result?: { value?: unknown }; data?: string } }> {
-    const id = ++this.id;
-    this.socket.send(JSON.stringify({ id, method, params }));
-    return new Promise((resolve) => this.pending.set(id, resolve));
-  }
-
-  async eval(expression: string): Promise<unknown> {
-    const answer = await this.send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
-    return answer.result?.result?.value;
+  eval(expression: string): Promise<unknown> {
+    return this.devTools.eval(expression);
   }
 
   async click(selector: string, text: string): Promise<void> {
@@ -140,16 +118,9 @@ class Page {
 
   /** A paused request, for the pause banner. */
   async pause(): Promise<void> {
-    const now = Date.now() / 1000;
-    await fetch(`${this.viewer}/_peep/envelope`, {
-      method: "POST",
-      body: JSON.stringify({
-        protocol: 1,
-        card: "pause-card",
-        payloads: [{ type: "lock", content: { name: "checkout-pause" }, origin: { file: "/Users/you/code/shop/app/Http/Controllers/CheckoutController.php", line: 21 } }],
-        meta: { project: "shop", hostname: "dev", php_version: "8.4.12", peep_version: "1.0.0", request: { id: "pause", kind: "http", label: "POST /checkout", started_at: now }, sent_at: now },
-      }),
-    });
+    await sendCard(this.viewer, "pause-card", { id: "pause", kind: "http", label: "POST /checkout" }, [
+      { type: "lock", content: { name: "checkout-pause" }, origin: { file: "/Users/you/code/shop/app/Http/Controllers/CheckoutController.php", line: 21 } },
+    ]);
     await Bun.sleep(300);
   }
 
@@ -166,138 +137,36 @@ class Page {
 
   async shot(file: string): Promise<void> {
     const answer = await this.send("Page.captureScreenshot", { format: "png" });
-    writeFileSync(join(IMAGES, `${file}.png`), Buffer.from(answer.result?.data ?? "", "base64"));
+    writeFileSync(join(IMAGES, `${file}.png`), Buffer.from(String(answer.result?.data ?? ""), "base64"));
   }
-}
-
-/** A storage/logs folder for the shop, reported the way the Laravel adapter does it. */
-async function demoLogs(viewer: string, config: string): Promise<void> {
-  const folder = join(config, "shop-logs");
-  mkdirSync(folder);
-  writeFileSync(join(folder, "laravel-2026-10-22.log"), "[2026-10-22 18:02:11] local.INFO: Deployed {\"release\":\"v2.14.0\"} \n");
-  const yesterday = new Date(Date.now() - 86400000);
-  utimesSync(join(folder, "laravel-2026-10-22.log"), yesterday, yesterday);
-  writeFileSync(
-    join(folder, "laravel.log"),
-    String.raw`[2026-10-23 09:41:02] local.INFO: Order placed {"order_id":1042,"total":129.9,"items":3} 
-[2026-10-23 09:41:02] local.DEBUG: Cache miss {"key":"shipping.rates.de"} 
-[2026-10-23 09:41:03] local.WARNING: Slow payment gateway response {"gateway":"stripe","ms":2380} 
-[2026-10-23 09:41:05] local.ERROR: Card declined {"order_id":1042,"customer":{"id":77,"email":"ada@example.test"},"exception":"[object] (App\\Exceptions\\PaymentDeclined(code: 402): Card declined at /Users/you/code/shop/app/Services/PaymentService.php:58)
-[stacktrace]
-#0 /Users/you/code/shop/app/Http/Controllers/CheckoutController.php(34): App\\Services\\PaymentService->charge()
-#1 /Users/you/code/shop/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): App\\Http\\Controllers\\CheckoutController->store()
-#2 {main}
-"} 
-[2026-10-23 09:41:06] local.NOTICE: Customer notified {"customer":"ada@example.test","channel":"mail"} 
-[2026-10-23 09:41:09] local.INFO: Order placed {"order_id":1043,"total":49,"items":1} 
-[2026-10-23 09:41:12] local.CRITICAL: Queue worker stopped {"queue":"default","reason":"Allowed memory size exhausted"} 
-`,
-  );
-
-  const now = Date.now() / 1000;
-  await fetch(`${viewer}/_peep/envelope`, {
-    method: "POST",
-    body: JSON.stringify({
-      protocol: 1,
-      card: "logs-card",
-      payloads: [{ type: "log", content: { values: [{ type: "string", value: "Logs ready", length: 10 }] }, origin: { file: "/Users/you/code/shop/routes/web.php", line: 8 } }],
-      meta: { project: "shop", hostname: "dev", php_version: "8.4.12", peep_version: "1.0.0", request: { id: "logs", kind: "cli", label: "artisan about", started_at: now }, sent_at: now, logs: { path: folder, timezone: "UTC" } },
-    }),
-  });
-}
-
-function freePort(): Promise<number> {
-  return new Promise((resolve) => {
-    const server = createServer();
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      server.close(() => resolve(typeof address === "object" && address ? address.port : 0));
-    });
-  });
-}
-
-async function waitFor(check: () => Promise<boolean>, what: string): Promise<void> {
-  for (let attempt = 0; attempt < 100; attempt++) {
-    if (await check().catch(() => false)) {
-      return;
-    }
-    await Bun.sleep(100);
-  }
-  throw new Error(`${what} did not come up`);
-}
-
-async function post(url: string, body: unknown): Promise<unknown> {
-  const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json", "X-Peep-UI": "1" }, body: JSON.stringify(body) });
-  return response.json();
 }
 
 async function main(): Promise<void> {
   const wanted = process.argv.slice(2);
-  const config = mkdtempSync(join(tmpdir(), "peep-screenshots-"));
-  const port = await freePort();
-  const appPort = await freePort();
-  const debugPort = await freePort();
-  const viewer = `http://127.0.0.1:${port}`;
-  writeFileSync(join(config, "settings.json"), JSON.stringify({ theme: "light", smtp: false, history: false }));
-
-  const env = { ...process.env, PEEP_CONFIG_DIR: config, PEEP_PORT: String(port), APP_PORT: String(appPort) };
-  const processes = [
-    Bun.spawn(["php", "-d", "zend.assertions=-1", "server/bin/peep-server", "serve", `--port=${port}`, "--open=none"], { cwd: ROOT, env, stdout: "ignore", stderr: "ignore" }),
-    Bun.spawn(["php", "-S", `127.0.0.1:${appPort}`, "scripts/screenshots/receiver.php"], { cwd: ROOT, stdout: "ignore", stderr: "ignore" }),
-  ];
+  const demo = await startDemo();
 
   try {
-    await waitFor(async () => (await fetch(`${viewer}/_peep/health`)).ok, "The viewer");
-    Bun.spawnSync(["php", "scripts/screenshots/demo.php"], { cwd: ROOT, env });
+    const chrome = await startChrome(WIDTH, HEIGHT);
+    const page = new Page(chrome.page, demo.viewer);
 
-    // Webhook rules from the presets, pointed at the demo app, and one delivery of each.
-    const presets = ((await (await fetch(`${viewer}/_peep/ui/webhooks/presets`)).json()) as { presets: { id: string; rule: object }[] }).presets;
-    const mailgun = (await post(`${viewer}/_peep/ui/webhooks/rules`, {
-      rule: { ...presets.find((preset) => preset.id === "mailgun")?.rule, url: `http://127.0.0.1:${appPort}/webhooks/mailgun` },
-    })) as { rule: { id: string } };
-    await post(`${viewer}/_peep/ui/webhooks/rules`, { rule: presets.find((preset) => preset.id === "twilio")?.rule });
-    await post(`${viewer}/_peep/ui/webhooks/rules/${mailgun.rule.id}/test`, { event: "accepted" });
-    await post(`${viewer}/_peep/ui/webhooks/rules/${mailgun.rule.id}/test`, { event: "delivered" });
-    await post(`${viewer}/_peep/ui/switches`, { project: "shop", switches: { slow_query_ms: 250 } });
-    await demoLogs(viewer, config);
+    try {
+      for (const [name, step] of Object.entries(SHOTS)) {
+        if (wanted.length > 0 && !wanted.includes(name)) {
+          continue;
+        }
 
-    const profile = mkdtempSync(join(tmpdir(), "peep-chrome-"));
-    processes.push(
-      Bun.spawn([CHROME, "--headless=new", `--remote-debugging-port=${debugPort}`, `--user-data-dir=${profile}`, "--no-first-run", "--hide-scrollbars", `--window-size=${WIDTH},${HEIGHT}`, "about:blank"], { stdout: "ignore", stderr: "ignore" }),
-    );
-
-    let target: { webSocketDebuggerUrl: string } | undefined;
-    await waitFor(async () => {
-      target = ((await (await fetch(`http://127.0.0.1:${debugPort}/json`)).json()) as { type: string; webSocketDebuggerUrl: string }[]).find((each) => each.type === "page");
-      return target !== undefined;
-    }, "Chrome");
-
-    const socket = new WebSocket(target?.webSocketDebuggerUrl ?? "");
-    await new Promise((resolve) => (socket.onopen = resolve));
-    const page = new Page(socket, viewer);
-    await page.send("Page.enable");
-    await page.send("Emulation.setDeviceMetricsOverride", { width: WIDTH, height: HEIGHT, deviceScaleFactor: 1, mobile: false });
-
-    for (const [name, step] of Object.entries(SHOTS)) {
-      if (wanted.length > 0 && !wanted.includes(name)) {
-        continue;
+        await page.send("Page.navigate", { url: demo.viewer });
+        await Bun.sleep(1500);
+        await step(page);
+        await Bun.sleep(500);
+        await page.shot(name);
+        console.log(`docs/wiki/images/${name}.png`);
       }
-
-      await page.send("Page.navigate", { url: viewer });
-      await Bun.sleep(1500);
-      await step(page);
-      await Bun.sleep(500);
-      await page.shot(name);
-      console.log(`docs/wiki/images/${name}.png`);
+    } finally {
+      chrome.stop();
     }
-
-    socket.close();
-    rmSync(profile, { recursive: true, force: true });
   } finally {
-    for (const process of processes) {
-      process.kill();
-    }
-    rmSync(config, { recursive: true, force: true });
+    demo.stop();
   }
 }
 

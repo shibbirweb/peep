@@ -6,7 +6,7 @@ Peep has two parts: the **client** you add to your app, and the **viewer** where
 
 Pick one:
 
-- **Desktop app** (macOS, Windows, Linux): download it from the [releases page](https://github.com/shibbirweb/peep/releases) and open it. It brings its own PHP; nothing else is needed. See [Desktop app](Desktop-App.md).
+- **Desktop app** (macOS, Windows, Linux): download it from the [releases page](https://github.com/shibbirweb/peep/releases) and open it. It brings its own PHP; nothing else is needed. It is not signed yet, so macOS and Windows need one extra step the first time: see [Desktop app: install](Desktop-App.md#install).
 - **`peep-server.phar`** (needs PHP 8.5): download it from the releases page and run
 
   ```bash
