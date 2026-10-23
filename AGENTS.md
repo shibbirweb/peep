@@ -19,6 +19,7 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) first: it has the setup, the repository 
 - Pull request test plans: plain bullet points describing what was run and checked, no checkboxes.
 - Commit locally as the work goes; push only when every step of the task is done, unless asked to push sooner.
 - Never commit `docs/research/`. It is local only and excluded through `.git/info/exclude`.
+- After every commit, clear the desktop app's Cargo build to save disk space: `cargo clean --manifest-path desktop/src-tauri/Cargo.toml`. A local `.git/hooks/post-commit` hook does it; in a clone without the hook, run it by hand. Leave the shared crate cache in `~/.cargo` alone.
 
 ## Writing
 
