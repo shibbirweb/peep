@@ -15,6 +15,7 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) first: it has the setup, the repository 
 - Commit messages: `feat:[TICKET] summary` for new features and `fix:[TICKET] summary` for bug fixes. The ticket goes in square brackets straight after the colon (no space before the bracket), followed by a one-line summary. Example: `fix:[RL-16] do not require a changelog section when checking a beta version`.
 - Other changes use `docs:`, `test:`, `chore:` or `ci:`. Release commits are `chore:[REL-n] release x.y.z` (`bun scripts/version.ts next-ticket` prints the next number).
 - Do not use co-authors. No `Co-Authored-By` lines (or any other co-author trailer) in commits, squash merges or pull request descriptions, for Claude or anyone else.
+- No tool attribution either: never add lines such as `🤖 Generated with [Claude Code](https://claude.com/claude-code)` or "Generated with ..." to commits, pull request descriptions, comments or release notes.
 - Pull request test plans: plain bullet points describing what was run and checked, no checkboxes.
 - Commit locally as the work goes; push only when every step of the task is done, unless asked to push sooner.
 - Never commit `docs/research/`. It is local only and excluded through `.git/info/exclude`.
