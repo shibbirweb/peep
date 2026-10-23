@@ -10,6 +10,7 @@ use Amp\Http\Server\Response;
 use ShibbirWeb\PeepServer\Event\EventHub;
 use ShibbirWeb\PeepServer\Http\JsonBody;
 use ShibbirWeb\PeepServer\Http\Responses;
+use ShibbirWeb\PeepServer\Log\FolderBrowser;
 use ShibbirWeb\PeepServer\Log\LogEntry;
 use ShibbirWeb\PeepServer\Log\LogFiles;
 use ShibbirWeb\PeepServer\Log\LogFolders;
@@ -24,8 +25,10 @@ use ShibbirWeb\PeepServer\Log\LogParser;
  *      ...&before=OFFSET                                  older ones
  *      ...&after=OFFSET                                   what was added (watching)
  * POST /_peep/ui/logs/folder {"project", "path"}          choose a folder; "path": null goes back to the app's
+ * POST /_peep/ui/logs/browse {"path"}                     the folders inside a folder, for the folder picker
  *
- * Only .log files directly inside a project's folder are read.
+ * Only .log files directly inside a project's folder are read. Browsing lists folder names
+ * only, and is a POST so it needs the X-Peep-UI header like every other UI action.
  */
 final readonly class LogController implements RequestHandler
 {
@@ -40,7 +43,11 @@ final readonly class LogController implements RequestHandler
         parse_str($request->getUri()->getQuery(), $query);
 
         if ($request->getMethod() === 'POST') {
-            return $path === '/_peep/ui/logs/folder' ? $this->choose(JsonBody::read($request)) : Responses::error(404, 'not_found', 'Not found.');
+            return match ($path) {
+                '/_peep/ui/logs/folder' => $this->choose(JsonBody::read($request)),
+                '/_peep/ui/logs/browse' => $this->browse(JsonBody::read($request)),
+                default => Responses::error(404, 'not_found', 'Not found.'),
+            };
         }
 
         return match ($path) {
@@ -116,6 +123,21 @@ final readonly class LogController implements RequestHandler
         $this->hub->publish($this->folders->choose($project, $path));
 
         return Responses::json(200, ['folders' => $this->folders->all()]);
+    }
+
+    /**
+     * @param array<mixed> $data
+     */
+    private function browse(array $data): Response
+    {
+        $path = $data['path'] ?? null;
+        $listing = FolderBrowser::browse(is_string($path) ? $path : null);
+
+        if ($listing === null) {
+            return Responses::error(422, 'invalid_folder', 'Cannot read this folder.');
+        }
+
+        return Responses::json(200, $listing);
     }
 
     /**

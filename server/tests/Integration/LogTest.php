@@ -87,6 +87,15 @@ final class LogTest extends TestCase
         $this->assertNull($this->application->logFolders->for('blog'));
     }
 
+    public function testTheFolderPickerListsFolders(): void
+    {
+        $this->assertSame(403, $this->request('POST', '/_peep/ui/logs/browse', '{"path": "/tmp"}', ui: false)->getStatus(), 'Browsing needs X-Peep-UI.');
+
+        $listing = $this->json('POST', '/_peep/ui/logs/browse', (string) json_encode(['path' => $this->folder]));
+        $this->assertSame([realpath($this->folder), 1], [$listing['path'], $listing['logs']]);
+        $this->assertSame(realpath(dirname($this->folder)), $listing['parent']);
+    }
+
     public function testAgentsReadLogsAndTheReportListsLogErrors(): void
     {
         $text = $this->request('GET', '/_peep/agent/logs?project=shop&level=error')->getBody()->buffer();

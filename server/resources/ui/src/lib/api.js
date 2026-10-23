@@ -273,3 +273,12 @@ export async function loadLogEntries(project, file, range = {}) {
 export function setLogFolder(project, path) {
   return post('/_peep/ui/logs/folder', { project, path });
 }
+
+/**
+ * The folders inside a folder, for the Logs tab's folder picker.
+ *
+ * @param {string|null} path The home folder when null; the nearest existing folder above a missing one.
+ */
+export function browseFolders(path) {
+  return post('/_peep/ui/logs/browse', { path });
+}

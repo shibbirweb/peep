@@ -19,6 +19,7 @@ use tauri::{
 };
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt as _};
 use tauri_plugin_deep_link::DeepLinkExt;
+use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_opener::OpenerExt;
@@ -357,6 +358,28 @@ fn check_updates(app: AppHandle) {
     updates::check_now(&app, channel());
 }
 
+/// The Logs tab's "Browse": a native folder picker, starting at the folder typed so far.
+/// None when it is cancelled. Async, so the blocking picker runs off the main thread.
+#[tauri::command]
+async fn pick_folder(app: AppHandle, start: Option<String>) -> Option<String> {
+    trace("pick_folder");
+
+    let mut dialog = app.dialog().file().set_title("Choose a log folder");
+
+    if let Some(window) = app.get_webview_window(MAIN) {
+        dialog = dialog.set_parent(&window);
+    }
+
+    if let Some(start) = start.filter(|path| std::path::Path::new(path).is_dir()) {
+        dialog = dialog.set_directory(start);
+    }
+
+    dialog
+        .blocking_pick_folder()
+        .and_then(|folder| folder.into_path().ok())
+        .map(|folder| folder.to_string_lossy().into_owned())
+}
+
 pub fn run() {
     let settings = settings::read();
 
@@ -398,7 +421,8 @@ pub fn run() {
             show_window,
             hide_window,
             set_pinned,
-            check_updates
+            check_updates,
+            pick_folder
         ])
         .setup(move |app| {
             let handle = app.handle().clone();

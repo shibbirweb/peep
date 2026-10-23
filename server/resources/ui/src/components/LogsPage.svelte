@@ -1,16 +1,19 @@
 <script>
   // The Logs tab: a project's log files on the left, the open file's entries on the right,
-  // watched live (or paused), newest or oldest first, filtered by level and text.
+  // watched live (or paused), newest or oldest first, filtered by level and text. A folder can
+  // also be added by hand, for an app that does not report one (or has not sent anything yet).
   import { tick } from 'svelte';
   import { loadLogEntries, loadLogFiles, setLogFolder } from '../lib/api.js';
+  import { isDesktop, pickFolder } from '../lib/desktop.js';
   import { clock, formatBytes } from '../lib/format.js';
-  import { LEVELS, appendEntries, levelCounts, prependEntries, visibleEntries } from '../lib/logs.js';
+  import FolderPicker from './FolderPicker.svelte';
+  import { LEVELS, appendEntries, levelCounts, prependEntries, projectFromLogPath, visibleEntries } from '../lib/logs.js';
   import { viewer } from '../lib/stream.svelte.js';
   import LogEntry from './LogEntry.svelte';
   import VirtualList from './VirtualList.svelte';
 
-  /** @type {{ project: string, ide: string }} */
-  let { project, ide } = $props();
+  /** @type {{ project: string, projects: string[], ide: string }} */
+  let { project, projects, ide } = $props();
 
   const POLL_MS = 1000;
   const PAGE = 500;
@@ -35,6 +38,11 @@
   let editing = $state(false);
   let folderInput = $state('');
   let folderError = $state('');
+  let adding = $state(false);
+  let projectInput = $state('');
+  let picking = $state(false);
+
+  const desktop = isDesktop();
 
   const folders = $derived(viewer.logFolders);
   const current = $derived(project !== '' ? project : folders.length === 1 ? folders[0].project : picked);
@@ -42,6 +50,10 @@
   // A primitive, so a refreshed folder list with the same path does not reopen the file.
   const folderPath = $derived(folder?.path ?? null);
   const counts = $derived(levelCounts(entries));
+  // Adding a folder: asked for, or nothing to show yet in the All view.
+  const showAdd = $derived(adding || (project === '' && folders.length === 0));
+  const suggestedProject = $derived(projectFromLogPath(folderInput));
+  const addProject = $derived(projectInput.trim() !== '' ? projectInput.trim() : suggestedProject);
   const shown = $derived(visibleEntries(entries, { levels, search, order }));
 
   // A new project or folder: list its files and open the newest.
@@ -219,6 +231,42 @@
     opened = next;
   }
 
+  function startAdding() {
+    adding = true;
+    editing = false;
+    projectInput = '';
+    folderInput = '';
+    folderError = '';
+  }
+
+  // The desktop app opens the system's folder dialog; a browser gets the viewer's own picker.
+  async function browse() {
+    if (!desktop) {
+      picking = true;
+
+      return;
+    }
+
+    const path = await pickFolder(folderInput);
+
+    if (path !== null) {
+      folderInput = path;
+    }
+  }
+
+  async function addFolder() {
+    const name = addProject;
+    folderError = '';
+
+    try {
+      await setLogFolder(name, folderInput);
+      adding = false;
+      picked = name;
+    } catch (exception) {
+      folderError = exception.message;
+    }
+  }
+
   async function saveFolder(path) {
     folderError = '';
 
@@ -231,72 +279,110 @@
   }
 </script>
 
+{#snippet folderField()}
+  <div class="pick">
+    <input type="text" bind:value={folderInput} placeholder="/path/to/app/storage/logs" aria-label="Log folder" />
+    <button type="button" onclick={browse} title="Choose the folder by clicking through your folders">Browse…</button>
+  </div>
+{/snippet}
+
+{#if picking}<FolderPicker start={folderInput} onchoose={(path) => (folderInput = path)} onclose={() => (picking = false)} />{/if}
+
 <div class="logs">
   <aside>
-    {#if project === '' && folders.length > 1}
-      <div class="section">
-        <div class="heading">Project</div>
-        {#each folders as candidate (candidate.project)}
-          <button type="button" class="item" class:selected={candidate.project === current} onclick={() => (picked = candidate.project)}>{candidate.project}</button>
-        {/each}
-      </div>
-    {/if}
-
-    {#if current}
+    {#if showAdd}
       <div class="section folder">
-        <div class="heading">Log folder</div>
-        {#if editing || folder === null}
-          <form
-            onsubmit={(event) => {
-              event.preventDefault();
-              saveFolder(folderInput);
-            }}
-          >
-            <input type="text" bind:value={folderInput} placeholder="/path/to/app/storage/logs" aria-label="Log folder" />
-            <div class="row">
-              <button type="submit" disabled={folderInput.trim() === ''}>Use this folder</button>
-              {#if folder !== null}<button type="button" onclick={() => (editing = false)}>Cancel</button>{/if}
-            </div>
-          </form>
-          {#if folder === null}<p class="hint">{current} has not reported a log folder. Laravel apps report <code>storage/logs</code> with their next card; or type a folder.</p>{/if}
-        {:else}
-          <code class="path" title={folder.path}>{folder.path}</code>
+        <div class="heading">Add a log folder</div>
+        <form
+          onsubmit={(event) => {
+            event.preventDefault();
+            addFolder();
+          }}
+        >
+          <span class="label">Folder</span>
+          {@render folderField()}
+          <span class="label">Project</span>
+          <input type="text" bind:value={projectInput} list="log-projects" placeholder={suggestedProject || 'shop'} aria-label="Project" />
+          <datalist id="log-projects">
+            {#each projects as name (name)}<option value={name}></option>{/each}
+          </datalist>
           <div class="row">
-            <span class="muted">{folder.manual ? 'chosen here' : 'from the app'} · {folder.timezone}</span>
-            <span class="spacer"></span>
-            <button type="button" onclick={() => ((folderInput = folder.path), (editing = true))}>Change</button>
-            {#if folder.manual}<button type="button" onclick={() => saveFolder(null)} title="Use the folder the app reports">Use app's</button>{/if}
+            <button type="submit" disabled={folderInput.trim() === '' || addProject === ''}>Use this folder</button>
+            {#if folders.length > 0}<button type="button" onclick={() => (adding = false)}>Cancel</button>{/if}
           </div>
-        {/if}
+        </form>
         {#if folderError}<p class="error">{folderError}</p>{/if}
+        <p class="hint">
+          Any folder of <code>.log</code> files in Monolog's line format. Name the project as your app sends it, so its cards and logs show together. Laravel apps with the Composer package report
+          <code>storage/logs</code> with their first card.
+        </p>
       </div>
-
-      {#if folder !== null}
+    {:else}
+      {#if project === '' && folders.length > 1}
         <div class="section">
-          <div class="heading">Files</div>
-          {#if filesError}<p class="error">{filesError}</p>{/if}
-          <ul>
-            {#each files as candidate (candidate.name)}
-              <li>
-                <button type="button" class="item file" class:selected={candidate.name === file} onclick={() => open(candidate.name)}>
-                  <span class="name">{candidate.name}</span>
-                  <span class="muted">{formatBytes(candidate.size)} · {clock(candidate.modified)}</span>
-                </button>
-              </li>
-            {:else}
-              {#if !filesError}<li class="hint">No .log files here yet.</li>{/if}
-            {/each}
-          </ul>
+          <div class="heading">Project</div>
+          {#each folders as candidate (candidate.project)}
+            <button type="button" class="item" class:selected={candidate.project === current} onclick={() => (picked = candidate.project)}>{candidate.project}</button>
+          {/each}
         </div>
       {/if}
-    {:else}
-      <p class="hint pad">
-        {#if folders.length === 0}
-          No project has a log folder yet. Laravel apps report <code>storage/logs</code> with their first card; select a project to choose a folder by hand.
-        {:else}
-          Select a project.
+
+      {#if current}
+        <div class="section folder">
+          <div class="heading">Log folder</div>
+          {#if editing || folder === null}
+            <form
+              onsubmit={(event) => {
+                event.preventDefault();
+                saveFolder(folderInput);
+              }}
+            >
+              {@render folderField()}
+              <div class="row">
+                <button type="submit" disabled={folderInput.trim() === ''}>Use this folder</button>
+                {#if folder !== null}<button type="button" onclick={() => (editing = false)}>Cancel</button>{/if}
+              </div>
+            </form>
+            {#if folder === null}<p class="hint">{current} has not reported a log folder. Laravel apps report <code>storage/logs</code> with their next card; or type a folder.</p>{/if}
+          {:else}
+            <code class="path" title={folder.path}>{folder.path}</code>
+            <div class="row">
+              <span class="muted">{folder.manual ? 'chosen here' : 'from the app'} · {folder.timezone}</span>
+              <span class="spacer"></span>
+              <button type="button" onclick={() => ((folderInput = folder.path), (editing = true))}>Change</button>
+              {#if folder.manual}<button type="button" onclick={() => saveFolder(null)} title="Forget this folder and use the one the app reports">Use app's</button>{/if}
+            </div>
+          {/if}
+          {#if folderError}<p class="error">{folderError}</p>{/if}
+        </div>
+
+        {#if folder !== null}
+          <div class="section">
+            <div class="heading">Files</div>
+            {#if filesError}<p class="error">{filesError}</p>{/if}
+            <ul>
+              {#each files as candidate (candidate.name)}
+                <li>
+                  <button type="button" class="item file" class:selected={candidate.name === file} onclick={() => open(candidate.name)}>
+                    <span class="name">{candidate.name}</span>
+                    <span class="muted">{formatBytes(candidate.size)} · {clock(candidate.modified)}</span>
+                  </button>
+                </li>
+              {:else}
+                {#if !filesError}<li class="hint">No .log files here yet.</li>{/if}
+              {/each}
+            </ul>
+          </div>
         {/if}
-      </p>
+      {:else}
+        <p class="hint pad">Select a project.</p>
+      {/if}
+
+      {#if project === ''}
+        <div class="section">
+          <button type="button" class="link" onclick={startAdding}>+ Add a log folder</button>
+        </div>
+      {/if}
     {/if}
   </aside>
 
@@ -428,6 +514,24 @@
     overflow-wrap: anywhere;
     font-size: 12px;
     margin-bottom: 6px;
+  }
+
+  .label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin: 6px 0 2px;
+  }
+
+  .pick {
+    display: flex;
+    gap: 6px;
+  }
+
+  .pick button {
+    flex: none;
+    font-size: 12px;
+    padding: 2px 8px;
   }
 
   .row {
