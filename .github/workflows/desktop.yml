@@ -167,6 +167,15 @@ jobs:
           if (process.env.WINDOWS_THUMBPRINT) {
             config.bundle = { ...config.bundle, windows: { certificateThumbprint: process.env.WINDOWS_THUMBPRINT, digestAlgorithm: 'sha256', timestampUrl: 'http://timestamp.digicert.com' } };
           }
+          // RPM versions cannot contain '-' and MSI versions only take a numeric pre-release, so a beta
+          // such as 0.1.0-beta.1 ships without the .rpm and the .msi.
+          const { version } = await Bun.file('tauri.conf.json').json();
+          if (process.platform === 'linux' && version.includes('-')) {
+            config.bundle = { ...config.bundle, targets: ['deb', 'appimage'] };
+          }
+          if (process.platform === 'win32' && version.includes('-')) {
+            config.bundle = { ...config.bundle, targets: ['nsis'] };
+          }
           await Bun.write('tauri.release.conf.json', JSON.stringify(config, null, 2));
           JS
           bun release.conf.js
@@ -185,17 +194,64 @@ jobs:
           Import-PfxCertificate -FilePath "$env:RUNNER_TEMP\certificate.pfx" -CertStoreLocation Cert:\CurrentUser\My -Password $password | Out-Null
           Remove-Item "$env:RUNNER_TEMP\certificate.pfx"
 
-      - name: Build (and attach to the draft release for tags)
-        uses: tauri-apps/tauri-action@v0
+      # tauri-action reports a broken certificate only as a failed `security import` deep in the
+      # build, so it is opened here first, with an error that says which secret to fix.
+      # A .p12 exported by OpenSSL 3 (AES-256, PBKDF2) opens in openssl but not in `security import`
+      # ("Unable to decode the provided data"), so it is re-exported with the 3DES encryption Keychain
+      # reads, checked with the same `security import` the build runs, and handed to the build.
+      # Tauri signs whenever APPLE_CERTIFICATE is set, even to an empty string, so the Apple variables
+      # reach the build only through $GITHUB_ENV, and only when the certificate passed these checks.
+      - name: Check and convert the Apple signing certificate
+        if: runner.os == 'macOS'
+        shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # macOS signing and notarization; skipped when the secrets are not set.
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -z "$APPLE_CERTIFICATE" ]; then
+            echo "No APPLE_CERTIFICATE secret: the app is built unsigned."
+            exit 0
+          fi
+          p12="$RUNNER_TEMP/certificate.p12"
+          pem="$RUNNER_TEMP/certificate.pem"
+          legacy="$RUNNER_TEMP/certificate-legacy.p12"
+          keychain="$RUNNER_TEMP/certificate-check.keychain-db"
+          trap 'rm -f "$p12" "$pem" "$legacy"; security delete-keychain "$keychain" 2>/dev/null || true' EXIT
+          printf '%s' "$APPLE_CERTIFICATE" | base64 --decode > "$p12" 2>/dev/null || true
+          if ! /usr/bin/openssl pkcs12 -in "$p12" -nodes -passin fd:3 3<<<"$APPLE_CERTIFICATE_PASSWORD" > "$pem" 2>/dev/null \
+            || ! subject="$(/usr/bin/openssl pkcs12 -in "$p12" -nokeys -clcerts -passin fd:3 3<<<"$APPLE_CERTIFICATE_PASSWORD" 2>/dev/null | /usr/bin/openssl x509 -noout -subject 2>/dev/null)"; then
+            echo "::error::APPLE_CERTIFICATE is not a .p12 file that APPLE_CERTIFICATE_PASSWORD opens. Export the Developer ID Application certificate with its private key from Keychain Access as .p12, set APPLE_CERTIFICATE to the output of 'base64 -i certificate.p12' and APPLE_CERTIFICATE_PASSWORD to the export password. Delete both secrets to build unsigned."
+            exit 1
+          fi
+          echo "Signing certificate: $subject"
+          if [ -n "$APPLE_SIGNING_IDENTITY" ] && [[ "$subject" != *"$APPLE_SIGNING_IDENTITY"* ]]; then
+            echo "::warning::APPLE_SIGNING_IDENTITY ($APPLE_SIGNING_IDENTITY) does not appear in the certificate's subject."
+          fi
+          /usr/bin/openssl pkcs12 -export -in "$pem" -out "$legacy" -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -passout fd:3 3<<<"$APPLE_CERTIFICATE_PASSWORD"
+          security create-keychain -p peep "$keychain"
+          if ! security import "$legacy" -k "$keychain" -f pkcs12 -P "$APPLE_CERTIFICATE_PASSWORD" > /dev/null; then
+            echo "::error::macOS could not import APPLE_CERTIFICATE even after re-exporting it with 3DES. Export the Developer ID Application certificate with its private key from Keychain Access as .p12 and set APPLE_CERTIFICATE to the output of 'base64 -i certificate.p12'."
+            exit 1
+          fi
+          converted="$(base64 -i "$legacy")"
+          echo "::add-mask::$converted"
+          echo "APPLE_CERTIFICATE=$converted" >> "$GITHUB_ENV"
+          for name in APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID; do
+            if [ -n "${!name}" ]; then
+              echo "$name=${!name}" >> "$GITHUB_ENV"
+            fi
+          done
+
+      - name: Build (and attach to the draft release for tags)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # macOS signing and notarization come from $GITHUB_ENV, set by the step above only when
+          # APPLE_CERTIFICATE is set; without it the app is built unsigned.
           # Signs the update artifacts the app checks with TAURI_UPDATER_PUBKEY.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
