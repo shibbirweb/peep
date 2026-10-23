@@ -1,0 +1,18 @@
+# Peep
+
+> Peep is a debugger for PHP apps (PHP 7.1 to 8.5, Laravel 5.5 to 13). The app calls `peep($value)`, and values, queries, exceptions, jobs, logs, mail and SMS show up live in the Peep viewer: a desktop app for macOS, Windows and Linux, or `peep-server.phar` in a browser. Composer package: `shibbirweb/peep` (a dev dependency).
+
+## Install
+
+- [Installing Peep for a user, step by step for AI agents](https://github.com/shibbirweb/peep/blob/HEAD/llms-install.md): find the version, install the viewer for the user's system, add the package, turn it on, prove it works.
+- [README](https://github.com/shibbirweb/peep/blob/HEAD/README.md): the same for people.
+
+## Use
+
+- [Debugging with Peep, for AI agents](https://github.com/shibbirweb/peep/blob/HEAD/resources/skills/peep/SKILL.md): the Peep skill. `vendor/bin/peep report`, `cards`, `mail`, `sms`, `logs`, `wait`, `clear`, and `vendor/bin/peep mcp` for MCP.
+- [API reference](https://github.com/shibbirweb/peep/blob/HEAD/docs/wiki/usage/API-Reference.md): every method of `peep()`.
+- [Laravel](https://github.com/shibbirweb/peep/blob/HEAD/docs/wiki/usage/Laravel.md), [Configuration](https://github.com/shibbirweb/peep/blob/HEAD/docs/wiki/usage/Configuration.md), [Troubleshooting](https://github.com/shibbirweb/peep/blob/HEAD/docs/wiki/usage/Troubleshooting.md).
+
+## Work on Peep itself
+
+- [AGENTS.md](https://github.com/shibbirweb/peep/blob/HEAD/AGENTS.md): the rules for changing Peep's code.

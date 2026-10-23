@@ -19,6 +19,8 @@
 /.gitignore             export-ignore
 /.php-cs-fixer.dist.php export-ignore
 /AGENTS.md              export-ignore
+/llms-install.md        export-ignore
+/llms.txt               export-ignore
 /CLAUDE.md              export-ignore
 /CONTRIBUTING.md        export-ignore
 /SECURITY.md            export-ignore
