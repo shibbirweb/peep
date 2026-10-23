@@ -51,6 +51,23 @@ final class ViewerApiTest extends TestCase
         ], $this->transport->gets);
     }
 
+    public function testLogsTakeAFileAndALevel(): void
+    {
+        $this->transport->getResponses[] = new TransportResponse(200, '{"entries": []}');
+        $this->transport->getResponses[] = new TransportResponse(404, "Say which project: --project=NAME (one of blog, shop).\n");
+        $this->transport->getResponses[] = new TransportResponse(404, 'Not found.');
+
+        $this->assertTrue($this->viewer('/app', 'shop')->logs(['since' => '5m'], 'laravel.log', 'error', true)['ok']);
+        $this->assertSame(['ok' => false, 'text' => "Say which project: --project=NAME (one of blog, shop).\n"], $this->viewer()->logs([]));
+        $this->assertStringContainsString('has no agent endpoints', $this->viewer()->logs([])['text'], 'An older viewer answers plain "Not found.".');
+
+        $this->assertSame([
+            '/_peep/agent/logs?since=5m&project=shop&base=%2Fapp&format=json&file=laravel.log&level=error',
+            '/_peep/agent/logs',
+            '/_peep/agent/logs',
+        ], $this->transport->gets);
+    }
+
     public function testAStoppedViewerIsExplained(): void
     {
         $this->transport->failWith = new TransportException('refused');

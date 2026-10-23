@@ -135,6 +135,27 @@ final class ViewerApi
     }
 
     /**
+     * Entries of a project's log file (the newest file unless $file names one), at $level or above.
+     *
+     * @param array<string, mixed> $filters project, since, search, limit
+     * @return array{ok: bool, text: string}
+     */
+    public function logs(array $filters, ?string $file = null, ?string $level = null, bool $json = false): array
+    {
+        $query = $this->query($filters, $json);
+
+        if ($file !== null && $file !== '') {
+            $query['file'] = $file;
+        }
+
+        if ($level !== null && $level !== '') {
+            $query['level'] = $level;
+        }
+
+        return $this->get('logs', $query);
+    }
+
+    /**
      * Waits until $count new cards arrive (or change), then shows them.
      *
      * @param array<string, mixed> $filters
@@ -281,6 +302,12 @@ final class ViewerApi
     {
         $decoded = json_decode($body, true);
         $error = is_array($decoded) && isset($decoded['error']) && is_string($decoded['error']) ? $decoded['error'] : null;
+
+        // Plain-text answers (the logs endpoint) explain themselves; an older viewer's
+        // static "Not found." does not.
+        if (! is_array($decoded) && trim($body) !== '' && trim($body) !== 'Not found.') {
+            return self::fail(rtrim($body));
+        }
         $message = is_array($decoded) && isset($decoded['message']) && is_string($decoded['message']) ? $decoded['message'] : $body;
 
         // A viewer from before the agent endpoints answers 404 for all of them.

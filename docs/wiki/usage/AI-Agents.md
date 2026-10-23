@@ -42,14 +42,15 @@ The skill follows the [Agent Skills](https://agentskills.io) format, so agents t
 | Command | Shows or does |
 |---------|---------------|
 | `peep status` | Whether the viewer runs, each project with its cards, mail and SMS, and the query switches |
-| `peep report` | A Markdown debug report: problems (exceptions, failed jobs, error responses, failed HTTP calls, error logs, slow and repeated queries), then every request with its cards, then mail and SMS. `--output=FILE` also saves it |
+| `peep report` | A Markdown debug report: problems (exceptions, failed jobs, error responses, failed HTTP calls, error logs, error entries in the log file, slow and repeated queries), then every request with its cards, then mail and SMS. `--output=FILE` also saves it |
 | `peep cards` | The newest cards as text, oldest first |
 | `peep mail`, `peep sms` | Caught mail and SMS; `peep mail --id=ID` shows one mail with its body |
+| `peep logs` | The app's log file (the newest in `storage/logs`): `--file=NAME`, `--level=error` for errors and worse, with context and stack traces |
 | `peep wait` | Waits for new cards and shows them (`--timeout=30`, `--count=1`): for a page the user clicks or a queued job |
 | `peep clear` | Empties the viewer before a run (`--what=all`, `cards`, `mail` or `sms`) |
 | `peep mcp` | The MCP server |
 
-Filters for `report`, `cards`, `mail`, `sms` and `wait`:
+Filters for `report`, `cards`, `mail`, `sms`, `logs` and `wait`:
 
 | Option | Keeps |
 |--------|-------|
@@ -60,7 +61,7 @@ Filters for `report`, `cards`, `mail`, `sms` and `wait`:
 | `--search=TEXT` | What contains the text |
 | `--limit=50` | The newest that many |
 
-`status`, `cards`, `mail` and `sms` take `--json` for the full data. File paths are shown relative to the directory the command runs in. The exit code is 0 when it worked and 1 when the viewer is not reachable or nothing came, so a script can tell.
+`status`, `cards`, `mail`, `sms` and `logs` take `--json` for the full data. File paths are shown relative to the directory the command runs in. The exit code is 0 when it worked and 1 when the viewer is not reachable or nothing came, so a script can tell.
 
 A card as the agent reads it:
 
@@ -75,7 +76,7 @@ A card as the agent reads it:
 
 ## The MCP server
 
-For agents that use MCP tools, `peep mcp` runs a Model Context Protocol server on stdin and stdout with the same abilities: `peep_status`, `peep_report`, `peep_cards`, `peep_mail`, `peep_sms`, `peep_wait` and `peep_clear`. Start it from the project directory.
+For agents that use MCP tools, `peep mcp` runs a Model Context Protocol server on stdin and stdout with the same abilities: `peep_status`, `peep_report`, `peep_cards`, `peep_mail`, `peep_sms`, `peep_logs`, `peep_wait` and `peep_clear`. Start it from the project directory.
 
 Claude Code:
 

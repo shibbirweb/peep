@@ -10,7 +10,7 @@ use ShibbirWeb\Peep\Version;
  */
 final class AgentCli
 {
-    public const COMMANDS = ['status', 'cards', 'report', 'mail', 'sms', 'wait', 'clear', 'mcp', 'skill'];
+    public const COMMANDS = ['status', 'cards', 'report', 'mail', 'sms', 'logs', 'wait', 'clear', 'mcp', 'skill'];
 
     public const USAGE = <<<'TEXT'
 Debugging with an AI agent (or by hand):
@@ -19,12 +19,13 @@ Debugging with an AI agent (or by hand):
   cards                  The newest cards as text
   mail [--id=ID]         Caught mail (one mail with its body when --id is given)
   sms                    Caught SMS
+  logs                   The app's log file (--file=NAME, --level=error for error and above)
   wait                   Wait for new cards and show them (--timeout=30, --count=1)
   clear                  Empty the viewer before reproducing (--what=all|cards|mail|sms)
   mcp                    Run as an MCP server on stdin and stdout
   skill                  Print the Peep skill for AI agents (--install to add it to this project)
 
-Filters for report, cards, mail, sms and wait:
+Filters for report, cards, mail, sms, logs and wait:
   --project=NAME         One project (default: PEEP_PROJECT, else every project)
   --since=5m             Only what came after: an age (30s, 5m, 2h, 1d) or a unix time
   --request=ID           One request (the id shown in cards and reports)
@@ -33,7 +34,7 @@ Filters for report, cards, mail, sms and wait:
   --limit=50             How many of the newest
 
 Other options:
-  --json                 JSON instead of text (status, cards, mail, sms)
+  --json                 JSON instead of text (status, cards, mail, sms, logs)
   --output=FILE          report: also write the report to FILE
 
 The viewer is found the way the app finds it: peep.php, PEEP_HOST, PEEP_PORT, PEEP_TOKEN.
@@ -109,6 +110,10 @@ TEXT;
 
             case 'sms':
                 $result = $viewer->sms($options, $json);
+                break;
+
+            case 'logs':
+                $result = $viewer->logs($options, isset($options['file']) ? $options['file'] : null, isset($options['level']) ? $options['level'] : null, $json);
                 break;
 
             case 'wait':

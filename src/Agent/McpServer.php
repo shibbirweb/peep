@@ -15,7 +15,7 @@ final class McpServer
 
     private const INSTRUCTIONS = <<<'TEXT'
 Peep is a debugger for PHP apps: the app sends values, queries, exceptions, jobs, logs, mail and SMS to the Peep viewer, and these tools read them.
-To debug: call peep_status to check the viewer runs; add peep($value) calls to the code you suspect (peep($x)->label('why') helps you find your own cards); call peep_clear, reproduce the problem (open the page, run the command or the test); then call peep_report and read the Problems section first. Show the report to the user when they asked for one.
+To debug: call peep_status to check the viewer runs (and peep_logs for the app's log file); add peep($value) calls to the code you suspect (peep($x)->label('why') helps you find your own cards); call peep_clear, reproduce the problem (open the page, run the command or the test); then call peep_report and read the Problems section first. Show the report to the user when they asked for one.
 Remove every peep() call you added before you finish (vendor/bin/peep-clean --fix lists and removes them).
 TEXT;
 
@@ -139,6 +139,14 @@ TEXT;
                 'id' => ['type' => 'string', 'description' => 'One mail, with its body (the id in square brackets)'],
             ]),
             self::tool('peep_sms', 'SMS the app sent, caught by Peep.', $filters),
+            self::tool('peep_logs', "Entries of the app's log file (Laravel's storage/logs/laravel.log or the newest .log there), with context and exception stack traces. Use level=error to see only problems.", [
+                'project' => $filters['project'],
+                'file' => ['type' => 'string', 'description' => 'A log file name such as laravel-2026-10-23.log (default: the newest)'],
+                'level' => ['type' => 'string', 'enum' => ['debug', 'info', 'notice', 'warning', 'error', 'critical', 'alert', 'emergency'], 'description' => 'Only this level and above'],
+                'since' => $filters['since'],
+                'search' => $filters['search'],
+                'limit' => $filters['limit'],
+            ]),
             self::tool('peep_wait', 'Waits for new cards (after the user or a command runs the code), then returns them. Use it when something runs in the background, like a queued job.', [
                 'project' => $filters['project'],
                 'search' => $filters['search'],
@@ -183,6 +191,9 @@ TEXT;
 
             case 'peep_sms':
                 return $this->viewer->sms($filters);
+
+            case 'peep_logs':
+                return $this->viewer->logs($filters, $string('file'), $string('level'));
 
             case 'peep_wait':
                 $timeout = $string('timeout_seconds');

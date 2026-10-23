@@ -86,11 +86,15 @@ vendor/bin/peep cards --request=1f6c2d3e    # every card of one request (id from
 vendor/bin/peep cards --card=3f2a9c1b       # one card in full
 vendor/bin/peep mail                        # caught mail; --id=mail_... for one with its body
 vendor/bin/peep sms
+vendor/bin/peep logs --level=error         # the app's log file (storage/logs), errors and worse
+vendor/bin/peep logs --file=laravel-2026-10-22.log --search=checkout
 ```
 
-Each card starts with `[id]`, its age, the request (`POST /orders`, a command or a job), and the file and line of the call. File paths are relative to the project. The report's **Problems** section lists exceptions, failed jobs, error responses, failed HTTP calls, error logs, slow queries and repeated (N+1) queries.
+Each card starts with `[id]`, its age, the request (`POST /orders`, a command or a job), and the file and line of the call. File paths are relative to the project. The report's **Problems** section lists exceptions, failed jobs, error responses, failed HTTP calls, error logs, error entries in the app's log file, slow queries and repeated (N+1) queries.
 
-Add `--json` to `status`, `cards`, `mail` and `sms` for machine-readable output.
+The log file often holds what `peep()` calls do not: an exception the app caught and logged, or an error from a queued job. Read `peep logs --level=error` when the cards do not explain the bug.
+
+Add `--json` to `status`, `cards`, `mail`, `sms` and `logs` for machine-readable output.
 
 ## 6. Fix and check again
 
@@ -126,7 +130,7 @@ Do not commit `peep-report.md` unless the user asks.
 
 ## MCP instead of the command line
 
-When you have the Peep MCP tools (`peep_status`, `peep_report`, `peep_cards`, `peep_mail`, `peep_sms`, `peep_wait`, `peep_clear`), use them the same way. They take the same filters (`project`, `since`, `request`, `search`, `limit`). To add them to an MCP client, run the server from the project directory:
+When you have the Peep MCP tools (`peep_status`, `peep_report`, `peep_cards`, `peep_mail`, `peep_sms`, `peep_logs`, `peep_wait`, `peep_clear`), use them the same way. They take the same filters (`project`, `since`, `request`, `search`, `limit`). To add them to an MCP client, run the server from the project directory:
 
 ```json
 {
@@ -146,6 +150,7 @@ For Claude Code: `claude mcp add peep -- php vendor/bin/peep mcp`.
 | `peep report` | Markdown report; `--output=FILE` also saves it |
 | `peep cards` | Cards as text, oldest first |
 | `peep mail`, `peep sms` | Caught mail and SMS |
+| `peep logs` | The app's log file (`--file=NAME`, `--level=error`) |
 | `peep wait` | Wait for new cards (`--timeout=30`, `--count=1`) |
 | `peep clear` | Empty the viewer (`--what=all\|cards\|mail\|sms`) |
 | `peep mcp` | MCP server on stdio |

@@ -53,13 +53,12 @@ final class McpServerTest extends TestCase
         $answer = $this->ask(['jsonrpc' => '2.0', 'id' => 'a', 'method' => 'tools/list']);
         $tools = $answer['result']['tools'];
 
-        $this->assertSame(['peep_status', 'peep_report', 'peep_cards', 'peep_mail', 'peep_sms', 'peep_wait', 'peep_clear'], array_column($tools, 'name'));
+        $this->assertSame(['peep_status', 'peep_report', 'peep_cards', 'peep_mail', 'peep_sms', 'peep_logs', 'peep_wait', 'peep_clear'], array_column($tools, 'name'));
         foreach ($tools as $tool) {
             $this->assertSame('object', $tool['inputSchema']['type']);
             $this->assertNotSame('', $tool['description']);
+            $this->assertSame($tool['name'] === 'peep_clear', $tool['annotations']['destructiveHint'], 'Only peep_clear changes anything.');
         }
-        $this->assertTrue($tools[6]['annotations']['destructiveHint'], 'Only peep_clear changes anything.');
-        $this->assertTrue($tools[1]['annotations']['readOnlyHint']);
     }
 
     public function testToolCallsAskTheViewer(): void
@@ -70,6 +69,16 @@ final class McpServerTest extends TestCase
 
         $this->assertSame(['content' => [['type' => 'text', 'text' => "# Peep debug report\n"]], 'isError' => false], $answer['result']);
         $this->assertSame(['/_peep/agent/report?project=shop&since=5m&limit=20&base=%2Fapp'], $this->transport->gets);
+    }
+
+    public function testLogsAskForAFileAndALevel(): void
+    {
+        $this->transport->getResponses[] = new TransportResponse(200, "shop: /app/storage/logs/laravel.log\n");
+
+        $answer = $this->ask(['jsonrpc' => '2.0', 'id' => 5, 'method' => 'tools/call', 'params' => ['name' => 'peep_logs', 'arguments' => ['project' => 'shop', 'level' => 'error', 'file' => 'laravel.log']]]);
+
+        $this->assertFalse($answer['result']['isError']);
+        $this->assertSame(['/_peep/agent/logs?project=shop&base=%2Fapp&file=laravel.log&level=error'], $this->transport->gets);
     }
 
     public function testAViewerProblemIsAToolError(): void
