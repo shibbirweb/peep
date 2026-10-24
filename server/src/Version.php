@@ -9,7 +9,7 @@ namespace ShibbirWeb\PeepServer;
  */
 final class Version
 {
-    public const string VERSION = '0.1.0-beta.3';
+    public const string VERSION = '0.1.0';
 
     private function __construct() {}
 }
