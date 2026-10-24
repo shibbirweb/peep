@@ -25,7 +25,7 @@ Done means: the viewer runs, the package is in the project, Peep is enabled in d
 
 ## 1. Find the version to install
 
-Use the newest **stable** release. Until Peep 1.0 there is none, so use the newest **pre-release** and tell the user it is a beta.
+Use the newest **stable** release. Use a **pre-release** (a beta, from `develop`) only when the user asks for one, or when the first command below finds no stable release, and then tell the user it is a beta.
 
 ```bash
 # Newest stable release; HTTP 404 means there is none yet.
@@ -35,7 +35,7 @@ curl -fsSL https://api.github.com/repos/shibbirweb/peep/releases/latest
 curl -fsSL "https://api.github.com/repos/shibbirweb/peep/releases?per_page=1"
 ```
 
-From the answer, take `tag_name` (for example `v0.1.0-beta.2`). Below, `TAG` is that tag and `VERSION` is the tag without the `v` (`0.1.0-beta.2`). With the GitHub CLI: `gh release list --repo shibbirweb/peep --limit 1`.
+From the answer, take `tag_name` (for example `v0.1.0`). Below, `TAG` is that tag and `VERSION` is the tag without the `v` (`0.1.0`). With the GitHub CLI: `gh release view --repo shibbirweb/peep --json tagName` (the newest stable release).
 
 Every file of a release downloads from:
 
@@ -147,7 +147,7 @@ It answers `{"app":"peep","protocol":1,"version":"..."}`. If not, see [Troublesh
 
 ## 4. Add the package to the project
 
-In the project folder. For a beta (step 1 found no stable release):
+In the project folder. For a beta (step 1 chose a pre-release):
 
 ```bash
 composer require --dev "shibbirweb/peep:@beta"
