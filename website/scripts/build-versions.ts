@@ -42,9 +42,9 @@ for (const version of versions) {
   // and git archive would leave it out.
   execSync(`git archive ${version.ref}:docs/wiki | tar -x -C "${source}"`, { cwd: ROOT, stdio: "inherit" });
 
-  // Links to repository files point at the tag, or at the branch for next.
+  // Links to repository files point at the tag, or at the branch for next, whose install commands get :@beta.
   const ref = version.next ? version.ref.replace(/^origin\//, "") : version.ref;
-  run(`bun scripts/sync-docs.ts "${source}"`, { PEEP_DOCS_REF: ref });
+  run(`bun scripts/sync-docs.ts "${source}"`, { PEEP_DOCS_REF: ref, PEEP_DOCS_CHANNEL: version.next ? "beta" : "stable" });
   run("bun --bun vitepress build", { PEEP_DOCS_VERSION: version.id, PEEP_DOCS_OUT_DIR: out });
 }
 

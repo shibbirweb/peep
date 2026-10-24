@@ -14,8 +14,8 @@ const latestHref = computed(() => `${theme.value.peep.siteBase}${page.value.rela
 <template>
   <div v-if="latest && !theme.peep.current.latest" class="VersionBanner custom-block warning">
     <p v-if="theme.peep.current.next">
-      These docs are for the next release, in beta. For the version most people use, see the
-      <a :href="latestHref" target="_self">{{ latest.label }} docs</a>.
+      These docs are for the next release, in beta, so their install commands add <code>:@beta</code>. For the
+      version most people use, see the <a :href="latestHref" target="_self">{{ latest.label }} docs</a>.
     </p>
     <p v-else>
       These docs are for {{ theme.peep.current.label }}, an older version. The latest is

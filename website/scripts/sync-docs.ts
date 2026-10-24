@@ -63,6 +63,19 @@ function rewriteProse(prose: string, from: string): string {
   });
 }
 
+/**
+ * For the next version (PEEP_DOCS_CHANNEL=beta), `composer require shibbirweb/peep` installs the beta:
+ * `:@beta` lets Composer take the newest beta or stable version, so it is right before and after a release.
+ * Only lines that run `composer require`, in code and prose alike.
+ */
+function betaInstall(markdown: string): string {
+  if (process.env.PEEP_DOCS_CHANNEL !== "beta") {
+    return markdown;
+  }
+
+  return markdown.replace(/^.*composer require.*$/gm, (line) => line.replace(/shibbirweb\/peep(?![:\w/-])/g, "shibbirweb/peep:@beta"));
+}
+
 function frontmatter(summary: string): string {
   return `---\ndescription: ${JSON.stringify(summary)}\n---\n\n`;
 }
@@ -78,7 +91,7 @@ for (const entry of entries) {
   const markdown = readFileSync(join(WIKI, entry.page), "utf8");
   const out = join(DOCS, entry.page);
   mkdirSync(dirname(out), { recursive: true });
-  writeFileSync(out, frontmatter(entry.summary) + rewriteLinks(markdown, `${WIKI_DIR}/${entry.page}`));
+  writeFileSync(out, frontmatter(entry.summary) + betaInstall(rewriteLinks(markdown, `${WIKI_DIR}/${entry.page}`)));
 }
 
 copyFileSync(join(WIKI, "pages.json"), join(DOCS, "pages.json"));
