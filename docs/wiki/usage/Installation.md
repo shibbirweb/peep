@@ -51,11 +51,44 @@ Peep is off until you turn it on, so it never runs by accident in production.
   ];
   ```
 
-Then:
+## 4. Send something
+
+Put this anywhere in your code, then run that code (open the page, run the command or the test):
 
 ```php
-peep('Hello');
+peep('Hello from my app');
+peep($user);
+peep()->table($rows);
 ```
+
+A card appears in the viewer. Nothing there? See [Troubleshooting](Troubleshooting.md). Every method is in the [API reference](API-Reference.md).
+
+## Laravel in a minute
+
+Logs, reported exceptions, `dump()` and sent mail show up without any call. A few lines show the rest:
+
+```php
+peep()->showQueries();                         // every query, with bindings and time
+peep()->showSlowQueries(100);                  // queries slower than 100 ms
+peep()->showDuplicateQueries();                // the same query run again (N+1)
+peep()->countQueries(fn () => $order->load('items'));
+peep()->showJobs()->showHttpClientRequests();
+peep()->model($user);
+collect($rows)->peep()->map(...);
+```
+
+Set `MAIL_MAILER=peep` to send every mail to the viewer's inbox. More in the [Laravel guide](Laravel.md).
+
+## Debugging with an AI agent
+
+The Peep skill teaches Claude Code, Codex, Cursor and other agents to add `peep()` calls, read what was caught, fix the bug and clean up:
+
+```bash
+vendor/bin/peep skill --install                  # the Peep skill, for Claude Code
+claude mcp add peep -- php vendor/bin/peep mcp   # optional: Peep's MCP tools
+```
+
+Then ask: "Use Peep to find out why checkout fails, fix it, and show me the report." See [AI agents](AI-Agents.md).
 
 ## Docker and other machines
 

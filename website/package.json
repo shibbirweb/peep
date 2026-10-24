@@ -1,0 +1,17 @@
+{
+  "name": "peep-website",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync": "bun scripts/sync-docs.ts",
+    "dev": "bun scripts/sync-docs.ts && bun --bun vitepress dev",
+    "build": "bun scripts/sync-docs.ts && bun --bun vitepress build",
+    "build:versions": "bun scripts/build-versions.ts",
+    "preview": "bun --bun vitepress preview"
+  },
+  "devDependencies": {
+    "mermaid": "^11.17.2",
+    "vitepress": "^1.6.4",
+    "vitepress-plugin-mermaid": "^2.0.17"
+  }
+}

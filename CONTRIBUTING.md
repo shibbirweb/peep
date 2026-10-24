@@ -39,6 +39,7 @@ src/        client, namespace ShibbirWeb\Peep\ (PHP 7.1+), the only Composer pac
 tests/      client tests, ShibbirWeb\Peep\Tests\
 server/     viewer, ShibbirWeb\PeepServer\ (PHP 8.5), own composer.json, not on Packagist
 desktop/    Tauri desktop app
+website/    the website (VitePress, GitHub Pages), its docs copied from docs/wiki
 tools/      quality tools, kept apart because they need a newer PHP than the client
 docs/plan/  roadmap, feature list and implementation plan
 ```
