@@ -11,6 +11,8 @@ notes, and `bun scripts/version.ts notes` prints it. See the Releasing page of t
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-24
+
 ### Added
 
 - A full API reference in the wiki: how a card works and when nothing is sent, then every method of `peep()` with its signature, parameters, return value, behavior and examples, on five pages (overview, values, inspecting, control, Laravel methods), linked from the README.
@@ -67,4 +69,5 @@ notes, and `bun scripts/version.ts notes` prints it. See the Releasing page of t
 - Peep no longer calls `set_error_handler()` while sending, which on PHP 7 could remove the app's error handler when Peep was called from inside it.
 - The viewer's Host check now covers only the UI and the stream, so apps in Docker can send through `host.docker.internal`.
 
-[Unreleased]: https://github.com/shibbirweb/peep/commits/develop
+[Unreleased]: https://github.com/shibbirweb/peep/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/shibbirweb/peep/releases/tag/v0.1.0
