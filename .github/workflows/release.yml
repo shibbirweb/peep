@@ -12,7 +12,7 @@
 # ship a client reporting the wrong version. So the tag, the pre-release flag and the code must agree.
 #
 # Packagist: with the repository variable PACKAGIST_AUTO_PUBLISH set to "true" and the secrets
-# PACKAGIST_USERNAME and PACKAGIST_TOKEN (an API token from packagist.org/profile), the package is created
+# PACKAGIST_USERNAME and PACKAGIST_TOKEN (the main API token from packagist.org/profile), the package is created
 # on the first release and updated on every one after. Without them Packagist's own GitHub hook, if set up,
 # picks the tag up.
 name: Release
@@ -58,7 +58,7 @@ jobs:
       TAG: ${{ inputs.tag || github.event.release.tag_name }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ env.TAG }}
 
@@ -116,7 +116,7 @@ jobs:
       TAG: ${{ needs.version.outputs.tag }}
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ env.TAG }}
 
@@ -175,24 +175,29 @@ jobs:
             echo "::error::PACKAGIST_AUTO_PUBLISH is on, but the PACKAGIST_USERNAME and PACKAGIST_TOKEN secrets are missing."
             exit 1
           fi
-          body="{\"repository\":{\"url\":\"https://github.com/$GITHUB_REPOSITORY\"}}"
-          query="username=$PACKAGIST_USERNAME&apiToken=$PACKAGIST_TOKEN"
+          # As documented at packagist.org/apidoc: the token goes in a header, never in the URL (which
+          # could end up in logs), and the body names the repository.
+          body="{\"repository\":\"https://github.com/$GITHUB_REPOSITORY\"}"
+          call() {
+            curl -s -o "$RUNNER_TEMP/$1.json" -w '%{http_code}' -X POST \
+              -H 'Content-Type: application/json' \
+              -H "Authorization: Bearer $PACKAGIST_USERNAME:$PACKAGIST_TOKEN" \
+              "https://packagist.org/api/$1" -d "$body"
+          }
 
-          status="$(curl -s -o "$RUNNER_TEMP/update.json" -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
-            "https://packagist.org/api/update-package?$query" -d "$body")"
+          status="$(call update-package)"
           if [ "$status" -ge 200 ] && [ "$status" -lt 300 ]; then
             echo "Packagist is updating shibbirweb/peep: https://packagist.org/packages/shibbirweb/peep" >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
-          # Not on Packagist yet: the first release creates it.
-          status="$(curl -s -o "$RUNNER_TEMP/create.json" -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
-            "https://packagist.org/api/create-package?$query" -d "$body")"
+          # Not on Packagist yet: the first release creates it (this needs the main API token, not the safe one).
+          status="$(call create-package)"
           if [ "$status" -ge 200 ] && [ "$status" -lt 300 ]; then
             echo "Created shibbirweb/peep on Packagist: https://packagist.org/packages/shibbirweb/peep" >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
 
           echo "::error::Packagist answered $status:"
-          cat "$RUNNER_TEMP/update.json" "$RUNNER_TEMP/create.json" 2>/dev/null
+          cat "$RUNNER_TEMP/update-package.json" "$RUNNER_TEMP/create-package.json" 2>/dev/null
           exit 1

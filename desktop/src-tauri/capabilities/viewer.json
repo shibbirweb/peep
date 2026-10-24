@@ -12,6 +12,7 @@
     "allow-show-window",
     "allow-hide-window",
     "allow-set-pinned",
-    "allow-check-updates"
+    "allow-check-updates",
+    "allow-pick-folder"
   ]
 }

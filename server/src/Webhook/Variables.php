@@ -38,13 +38,14 @@ final class Variables
     }
 
     /**
-     * Made-up data for the Test button (WH-10).
+     * Made-up data for the Test button (WH-10), and for agents that send a rule without a
+     * caught mail; $project is where the delivery is logged.
      */
-    public static function sampleMail(): Mail
+    public static function sampleMail(string $project = 'sample'): Mail
     {
         return new Mail(
             id: 'mail_sample',
-            project: 'sample',
+            project: $project,
             requestId: null,
             messageId: 'sample.' . bin2hex(random_bytes(6)) . '@peep.local',
             from: 'Shop <shop@example.test>',
@@ -62,9 +63,9 @@ final class Variables
         );
     }
 
-    public static function sampleSms(): Sms
+    public static function sampleSms(string $project = 'sample'): Sms
     {
-        return Sms::create('sample', '+15550100001', '+15550100999', 'Sample SMS from the Peep webhook test', 'test', microtime(true));
+        return Sms::create($project, '+15550100001', '+15550100999', 'Sample SMS from the Peep webhook test', 'test', microtime(true));
     }
 
     /**

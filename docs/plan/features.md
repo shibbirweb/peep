@@ -13,11 +13,12 @@ How each feature works is described in [implementation.md](implementation.md). T
 | API: Full client API | 3 | 38 / 38 |
 | LV: Laravel adapter | 4 | 31 / 31 |
 | BR: Bridges for any PHP app | 5 | 7 / 7 |
-| VF: Full viewer | 6 | 23 / 23 (2 dropped) |
+| VF: Full viewer | 6 | 26 / 26 (2 dropped) |
 | MS: Mail and SMS catching | 7 | 15 / 15 |
 | WH: Webhook simulator | 7 | 13 / 13 |
 | DT: Desktop app (Tauri) | 8 | 13 / 16 |
 | RL: Release | 9 | 12 / 15 |
+| AI: AI agents | 9 | 6 / 6 |
 
 ## SU: Project setup (Phase 0)
 
@@ -218,6 +219,11 @@ Storage and protocols:
 - [-] VF-23 Ray protocol decoder (dropped: decision D2 is no)
 - [-] VF-24 Symfony VarDumper TCP server on 9912 (dropped: decision D2 is no)
 
+Logs:
+- [x] VF-25 Logs tab: a project's `.log` files, entries parsed from Monolog's line format (Laravel's default) with level colors, exceptions and stack frames linked to the editor, context as a tree, JSON or raw; large files read from the end, older entries on demand
+- [x] VF-26 Live watching with pause, newest or oldest first, level chips with counts, search
+- [x] VF-27 Log folders: reported by the app (`meta.logs`, Laravel's `storage/logs` mapped like origins, `PEEP_LOG_PATH`) or chosen in the tab, kept in the settings
+
 ## MS: Mail and SMS catching (Phase 7)
 
 The viewer catches mail and SMS the app sends, so nothing reaches real people during development, and shows them in an inbox.
@@ -295,3 +301,13 @@ After the viewer catches a mail or SMS, it can call back a URL the user sets up,
 - [x] RL-14 Release notes from `CHANGELOG.md` (Unreleased for betas, the dated section for stable releases)
 - [x] RL-15 CI: every Laravel version on every PHP version it supports, and the client on PHP 7.1 to 8.5, as parallel jobs
 - [ ] RL-10 Homebrew cask `peep` (in progress: the name is free; cask in `packaging/homebrew/peep.rb`, published to a tap after the first release)
+
+## AI: AI agents (Phase 9)
+
+- [x] AI-01 Viewer agent endpoints `/_peep/agent/*`: status, cards, a Markdown debug report (problems first), mail, SMS and clear, as text or JSON, filtered by project, age, request, card and text; local only
+- [x] AI-02 `vendor/bin/peep` (and `php peep.phar`): `status`, `report [--output]`, `cards`, `mail`, `sms`, `wait`, `clear`, finding the viewer the way the app does
+- [x] AI-03 MCP server `peep mcp` on stdio: `peep_status`, `peep_report`, `peep_cards`, `peep_mail`, `peep_sms`, `peep_wait`, `peep_clear`
+- [x] AI-04 Peep skill for agents (`resources/skills/peep/SKILL.md`, Agent Skills format), printed or installed with `peep skill [--install]`
+- [x] AI-05 Docs: wiki page AI agents, README, protocol; `AGENTS.md` (imported by `CLAUDE.md`) with the rules for agents working on Peep itself
+- [x] AI-06 `peep logs` and the `peep_logs` MCP tool; error-level log entries in the debug report since the window, the last `peep clear` or the first card
+- [x] AI-07 Webhooks for agents: `peep webhooks` and `peep send-webhook` (MCP `peep_webhooks`, `peep_send_webhook`) list the user's rules (without secrets) and calls, and send a rule to the app now or on its schedule, with a caught mail or SMS or sample data; failed calls in the debug report

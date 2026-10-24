@@ -26,6 +26,8 @@ final class ConfigLoader
         'project' => 'PEEP_PROJECT',
         'remote_path' => 'PEEP_REMOTE_PATH',
         'local_path' => 'PEEP_LOCAL_PATH',
+        'log_path' => 'PEEP_LOG_PATH',
+        'log_timezone' => 'PEEP_LOG_TIMEZONE',
         'serializer' => 'PEEP_SERIALIZER',
         'token' => 'PEEP_TOKEN',
     ];

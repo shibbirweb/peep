@@ -6,7 +6,7 @@ Peep has two parts: the **client** you add to your app, and the **viewer** where
 
 Pick one:
 
-- **Desktop app** (macOS, Windows, Linux): download it from the [releases page](https://github.com/shibbirweb/peep/releases) and open it. It brings its own PHP; nothing else is needed. See [Desktop app](Desktop-App.md).
+- **Desktop app** (macOS, Windows, Linux): download it from the [releases page](https://github.com/shibbirweb/peep/releases) and open it. It brings its own PHP; nothing else is needed. It is not signed yet, so macOS and Windows need one extra step the first time: see [Desktop app: install](Desktop-App.md#install).
 - **`peep-server.phar`** (needs PHP 8.5): download it from the releases page and run
 
   ```bash
@@ -86,5 +86,6 @@ Other machines can then send to the viewer, but the viewer page itself still ope
 | `remote_path`, `local_path` | `PEEP_REMOTE_PATH`, `PEEP_LOCAL_PATH` | none |
 | `serializer` | `PEEP_SERIALIZER` | `peep`; `var-dumper` uses Symfony VarDumper's casters |
 | `token` | `PEEP_TOKEN` | none |
+| `log_path`, `log_timezone` | `PEEP_LOG_PATH`, `PEEP_LOG_TIMEZONE` | none (Laravel: `storage/logs` and `app.timezone`); the folder the [Logs](Logs.md) tab shows |
 | `max_depth`, `max_items`, `max_string_length`, `max_nodes` | | 5, 100, 10,000, 5,000 |
 | `redact_keys` | | `password`, `secret`, `token`, `api_key`, `authorization`, `cookie` and more |

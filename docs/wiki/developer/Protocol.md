@@ -11,6 +11,8 @@ The client and the viewer speak a small HTTP and JSON protocol, version 1. The f
 | `POST /_peep/mail`, `/_peep/sms` and the Mailgun, Twilio and Vonage paths | any app | Caught mail and SMS |
 | `GET /_peep/stream` | viewer page | Server-Sent Events |
 | `POST /_peep/ui/*` | viewer page | Actions, with the `X-Peep-UI` header |
+| `GET /_peep/ui/logs/*`, `POST /_peep/ui/logs/folder` | Logs tab | Log folders, files and parsed entries |
+| `GET /_peep/agent/*`, `POST /_peep/agent/clear` | `peep` command, MCP server | Cards, a debug report, mail and SMS as text for [AI agents](../usage/AI-Agents.md) |
 
 An envelope:
 

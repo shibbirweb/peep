@@ -1,9 +1,66 @@
 <?php
 
-// Command line tool of peep.phar (global install). PHP 7.1 syntax, like the client.
+// Command line tool of Peep: vendor/bin/peep in a project, "php peep.phar" when installed
+// globally. PHP 7.1 syntax, like the client.
 
+use ShibbirWeb\Peep\Agent\AgentCli;
 use ShibbirWeb\Peep\Install\Installer;
 
-require_once 'phar://peep.phar/resources/global/prepend.php';
+$peepInPhar = class_exists('Phar', false) && Phar::running(false) !== '';
 
-exit(Installer::run(array_slice(isset($argv) ? $argv : [], 1), STDOUT, STDERR));
+if ($peepInPhar) {
+    require_once 'phar://peep.phar/resources/global/prepend.php';
+} else {
+    $autoloaders = [
+        isset($GLOBALS['_composer_autoload_path']) ? $GLOBALS['_composer_autoload_path'] : null,
+        __DIR__ . '/../../../autoload.php',
+        __DIR__ . '/../vendor/autoload.php',
+    ];
+
+    foreach ($autoloaders as $autoloader) {
+        if (is_string($autoloader) && is_file($autoloader)) {
+            require $autoloader;
+            break;
+        }
+    }
+
+    if (! class_exists('ShibbirWeb\\Peep\\Agent\\AgentCli')) {
+        fwrite(STDERR, "Cannot find Composer's autoloader. Run this from a project that requires shibbirweb/peep.\n");
+        exit(2);
+    }
+}
+
+$arguments = array_slice(isset($argv) ? $argv : [], 1);
+$command = isset($arguments[0]) ? $arguments[0] : 'help';
+
+if (in_array($command, AgentCli::COMMANDS, true)) {
+    if ($command === 'status' && $peepInPhar) {
+        Installer::run(['status'], STDOUT, STDERR);
+        fwrite(STDOUT, "\n");
+    }
+
+    exit(AgentCli::run($arguments, STDIN, STDOUT, STDERR));
+}
+
+if ($command === 'help' || $command === '--help' || $command === '-h') {
+    $global = "\n\nGlobal install (php peep.phar):\n"
+        . "  install                Load Peep before every PHP script of this PHP (--force, --dry-run, --ini-dir=DIR)\n"
+        . "  uninstall              Remove that again\n"
+        . "  status                 Also shows what is installed\n"
+        . "  version                Show the version\n";
+
+    fwrite(STDOUT, AgentCli::usage() . ($peepInPhar ? $global : "\n  version                Show the version\n"));
+    exit(0);
+}
+
+if ($peepInPhar) {
+    exit(Installer::run($arguments, STDOUT, STDERR));
+}
+
+if ($command === 'version' || $command === '--version') {
+    fwrite(STDOUT, 'Peep client ' . ShibbirWeb\Peep\Version::VERSION . "\n");
+    exit(0);
+}
+
+fwrite(STDERR, 'Unknown command: ' . $command . "\nRun \"vendor/bin/peep help\".\n");
+exit(2);

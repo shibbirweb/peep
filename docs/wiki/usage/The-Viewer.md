@@ -8,6 +8,10 @@ Everything your app sends shows up as cards, newest first. A card is one `peep()
 
 Cards in a row from one HTTP request, queued job or Artisan command get a header with its label (`POST /checkout`) and the number of cards. Click the header to fold the group. Every card also shows where it was called; click the file to open it in your editor (choose the editor in [Settings](#settings)).
 
+## Logs
+
+The **Logs** tab shows the app's log files as colored entries with exceptions and context, live or paused. See [Logs](Logs.md).
+
 ## Projects
 
 Every app sends its project name (`PEEP_PROJECT`, or Laravel's `APP_NAME`), and each project gets a tab with its card count. Settings such as the [query switches](Query-Debugging.md) are per project.

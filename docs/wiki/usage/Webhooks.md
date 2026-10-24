@@ -62,6 +62,10 @@ For a signature of your own, choose **Custom header** and write it as a template
 X-Signature: {{ hmac_sha256(vars.secret, body) }}
 ```
 
+## With an AI agent
+
+An AI coding agent can send your rules too, to test the app's webhook handler while it fixes it: `vendor/bin/peep send-webhook --rule="Mailgun events" --event=failed --mail=last` sends one call now and shows the app's answer, and `peep webhooks` lists the rules and the delivery log. The MCP tools are `peep_webhooks` and `peep_send_webhook`. The agent never sees a rule's secret and cannot create or change rules. See [AI agents](AI-Agents.md#testing-webhooks).
+
 ## Delivery log, retries, sharing rules
 
 ![The delivery log with a request and your app's answer](../images/delivery-log.png)

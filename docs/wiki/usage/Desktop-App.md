@@ -15,7 +15,60 @@ flowchart TD
 
 ## Install
 
-Download it from the [releases page](https://github.com/shibbirweb/peep/releases): `.dmg` for macOS, `.msi` or `-setup.exe` for Windows, `.AppImage`, `.deb` or `.rpm` for Linux. Open it; Peep then lives in the tray (the menu bar on macOS).
+Download it from the [releases page](https://github.com/shibbirweb/peep/releases), under **Assets** of the newest release:
+
+| System | File |
+|--------|------|
+| macOS on Apple silicon (M1 and later) | `Peep_<version>_aarch64.dmg` |
+| macOS on Intel | `Peep_<version>_x64.dmg` |
+| Windows | `Peep_<version>_x64-setup.exe` (stable releases also have an `.msi`) |
+| Ubuntu, Debian | `Peep_<version>_amd64.deb` (`_arm64.deb` on ARM) |
+| Any Linux | `Peep_<version>_amd64.AppImage` (`_aarch64.AppImage` on ARM) |
+| Fedora, openSUSE | `.rpm`, stable releases only |
+
+Betas have no `.msi` or `.rpm`, because MSI and RPM versions cannot contain `-beta`. Not sure which Mac you have? Apple menu → **About This Mac** shows the chip.
+
+The app is not signed with an Apple Developer ID or a Windows code signing certificate yet. It is safe to open, but macOS and Windows cannot check who made it, so they stop it the first time. The steps below get past that once; after that it opens like any other app.
+
+### macOS
+
+1. Open the `.dmg` and drag **Peep** into **Applications**.
+2. Open Peep from Applications. macOS says *"Peep" Not Opened* (or *cannot be opened because Apple cannot check it for malicious software*). Click **Done**, not *Move to Trash*.
+3. Open **System Settings → Privacy & Security** and scroll down to **Security**. Next to *"Peep" was blocked to protect your Mac*, click **Open Anyway**, then enter your password.
+4. Open Peep again and click **Open** in the last question.
+
+On macOS 14 (Sonoma) and earlier, steps 2 to 4 can also be done in Finder: Control-click (or right-click) Peep in Applications, choose **Open**, then **Open** again.
+
+If macOS says *"Peep" is damaged and can't be opened*, it is not damaged: macOS marked the download and the app has no signature to clear the mark. Remove the mark in Terminal, then open Peep:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Peep.app
+```
+
+### Windows
+
+1. Your browser may say the file is not commonly downloaded. In Edge, open the download's **...** menu, choose **Keep**, then **Show more → Keep anyway**. In Chrome, choose **Keep**.
+2. Run `Peep_<version>_x64-setup.exe`. When *Windows protected your PC* (SmartScreen) appears, click **More info**, then **Run anyway**.
+3. Follow the installer. Peep starts from the Start menu like any other app.
+
+On Windows 11 with **Smart App Control** on, Windows blocks unsigned apps without a *Run anyway* button. Use `php peep-server.phar serve` (the viewer in your browser) instead, or turn Smart App Control off in **Windows Security → App & browser control → Smart App Control settings** (Windows does not let you turn it back on without reinstalling, so only do this if you are sure).
+
+### Linux
+
+Linux does not check signatures, so there is nothing to allow.
+
+```bash
+# Ubuntu, Debian
+sudo apt install ./Peep_<version>_amd64.deb
+
+# AppImage, on any distribution
+chmod +x Peep_<version>_amd64.AppImage
+./Peep_<version>_amd64.AppImage
+```
+
+If the AppImage says FUSE is missing, install it: `sudo apt install libfuse2` (on Ubuntu 24.04 and later, `libfuse2t64`).
+
+Once it runs, Peep lives in the tray (the menu bar on macOS).
 
 ## Window or browser
 

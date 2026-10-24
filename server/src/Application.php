@@ -15,11 +15,13 @@ use Revolt\EventLoop;
 use ShibbirWeb\PeepServer\Card\CardStore;
 use ShibbirWeb\PeepServer\Card\Receiving;
 use ShibbirWeb\PeepServer\Event\EventHub;
+use ShibbirWeb\PeepServer\Http\Controller\AgentController;
 use ShibbirWeb\PeepServer\Http\Controller\ClearController;
 use ShibbirWeb\PeepServer\Http\Controller\EnvelopeController;
 use ShibbirWeb\PeepServer\Http\Controller\HealthController;
 use ShibbirWeb\PeepServer\Http\Controller\InboxController;
 use ShibbirWeb\PeepServer\Http\Controller\LockController;
+use ShibbirWeb\PeepServer\Http\Controller\LogController;
 use ShibbirWeb\PeepServer\Http\Controller\MailController;
 use ShibbirWeb\PeepServer\Http\Controller\MailgunController;
 use ShibbirWeb\PeepServer\Http\Controller\ReceivingController;
@@ -37,6 +39,7 @@ use ShibbirWeb\PeepServer\Http\Guard\TokenGuard;
 use ShibbirWeb\PeepServer\Http\Router;
 use ShibbirWeb\PeepServer\Inbox\Catcher;
 use ShibbirWeb\PeepServer\Lock\LockRegistry;
+use ShibbirWeb\PeepServer\Log\LogFolders;
 use ShibbirWeb\PeepServer\Mail\MailParser;
 use ShibbirWeb\PeepServer\Mail\MailStore;
 use ShibbirWeb\PeepServer\Protocol\EnvelopeDecoder;
@@ -76,6 +79,8 @@ final class Application
 
     public readonly WebhookRunner $webhooks;
 
+    public readonly LogFolders $logFolders;
+
     private ?SocketHttpServer $server = null;
 
     private ?SmtpServer $smtp = null;
@@ -102,6 +107,7 @@ final class Application
         $this->receiving = new Receiving();
         $this->catcher = new Catcher(new MailStore(), new SmsStore(), $this->hub);
         $this->webhooks = new WebhookRunner(new WebhookRules($settings), $this->hub, logger: $logger);
+        $this->logFolders = new LogFolders($settings);
         $this->catcher->onMail($this->webhooks->onMail(...));
         $this->catcher->onSms($this->webhooks->onSms(...));
     }
@@ -219,12 +225,14 @@ final class Application
         $sms = new SmsController($this->catcher);
         $inbox = new InboxController($this->catcher, $this->hub);
         $webhooks = new WebhookController($this->webhooks, $this->catcher, $this->hub);
+        $agent = new AgentController($this->cards, $this->catcher, $this->hub, $this->receiving, $this->switches, $this->url(), $this->logFolders, $this->webhooks);
+        $logs = new LogController($this->logFolders, $this->hub);
 
         $router = new Router()
             ->add('GET', '/_peep/health', new HealthController())
-            ->add('POST', '/_peep/envelope', new EnvelopeController(new EnvelopeDecoder(), $this->cards, $this->hub, $this->locks, $this->switches, $this->receiving))
+            ->add('POST', '/_peep/envelope', new EnvelopeController(new EnvelopeDecoder(), $this->cards, $this->hub, $this->locks, $this->switches, $this->receiving, $this->logFolders))
             ->add('GET', '/_peep/switches', new SwitchController($this->switches))
-            ->add('GET', '/_peep/stream', new StreamController($this->cards, $this->hub, $this->locks, $this->switches, $this->receiving, $this->settings, $this->catcher, $this->webhooks))
+            ->add('GET', '/_peep/stream', new StreamController($this->cards, $this->hub, $this->locks, $this->switches, $this->receiving, $this->settings, $this->catcher, $this->webhooks, $this->logFolders))
             ->add('POST', '/_peep/mail', new MailController($this->catcher))
             ->add('POST', '/v3/*', new MailgunController($this->catcher))
             ->add('POST', '/_peep/sms', $sms)
@@ -244,6 +252,11 @@ final class Application
             ->add('POST', '/_peep/ui/receiving', new ReceivingController($this->receiving, $this->hub))
             ->add('POST', '/_peep/ui/screens', $screens)
             ->add('GET', '/_peep/ui/screens/*', $screens)
+            ->add('GET', '/_peep/ui/logs', $logs)
+            ->add('GET', '/_peep/ui/logs/*', $logs)
+            ->add('POST', '/_peep/ui/logs/*', $logs)
+            ->add('GET', '/_peep/agent/*', $agent)
+            ->add('POST', '/_peep/agent/*', $agent)
             ->add('GET', '/*', new StaticFileController($this->publicDirectory));
 
         return stackMiddleware(

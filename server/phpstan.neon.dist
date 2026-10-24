@@ -5,5 +5,8 @@ parameters:
     paths:
         - src
         - tests
+    excludePaths:
+        # Runs on the PHP and Monolog versions whose output it records, not on the viewer's.
+        - tests/Fixture/logs/make.php
     bootstrapFiles:
         - vendor/autoload.php

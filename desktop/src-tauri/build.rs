@@ -8,6 +8,7 @@ fn main() {
             "hide_window",
             "set_pinned",
             "check_updates",
+            "pick_folder",
         ]),
     ))
     .expect("failed to run the Tauri build script");

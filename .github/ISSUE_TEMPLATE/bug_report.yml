@@ -1,0 +1,102 @@
+name: Bug report
+description: Something in Peep does not work as it should.
+title: "Bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. The details below let us reproduce it quickly.
+        For a security problem, do not open an issue: report it privately (see SECURITY.md).
+
+  - type: dropdown
+    id: part
+    attributes:
+      label: Which part of Peep?
+      options:
+        - Client (peep() in my app)
+        - Laravel integration
+        - Viewer (cards, filters, settings)
+        - Mail or SMS catching
+        - Webhooks
+        - Desktop app
+        - Global install (peep.phar)
+        - peep-clean or the PHPStan rule
+        - Documentation
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you saw, and what you expected instead.
+      placeholder: peep($order) shows nothing, although the viewer is running.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The smallest code or steps that show it.
+      placeholder: |
+        1. Start the viewer with php peep-server.phar serve
+        2. Run this script: ...
+        3. ...
+      render: markdown
+    validations:
+      required: true
+
+  - type: input
+    id: peep-version
+    attributes:
+      label: Peep version
+      description: "Client: the version in composer.lock. Viewer: php peep-server.phar --version. Desktop app: About or the tray menu."
+      placeholder: 1.0.0
+    validations:
+      required: true
+
+  - type: input
+    id: php-version
+    attributes:
+      label: PHP version of your app
+      placeholder: "8.3.12"
+    validations:
+      required: true
+
+  - type: input
+    id: framework
+    attributes:
+      label: Framework and version
+      placeholder: Laravel 11.31, Symfony 7.1, plain PHP, WordPress 6.6
+    validations:
+      required: false
+
+  - type: input
+    id: system
+    attributes:
+      label: Operating system, and Docker if used
+      placeholder: macOS 15, app in Docker Desktop
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or error messages
+      description: The viewer's output, a stack trace, or the delivery log for webhooks. Remove secrets first.
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checked
+    attributes:
+      label: Before you send it
+      options:
+        - label: I searched the existing issues and this is not one of them.
+          required: true
+        - label: I checked the Troubleshooting page of the wiki.
+          required: false

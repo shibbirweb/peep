@@ -53,7 +53,35 @@ final class EnvelopeDecoder
                 'started_at' => self::optionalFloat($request, 'started_at'),
             ],
             sentAt: self::optionalFloat($meta, 'sent_at'),
+            logs: self::logs($meta['logs'] ?? null),
         );
+    }
+
+    /**
+     * meta.logs: {"path": absolute folder, "timezone": "Europe/Berlin"}. Anything else is ignored,
+     * so a client that gets it wrong still delivers its cards.
+     *
+     * @return array{path: string, timezone: string}|null
+     */
+    private static function logs(mixed $logs): ?array
+    {
+        if (! is_array($logs) || ! is_string($logs['path'] ?? null) || strlen($logs['path']) > 4096) {
+            return null;
+        }
+
+        $path = $logs['path'];
+        if (! str_starts_with($path, '/') && preg_match('#^[A-Za-z]:[\\\\/]#', $path) !== 1) {
+            return null;
+        }
+
+        $timezone = is_string($logs['timezone'] ?? null) ? $logs['timezone'] : 'UTC';
+        try {
+            new \DateTimeZone($timezone);
+        } catch (\Exception) {
+            $timezone = 'UTC';
+        }
+
+        return ['path' => $path, 'timezone' => $timezone];
     }
 
     /**

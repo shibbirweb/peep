@@ -5,6 +5,7 @@
   import MailInbox from './components/MailInbox.svelte';
   import SmsInbox from './components/SmsInbox.svelte';
   import WebhookPage from './components/WebhookPage.svelte';
+  import LogsPage from './components/LogsPage.svelte';
   import QuerySwitches from './components/QuerySwitches.svelte';
   import SettingsDialog from './components/SettingsDialog.svelte';
   import VirtualList from './components/VirtualList.svelte';
@@ -37,7 +38,7 @@
   const source = $derived(archived === null ? viewer.cards : archived.cards);
   // Projects stay listed after a new screen or clear: their switches and screens still matter.
   const projects = $derived(
-    [...new Set([...projectsOf(viewer.cards), ...viewer.screens.map((screen) => screen.project), ...Object.keys(viewer.switches), ...(project !== '' ? [project] : [])])].sort(),
+    [...new Set([...projectsOf(viewer.cards), ...viewer.screens.map((screen) => screen.project), ...Object.keys(viewer.switches), ...viewer.logFolders.map((folder) => folder.project), ...(project !== '' ? [project] : [])])].sort(),
   );
   const counts = $derived(
     viewer.cards.reduce((totals, card) => {
@@ -125,6 +126,7 @@
       <button type="button" class:active={tab === 'mail'} onclick={() => (tab = 'mail')}>Mail{#if unreadMail > 0} <span class="badge">{unreadMail}</span>{/if}</button>
       <button type="button" class:active={tab === 'sms'} onclick={() => (tab = 'sms')}>SMS{#if unreadSms > 0} <span class="badge">{unreadSms}</span>{/if}</button>
       <button type="button" class:active={tab === 'webhooks'} onclick={() => (tab = 'webhooks')}>Webhooks</button>
+      <button type="button" class:active={tab === 'logs'} onclick={() => (tab = 'logs')}>Logs</button>
     </nav>
 
     <nav class="projects" aria-label="Projects">
@@ -179,6 +181,8 @@
     <SmsInbox messages={viewer.sms} {project} onrequest={showRequest} />
   {:else if tab === 'webhooks'}
     <WebhookPage rules={viewer.webhooks.rules} deliveries={viewer.webhooks.deliveries} {project} />
+  {:else if tab === 'logs'}
+    <LogsPage {project} {projects} ide={viewer.settings.ide} />
   {:else if rows.length === 0}
     <div class="empty">
       {#if inProject.length > 0}

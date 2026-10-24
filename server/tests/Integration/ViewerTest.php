@@ -10,6 +10,7 @@ use Amp\Http\Client\Request;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use ShibbirWeb\PeepServer\Application;
+use ShibbirWeb\PeepServer\Version;
 use ShibbirWeb\PeepServer\Tests\Support\JsonPath;
 use ShibbirWeb\PeepServer\Tests\Unit\Protocol\EnvelopeDecoderTest;
 
@@ -44,7 +45,7 @@ final class ViewerTest extends TestCase
         $response = $this->client->request(new Request($this->application->url() . '/_peep/health'));
 
         $this->assertSame(200, $response->getStatus());
-        $this->assertSame(['app' => 'peep', 'protocol' => 1, 'version' => '0.0.0'], json_decode($response->getBody()->buffer(), true));
+        $this->assertSame(['app' => 'peep', 'protocol' => 1, 'version' => Version::VERSION], json_decode($response->getBody()->buffer(), true));
     }
 
     public function testEnvelopesReachTheStreamLive(): void

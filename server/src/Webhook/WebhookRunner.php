@@ -164,10 +164,13 @@ final class WebhookRunner
         return array_reverse(array_values($this->deliveries));
     }
 
-    public function clear(): void
+    /**
+     * Forgets the logged calls of one project, or of every project.
+     */
+    public function clear(?string $project = null): void
     {
-        $this->deliveries = [];
-        $this->hub->publish([new ServerEvent('webhook.cleared', [])]);
+        $this->deliveries = $project === null ? [] : array_filter($this->deliveries, static fn(Delivery $delivery): bool => $delivery->project !== $project);
+        $this->hub->publish([new ServerEvent('webhook.cleared', $project === null ? [] : ['project' => $project])]);
     }
 
     public static function isAllowedCallbackHost(string $url): bool

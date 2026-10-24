@@ -8,7 +8,7 @@ Peep is in early development. Until 1.0.0, only the latest release receives secu
 
 Please do not open a public issue for security problems.
 
-Report it privately through GitHub: open the repository's **Security** tab and choose **Report a vulnerability**. Include the affected version, the steps to reproduce, and the impact you expect.
+Report it privately through GitHub: open the repository's **Security** tab and choose **Report a vulnerability** ([direct link](https://github.com/shibbirweb/peep/security/advisories/new)). Include the affected version, the steps to reproduce, and the impact you expect.
 
 You will get a reply within 7 days. Once a fix is released, the advisory is published with credit to the reporter unless you ask otherwise.
 

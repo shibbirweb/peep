@@ -28,9 +28,12 @@ This is not a clearance search. Before 1.0, search the official databases for th
 
 Releases follow nibtree's model: `develop` is the beta line, `main` is stable, and workflows do the bumping, tagging and publishing. The full description, with diagrams, is the wiki's [Releasing](../wiki/developer/Releasing.md) page.
 
-1. Create the `develop` branch from `main` (done) and protect both: pull requests and passing CI.
+1. Create the `develop` branch from `main` and make it the default branch (both done), and protect `develop` and `main`: pull requests and passing CI.
 2. Tick Settings, Actions, General, "Allow GitHub Actions to create and approve pull requests".
 3. Actions, **Beta release** on `develop`: opens `chore:[REL-n] release 0.1.0-beta.1`. Merge it; **Publish beta** publishes the pre-release and **Release** attaches the PHARs and desktop apps.
 4. Actions, **Stable release** on `develop`, merge its pull request, then merge the develop to main pull request that **Promote stable** opens. **Publish stable** publishes the release; **Release** builds it and, with `PACKAGIST_AUTO_PUBLISH`, creates or updates the Packagist package.
+5. Once, after the **first** stable release is published: make `main` the default branch (Settings, General, Default branch), so visitors land on the stable README and its install steps instead of the beta line's. Until then `develop` stays the default, because `main` is far behind it and the workflows started by CI finishing run from the default branch's files. After the switch:
+   - Pull requests still go into `develop`. GitHub now suggests `main` as the base; change it to `develop`.
+   - **Publish beta**, **Promote stable** and **Publish stable** run from `main`'s copy of their workflow files, and so do **Release** and **Desktop**, which they call. A fix to any of these takes effect once it reaches `main` with the next stable release. When one is needed sooner, switch the default branch back to `develop` for that release.
 
 `bun scripts/version.ts pending` says what the next release would be at any time.

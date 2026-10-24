@@ -6,7 +6,11 @@
     { "page": "usage/Version-Support.md", "summary": "Which PHP, Laravel, packages and operating systems each part supports and CI tests." },
     { "page": "usage/Configuration.md", "summary": "peep.php, environment variables, Docker paths, and the bridges for apps without Laravel." },
     { "page": "usage/The-Viewer.md", "summary": "Cards, request groups, projects, filters, search, screens, pausing and settings." },
-    { "page": "usage/API-Reference.md", "summary": "Every method of peep(), and the Laravel additions." },
+    { "page": "usage/API-Reference.md", "summary": "How a card works, when nothing is sent, and every method of peep() at a glance." },
+    { "page": "usage/API-Values.md", "summary": "Sending values: send, pass, raw, text, HTML, JSON, XML, tables, images, files and links, and how values are shown." },
+    { "page": "usage/API-Inspecting.md", "summary": "The card's look, callers and traces, exceptions, timing, counting, catching, pausing and stopping." },
+    { "page": "usage/API-Control.md", "summary": "Sending less, turning Peep on and off, screens, notifications, SMS, and your own methods with macros." },
+    { "page": "usage/API-Laravel.md", "summary": "The Laravel methods: query and watcher switches, models, mail, Context, ->peep() on Laravel classes and Blade." },
     { "page": "usage/Laravel.md", "summary": "What Laravel shows with no code, the config, macros, Blade, mail and SMS." },
     { "page": "usage/Query-Debugging.md", "summary": "Queries with bindings, slow and duplicate badges, and switching capture from the viewer." },
     { "page": "usage/Plain-PHP.md", "summary": "Scripts and apps without a framework: errors, logs and dump()." },
@@ -16,8 +20,10 @@
     { "page": "usage/Global-Install.md", "summary": "peep() in every script of a PHP install, without Composer." },
     { "page": "usage/Mail-and-SMS.md", "summary": "Catch the mail and SMS your app sends: SMTP, the peep mailer, Mailgun, Twilio and Vonage." },
     { "page": "usage/Webhooks.md", "summary": "Call your app back with signed Mailgun, Twilio and Vonage events." },
+    { "page": "usage/Logs.md", "summary": "Your app's log files as colored entries, with exceptions, context trees, live watching and filters." },
     { "page": "usage/Desktop-App.md", "summary": "The viewer in its own window: display mode, tray, hotkey, notifications and updates." },
     { "page": "usage/Finding-Leftover-Calls.md", "summary": "peep-clean, artisan peep:clean and the PHPStan rule." },
+    { "page": "usage/AI-Agents.md", "summary": "Let an AI agent debug with Peep: the skill, vendor/bin/peep, the debug report and the MCP server." },
     { "page": "usage/Troubleshooting.md", "summary": "No cards, Docker, editor links, ports and failing webhooks." }
   ],
   "developer": [

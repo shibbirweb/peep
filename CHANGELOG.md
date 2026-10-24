@@ -11,8 +11,15 @@ notes, and `bun scripts/version.ts notes` prints it. See the Releasing page of t
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-24
+
 ### Added
 
+- A full API reference in the wiki: how a card works and when nothing is sent, then every method of `peep()` with its signature, parameters, return value, behavior and examples, on five pages (overview, values, inspecting, control, Laravel methods), linked from the README.
+- AI agents can test webhook handlers: `peep webhooks` lists the rules made in the viewer (never their secrets) and the calls they made with the app's answers, and `peep send-webhook --rule=NAME --event=failed --mail=last` calls the app now, signed like the provider, and shows the answer (or runs every step of the rule). MCP tools `peep_webhooks` and `peep_send_webhook`; failed calls are listed in the debug report, and `peep clear --what=webhooks` forgets a project's calls.
+- `llms-install.md`: step-by-step instructions an AI coding agent follows to install Peep for a user (the right viewer download for the machine, the package, turning it on, and a test that proves it works), with `llms.txt` and a ready-to-paste prompt in the README.
+- Logs tab: your app's log files (Laravel's `storage/logs`, reported by the app, or any folder you add in the tab, even before the app sends anything, picked with **Browse…**: the system's folder dialog in the desktop app, the viewer's own folder picker in a browser) as colored entries with the exception and its stack, and the context as a tree, JSON or raw text. Watch a file live or pause it, newest or oldest first, filter by level and text; large files open at once. Agents read them with `peep logs` and `peep_logs`, and the debug report lists log file errors.
+- AI agents: `vendor/bin/peep` (and `php peep.phar`) reads the viewer as text with `status`, `report` (a Markdown debug report, problems first), `cards`, `mail`, `sms`, `wait` and `clear`; `peep mcp` runs the same as an MCP server; `peep skill` prints or installs the Peep skill that teaches an agent to debug with Peep and report back. The viewer answers them on the local-only `/_peep/agent/*` endpoints.
 - Leftover calls: `vendor/bin/peep-clean [--fix]` and `php artisan peep:clean` list `peep()`, `pd()`, `->peep()` and `@peep` calls and remove the safe ones; a PHPStan rule (`phpstan/rules.neon`) reports them.
 - Releases: betas from `develop` and stable releases from `main`, cut by the Beta release and Stable release workflows (version worked out from the commits, release pull request, then publish), with the PHARs, checksums and desktop apps attached. Release notes come from this changelog. `bun scripts/version.ts` shows, checks, bumps and sets the version everywhere it is written.
 - Packagist: the Release workflow can create and update the package itself (`PACKAGIST_AUTO_PUBLISH`).
@@ -62,4 +69,5 @@ notes, and `bun scripts/version.ts notes` prints it. See the Releasing page of t
 - Peep no longer calls `set_error_handler()` while sending, which on PHP 7 could remove the app's error handler when Peep was called from inside it.
 - The viewer's Host check now covers only the UI and the stream, so apps in Docker can send through `host.docker.internal`.
 
-[Unreleased]: https://github.com/shibbirweb/peep/commits/develop
+[Unreleased]: https://github.com/shibbirweb/peep/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/shibbirweb/peep/releases/tag/v0.1.0
