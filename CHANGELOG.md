@@ -11,6 +11,10 @@ notes, and `bun scripts/version.ts notes` prints it. See the Releasing page of t
 
 ## [Unreleased]
 
+### Fixed
+
+- The website's next (beta) docs install the beta: their `composer require shibbirweb/peep` commands add `:@beta`, and the banner says so. The docs of released versions are unchanged.
+
 ## [0.2.0] - 2026-10-24
 
 ### Added
