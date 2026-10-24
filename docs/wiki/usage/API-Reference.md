@@ -1,122 +1,119 @@
 # API reference
 
-`peep()` returns a card. Every method returns the card, so calls chain; each `peep()` call is one card in the viewer, and later calls on the same card update it.
+Everything you do with Peep starts with `peep()`. This page explains how a card works and lists every method. Each method is documented in full, with its parameters, return value, behavior and examples, on one of these pages:
+
+| Page | Covers |
+|------|--------|
+| [Values](API-Values.md) | Sending values in every format, and how values are shown |
+| [Inspecting](API-Inspecting.md) | The card's look, traces, exceptions, timing, counting, catching, pausing and stopping |
+| [Control](API-Control.md) | Sending less, turning Peep on and off, the viewer, SMS, and macros |
+| [Laravel](API-Laravel.md) | Query and watcher switches, models, mail, Context, `->peep()` on Laravel classes and Blade |
+
+## The helpers
 
 ```php
-peep($order)->green()->label('Order')->expand(2);
+peep(mixed ...$values): Peep
+pd(mixed ...$values): never
 ```
 
-Nothing is sent while Peep is off (the default outside development), and a closed viewer costs a few milliseconds once, then nothing.
+`peep()` creates a new card. With values, it sends them right away, so `peep($user)` is the same as `peep()->send($user)`. It always returns the card, an instance of `ShibbirWeb\Peep\Peep`.
 
-## Values
+`pd()` sends the values, then stops the script with exit code 1, like Laravel's `dd()`.
 
-| Method | Shows |
-|--------|-------|
-| `peep(...$values)`, `send(...$values)` | One or more values; on a card that already shows values, replaces them |
-| `pass($value)` | The value, and returns it: `return peep()->pass($total);` |
-| `raw(...$values)` | Values without casters: every property as stored |
-| `text(string $text)` | Text with whitespace kept, never rendered as HTML |
-| `html(string $html)` | HTML, in a sandboxed frame |
-| `json(string $json)` | A JSON string, pretty-printed |
-| `toJson(...$values)` | Values encoded with `json_encode()` |
-| `xml(string $xml)` | XML, indented |
-| `table(array $rows, ?string $label = null)` | An array as a table |
-| `image(string $source)` | An image from a URL, a file path, a data URI or base64 |
-| `file(string $path)` | A file's contents (the first 1 MB) |
-| `link(string $url, ?string $label = null)`, `url(...)` | A link (http, https and mailto only) |
-| `date($date)` | A date, to the microsecond, with its UTC offset |
-| `className($object)` | An object's class |
-| `invade($object)` | An object whose private properties and methods you can read and call: `peep()->invade($service)->cache` |
-| `phpinfo(string ...$keys)` | PHP's configuration, or the given ini settings |
-| `separator()` | A divider |
+Both helpers are defined only when no function of that name exists yet, so they never clash with another package.
 
-## Look of the card
+## How a card works
 
-| Method | Does |
-|--------|------|
-| `color(string $color)`, `red()`, `green()`, `blue()`, `orange()`, `purple()`, `gray()`, `yellow()` | Colors the card (and lets you filter by color) |
-| `label(string $label)` | A title for the card |
-| `small()`, `large()` | Text size |
-| `hide()` | Shows the card collapsed |
-| `expand(...$levelOrKeys)`, `expandAll()` | Opens nested values: `expand()` one level more, `expand(3)` three levels, `expand('user', 'user.roles')` those keys |
+- **One call, one card.** Each `peep()` call makes a new card in the viewer.
+- **Methods chain.** Almost every method returns the same card, so you can keep calling. The exceptions are documented: `pass()`, `catch()`, `invade()`, `counterValue()`, `rateLimiter()`, `isActive()`, `enabled()`, `disabled()` and `card()` return something else.
+- **Later calls update the card.** Methods called on a card change that card, not a new one. Keep the object to update it later:
 
-## Where and when
+```php
+$card = peep('Importing...')->label('Import')->blue();
 
-| Method | Does |
-|--------|------|
-| `caller()` | Shows where the function containing the call was called from |
-| `trace(int $limit = 50)`, `backtrace(...)` | Shows the call stack |
-| `exception(Throwable $exception)` | Shows an exception with its trace and source (red) |
-| `measure(?callable $callback = null)` | Without a callback, the first call starts a stopwatch and later calls show the time and memory since the start and since the previous call. With a callback, times that call |
-| `count(?string $name = null)` | Counts how often this line (or a named counter) runs; one card updates in place |
-| `counterValue(string $name)` | Returns a named counter's value |
-| `catch(callable $callback, $filter = null)` | Runs the callback; an exception matching the filter (a class name, a list of them, or a closure whose parameter type names the class, which is then called with the exception and the card) is shown instead of thrown |
-| `pause()` | Stops until you click Continue in the viewer; Stop throws `StopExecutionException` |
-| `die()`, `pd(...$values)` | Sends, then stops the script (like `dd()`) |
+foreach ($rows as $row) {
+    // ...
+}
 
-## Sending less
+$card->send("Imported {$count} rows")->green();  // the same card, now green with the new text
+```
+
+- **Where it was called.** Each card shows the file and line of the call (mapped to your machine in Docker, see [Configuration](Configuration.md)), with a link that opens it in your editor.
+- **Grouped by request.** Cards are grouped by the request, command or job that sent them, and kept apart by project. See [The viewer](The-Viewer.md).
+
+## When nothing is sent
+
+Peep stays out of the way when it cannot or should not send:
+
+- **Off.** Plain PHP apps start with Peep off: turn it on with `PEEP_ENABLED=true` or a `peep.php` file. Laravel turns it on everywhere except `production`. The [global install](Global-Install.md) is on by default. See [Configuration](Configuration.md#turning-it-on).
+- **No viewer.** When the viewer does not answer, Peep remembers it for 30 seconds (across PHP processes when APCu is installed) and sends nothing in that time, so a closed viewer costs a few milliseconds once.
+- **Muted.** `once()`, `limit()` and `if()` can mute a card: then every later call on it does nothing.
+
+While nothing is sent, methods do no work: values are not serialized and files are not read. They still return what they normally return, so code around them behaves the same. A problem inside Peep never reaches your app: it is swallowed and the call does nothing.
+
+## Every method
+
+### Values
 
 | Method | Does |
 |--------|------|
-| `once(...$values)` | Sends only the first time this line runs |
-| `limit(int $times)` | Sends at most that many times from this line |
-| `if($condition, ?callable $callback = null)` | Without a callback, the rest of the chain only runs when the condition (a value or a closure) holds; with one, calls it with the card when it holds |
-| `showIf($condition)` | Sends only when the condition (a value or a closure) is truthy |
-| `remove()`, `removeIf($condition)`, `removeWhen($condition)` | Removes the card |
-| `rateLimiter()` | Process-wide limits: `peep()->rateLimiter()->max(100)->perSecond(10)` |
-| `enable()`, `disable()`, `enabled()`, `disabled()` | Turns Peep on or off for the rest of the process, or asks |
-| `isActive()` | Whether calls are sent right now (on, viewer reachable, not muted) |
+| [`send`](API-Values.md#send) | Shows values; on a card that has some, replaces them |
+| [`pass`](API-Values.md#pass) | Shows a value and returns it |
+| [`raw`](API-Values.md#raw) | Shows values without casters |
+| [`text`](API-Values.md#text) | Text with whitespace kept |
+| [`html`](API-Values.md#html) | HTML in a sandboxed frame |
+| [`json`](API-Values.md#json), [`toJson`](API-Values.md#tojson) | A JSON string, or values encoded as JSON |
+| [`xml`](API-Values.md#xml) | XML, indented |
+| [`table`](API-Values.md#table) | An array as a table |
+| [`image`](API-Values.md#image) | An image from a URL, file, data URI or base64 |
+| [`file`](API-Values.md#file) | A file's contents |
+| [`link`, `url`](API-Values.md#link-and-url) | A clickable link |
+| [`date`](API-Values.md#date) | A date to the microsecond |
+| [`className`](API-Values.md#classname) | An object's class |
+| [`invade`](API-Values.md#invade) | Private properties and methods |
+| [`phpinfo`](API-Values.md#phpinfo) | PHP's configuration |
+| [`separator`](API-Values.md#separator) | A divider |
 
-## The viewer
-
-| Method | Does |
-|--------|------|
-| `newScreen(string $title = '')` | Moves the project's cards to "Previous screens" and starts a new one |
-| `clearScreen()`, `clearAll()` | Clears this project's cards, or every project's |
-| `notify(string $message)` | A notification (in the desktop app or the browser, when switched on in Settings) |
-| `showApp()`, `hideApp()` | Shows or hides the desktop app's window |
-| `sms(string $to, string $body, ?string $from = null)` | Puts an SMS in the viewer's SMS inbox instead of sending it |
-
-## Extending
+### Inspecting
 
 | Method | Does |
 |--------|------|
-| `Peep::macro(string $name, callable $macro)` | Adds a method: `Peep::macro('money', function ($amount) { return $this->text(number_format($amount, 2)); });` |
-| `Peep::hasMacro(string $name)` | Whether a macro exists |
-| `payload(string $type, array $content = [])` | Sends a payload of any type (the viewer shows unknown types as JSON) |
-| `sendCustom($value, string $label)` | A value with a label, in one call |
+| [`color`, `red()` ... `yellow()`](API-Inspecting.md#colors) | Colors the card |
+| [`label`](API-Inspecting.md#label) | A title for the card |
+| [`small`, `large`](API-Inspecting.md#small-and-large) | Text size |
+| [`hide`](API-Inspecting.md#hide) | Shows the card collapsed |
+| [`expand`, `expandAll`](API-Inspecting.md#expand-and-expandall) | Opens nested values |
+| [`caller`](API-Inspecting.md#caller) | Where the current function was called from |
+| [`trace`, `backtrace`](API-Inspecting.md#trace-and-backtrace) | The call stack |
+| [`exception`](API-Inspecting.md#exception) | An exception with its trace and source |
+| [`measure`](API-Inspecting.md#measure) | Time and memory |
+| [`count`, `counterValue`](API-Inspecting.md#count-and-countervalue) | How often a line runs |
+| [`catch`](API-Inspecting.md#catch) | Shows exceptions instead of throwing them |
+| [`pause`](API-Inspecting.md#pause) | Waits for a click in the viewer |
+| [`die`](API-Inspecting.md#die) | Stops the script |
 
-## Laravel
-
-With the Laravel package (auto-discovered), these are added:
+### Control
 
 | Method | Does |
 |--------|------|
-| `showQueries(?callable $callback = null)`, `queries(...)`, `stopShowingQueries()` | Every query with its bindings and time. With a callback, only while it runs, and returns its result |
-| `showSelectQueries()`, `showInsertQueries()`, `showUpdateQueries()`, `showDeleteQueries()` | Queries of one type |
-| `showSlowQueries($thresholdMs = null, ?callable $callback = null)`, `slowQueries(...)`, `stopShowingSlowQueries()` | Queries slower than the threshold (default: `slow_query_ms`) |
-| `showDuplicateQueries(?callable $callback = null)`, `stopShowingDuplicateQueries()` | The same query run again (N+1) |
-| `showConditionalQueries(callable $condition, ?callable $callback = null)`, `stopShowingConditionalQueries()` | Queries for which the condition returns true |
-| `countQueries(callable $callback)` | Runs the callback and shows how many queries it ran, and how long they took |
-| `showEvents()`, `showJobs()`, `showCache()`, `showHttpClientRequests()`, `showViews()`, `showRequests()` and their `stopShowing...()` | The other watchers; each takes an optional callback too |
-| `model(...$models)`, `models(...)` | Models with their attributes, changes and loaded relations |
-| `mailable($mailable)` | A rendered mailable |
-| `markdown(string $markdown)` | Markdown rendered as HTML |
-| `context(string ...$keys)`, `hiddenContext(...)` | Laravel's Context (Laravel 11+) |
+| [`once`](API-Control.md#once), [`limit`](API-Control.md#limit) | Sends only the first times a line runs |
+| [`if`, `showIf`](API-Control.md#if-and-showif) | Sends only when a condition holds |
+| [`remove`, `removeIf`, `removeWhen`](API-Control.md#remove-removeif-and-removewhen) | Removes the card |
+| [`rateLimiter`](API-Control.md#ratelimiter) | Process-wide limits |
+| [`enable`, `disable`, `enabled`, `disabled`](API-Control.md#enable-disable-enabled-and-disabled) | Turns Peep on or off, or asks |
+| [`isActive`](API-Control.md#isactive) | Whether calls are sent right now |
+| [`newScreen`, `clearScreen`, `clearAll`](API-Control.md#newscreen-clearscreen-and-clearall) | Screens and clearing |
+| [`notify`](API-Control.md#notify) | A notification |
+| [`showApp`, `hideApp`](API-Control.md#showapp-and-hideapp) | The desktop app's window |
+| [`sms`](API-Control.md#sms) | An SMS in the viewer's inbox |
+| [`Peep::macro`, `Peep::hasMacro`](API-Control.md#macros) | Your own methods |
+| [`payload`, `sendCustom`](API-Control.md#payload-and-sendcustom) | Payloads for macros and adapters |
+| [`card`](API-Control.md#card) | The card's id |
 
-Also `->peep()` on collections, `Str::of()` strings, query builders (shows the SQL) and test responses, and the Blade directives `@peep($value)`, `@peepAll` (every view variable) and `@peepMeasure`.
+### Laravel
+
+`showQueries()` and the other query switches, `countQueries()`, `showEvents()`, `showJobs()`, `showCache()`, `showHttpClientRequests()`, `showViews()`, `showRequests()`, `model()`, `mailable()`, `markdown()`, `context()`, `hiddenContext()`, `->peep()` on collections, strings, query builders and test responses, and the Blade directives. See [Laravel methods](API-Laravel.md).
 
 ## Finding leftover calls
 
-```bash
-vendor/bin/peep-clean           # lists peep(), pd(), ->peep() and @peep calls; exit code 1 when there are any
-vendor/bin/peep-clean --fix     # removes the ones that can go safely
-php artisan peep:clean --fix    # the same, in Laravel
-```
-
-A call is removed when it is a statement on its own (`peep($x)->red();`) or a `->peep()` step in a chain. Calls used as a value, such as `$user = peep($user);`, are listed to fix by hand. For CI, the PHPStan rule reports every call:
-
-```neon
-includes:
-    - vendor/shibbirweb/peep/phpstan/rules.neon
-```
+`vendor/bin/peep-clean` lists the `peep()`, `pd()`, `->peep()` and `@peep` calls left in your code, and `--fix` removes the safe ones. A PHPStan rule reports them in CI. See [Finding leftover calls](Finding-Leftover-Calls.md).

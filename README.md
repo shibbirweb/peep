@@ -190,7 +190,7 @@ The [wiki](https://github.com/shibbirweb/peep/wiki) has everything, with screens
 
 - [Getting started](docs/wiki/usage/Getting-Started.md) and [Installation](docs/wiki/usage/Installation.md)
 - [Version support](docs/wiki/usage/Version-Support.md): PHP 7.1 to 8.5, Laravel 5.5 to 13
-- [API reference](docs/wiki/usage/API-Reference.md)
+- [API reference](docs/wiki/usage/API-Reference.md): every method of `peep()` with its parameters, return value and examples, in four parts: [values](docs/wiki/usage/API-Values.md), [inspecting](docs/wiki/usage/API-Inspecting.md), [control](docs/wiki/usage/API-Control.md) and [Laravel methods](docs/wiki/usage/API-Laravel.md)
 - [Laravel](docs/wiki/usage/Laravel.md), [other frameworks and plain PHP](docs/wiki/usage/Configuration.md), [mail and SMS](docs/wiki/usage/Mail-and-SMS.md), [webhooks](docs/wiki/usage/Webhooks.md), [desktop app](docs/wiki/usage/Desktop-App.md), [AI agents](docs/wiki/usage/AI-Agents.md)
 - [Releasing](docs/wiki/developer/Releasing.md): betas from `develop`, stable releases from `main`
 - [Protocol](docs/protocol.md), [roadmap](docs/plan/roadmap.md), [feature list](docs/plan/features.md) and [implementation plan](docs/plan/implementation.md)
