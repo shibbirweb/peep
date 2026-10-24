@@ -1,7 +1,7 @@
 # Peep
 
 [![CI](https://github.com/shibbirweb/peep/actions/workflows/ci.yml/badge.svg)](https://github.com/shibbirweb/peep/actions/workflows/ci.yml)
-[![Latest release](https://img.shields.io/github/v/release/shibbirweb/peep?include_prereleases&sort=semver)](https://github.com/shibbirweb/peep/releases)
+[![Latest release](https://img.shields.io/github/v/release/shibbirweb/peep?sort=semver)](https://github.com/shibbirweb/peep/releases)
 [![Packagist version](https://img.shields.io/packagist/v/shibbirweb/peep)](https://packagist.org/packages/shibbirweb/peep)
 [![Packagist downloads](https://img.shields.io/packagist/dt/shibbirweb/peep)](https://packagist.org/packages/shibbirweb/peep)
 [![PHP 7.1 to 8.5](https://img.shields.io/badge/PHP-7.1%20to%208.5-777bb4?logo=php&logoColor=white)](docs/wiki/usage/Version-Support.md)
@@ -28,7 +28,7 @@ Peep has two pieces. You set up each one once:
 | **The viewer** | The window where everything your app sends shows up | On your computer |
 | **The `peep()` package** (`shibbirweb/peep`) | Adds `peep()` to your code and sends what you give it to the viewer | In each PHP project you want to debug |
 
-> Peep is in beta. Until version 1.0, install the package with `:@beta` as shown below, and get the viewer from the newest [release](https://github.com/shibbirweb/peep/releases), marked *Pre-release*.
+> Want to try what comes next? Betas are built from `develop`: install the package with `composer require shibbirweb/peep:@beta --dev` and get the viewer from the newest [release](https://github.com/shibbirweb/peep/releases) marked *Pre-release*. The steps below install the stable release.
 
 > **Installing with an AI agent?** Paste this into Claude Code, Codex, Cursor or any other coding agent, in your project:
 >
@@ -102,7 +102,7 @@ The desktop app brings its own PHP, so you do not need to install PHP for it.
 In your project's folder (the one with `composer.json`):
 
 ```bash
-composer require shibbirweb/peep:@beta --dev
+composer require shibbirweb/peep --dev
 ```
 
 `--dev` keeps Peep out of your production install. Your project can use any PHP from 7.1 to 8.5; only the viewer cares about PHP 8.5, and the desktop app brings its own.
