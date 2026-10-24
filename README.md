@@ -17,7 +17,7 @@ The poster plays the tour of this version in your browser. It is also in the rep
 
 ![The Peep viewer showing cards from a shop app, grouped by request](https://raw.githubusercontent.com/shibbirweb/peep/main/docs/wiki/images/viewer.png)
 
-Works with PHP 7.1 to 8.5 and Laravel 5.5 to 13. More screenshots are in the [wiki](https://github.com/shibbirweb/peep/wiki).
+Works with PHP 7.1 to 8.5 and Laravel 5.5 to 13. More screenshots are on the [website](https://shibbirweb.github.io/peep/) and in the [wiki](https://github.com/shibbirweb/peep/wiki).
 
 ## Installation
 
@@ -186,7 +186,7 @@ Then ask: "Use Peep to find out why checkout fails, fix it, and show me the repo
 
 ## Documentation
 
-The [wiki](https://github.com/shibbirweb/peep/wiki) has everything, with screenshots. It is written in [docs/wiki](docs/wiki) and published by CI.
+The [website](https://shibbirweb.github.io/peep/) and the [wiki](https://github.com/shibbirweb/peep/wiki) have everything, with screenshots. Both are written in [docs/wiki](docs/wiki) and published by CI.
 
 - [Getting started](docs/wiki/usage/Getting-Started.md) and [Installation](docs/wiki/usage/Installation.md)
 - [Version support](docs/wiki/usage/Version-Support.md): PHP 7.1 to 8.5, Laravel 5.5 to 13

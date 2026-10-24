@@ -11,6 +11,11 @@ notes, and `bun scripts/version.ts notes` prints it. See the Releasing page of t
 
 ## [Unreleased]
 
+### Added
+
+- A website at https://shibbirweb.github.io/peep/: a home page with screenshots, features and the tour video, and every wiki page with search, dark mode and diagrams. The pages are copied from `docs/wiki` when the site is built. Every version keeps its docs: the latest stable version at the root, older minor versions under `/v0.1/` and so on, and the beta docs from `develop` under `/next/`, with a version menu and a banner on docs that are not the latest. The Website workflow publishes it to GitHub Pages.
+- The Installation page ends with sending a first card, Laravel in a minute and debugging with an AI agent.
+
 ## [0.1.0] - 2026-10-24
 
 ### Added
