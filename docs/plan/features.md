@@ -310,3 +310,4 @@ After the viewer catches a mail or SMS, it can call back a URL the user sets up,
 - [x] AI-04 Peep skill for agents (`resources/skills/peep/SKILL.md`, Agent Skills format), printed or installed with `peep skill [--install]`
 - [x] AI-05 Docs: wiki page AI agents, README, protocol; `AGENTS.md` (imported by `CLAUDE.md`) with the rules for agents working on Peep itself
 - [x] AI-06 `peep logs` and the `peep_logs` MCP tool; error-level log entries in the debug report since the window, the last `peep clear` or the first card
+- [x] AI-07 Webhooks for agents: `peep webhooks` and `peep send-webhook` (MCP `peep_webhooks`, `peep_send_webhook`) list the user's rules (without secrets) and calls, and send a rule to the app now or on its schedule, with a caught mail or SMS or sample data; failed calls in the debug report

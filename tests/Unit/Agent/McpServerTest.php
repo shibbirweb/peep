@@ -53,12 +53,14 @@ final class McpServerTest extends TestCase
         $answer = $this->ask(['jsonrpc' => '2.0', 'id' => 'a', 'method' => 'tools/list']);
         $tools = $answer['result']['tools'];
 
-        $this->assertSame(['peep_status', 'peep_report', 'peep_cards', 'peep_mail', 'peep_sms', 'peep_logs', 'peep_wait', 'peep_clear'], array_column($tools, 'name'));
+        $this->assertSame(['peep_status', 'peep_report', 'peep_cards', 'peep_mail', 'peep_sms', 'peep_logs', 'peep_webhooks', 'peep_send_webhook', 'peep_wait', 'peep_clear'], array_column($tools, 'name'));
         foreach ($tools as $tool) {
             $this->assertSame('object', $tool['inputSchema']['type']);
             $this->assertNotSame('', $tool['description']);
-            $this->assertSame($tool['name'] === 'peep_clear', $tool['annotations']['destructiveHint'], 'Only peep_clear changes anything.');
+            $this->assertSame($tool['name'] === 'peep_clear', $tool['annotations']['destructiveHint'], 'Only peep_clear removes anything.');
+            $this->assertSame(! in_array($tool['name'], ['peep_clear', 'peep_send_webhook'], true), $tool['annotations']['readOnlyHint']);
         }
+        $this->assertSame(['rule'], $tools[7]['inputSchema']['required']);
     }
 
     public function testToolCallsAskTheViewer(): void
@@ -94,6 +96,20 @@ final class McpServerTest extends TestCase
         $this->ask(['jsonrpc' => '2.0', 'id' => 9, 'method' => 'tools/call', 'params' => ['name' => 'peep_clear', 'arguments' => ['project' => 'shop', 'what' => 'cards']]]);
 
         $this->assertSame([['path' => '/_peep/agent/clear', 'body' => ['project' => 'shop', 'what' => 'cards']]], $this->transport->requests);
+    }
+
+    public function testWebhooksAreListedAndSent(): void
+    {
+        $this->transport->getResponses[] = new TransportResponse(200, "Rules (1):\n");
+        $this->transport->postResponses[] = new TransportResponse(200, "Sent \"Twilio status\" event delivered with SMS sms_1.\n");
+
+        $listed = $this->ask(['jsonrpc' => '2.0', 'id' => 3, 'method' => 'tools/call', 'params' => ['name' => 'peep_webhooks', 'arguments' => ['rule' => 'Twilio status', 'limit' => 5]]]);
+        $sent = $this->ask(['jsonrpc' => '2.0', 'id' => 4, 'method' => 'tools/call', 'params' => ['name' => 'peep_send_webhook', 'arguments' => ['rule' => 'Twilio status', 'event' => 'delivered', 'sms' => 'last']]]);
+
+        $this->assertFalse($listed['result']['isError']);
+        $this->assertSame("Sent \"Twilio status\" event delivered with SMS sms_1.\n", $sent['result']['content'][0]['text']);
+        $this->assertSame(['/_peep/agent/webhooks?limit=5&base=%2Fapp&rule=Twilio%20status'], $this->transport->gets);
+        $this->assertSame([['path' => '/_peep/agent/webhooks/send', 'body' => ['rule' => 'Twilio status', 'event' => 'delivered', 'sms' => 'last']]], $this->transport->requests);
     }
 
     public function testErrors(): void

@@ -16,6 +16,7 @@ final class McpServer
     private const INSTRUCTIONS = <<<'TEXT'
 Peep is a debugger for PHP apps: the app sends values, queries, exceptions, jobs, logs, mail and SMS to the Peep viewer, and these tools read them.
 To debug: call peep_status to check the viewer runs (and peep_logs for the app's log file); add peep($value) calls to the code you suspect (peep($x)->label('why') helps you find your own cards); call peep_clear, reproduce the problem (open the page, run the command or the test); then call peep_report and read the Problems section first. Show the report to the user when they asked for one.
+To test the app's webhook handling (Mailgun, Twilio, Vonage or custom callbacks): peep_webhooks lists the rules the user made in the viewer, and peep_send_webhook calls the app with one, signed so the app's signature check passes, and returns the app's answer.
 Remove every peep() call you added before you finish (vendor/bin/peep-clean --fix lists and removes them).
 TEXT;
 
@@ -147,6 +148,21 @@ TEXT;
                 'search' => $filters['search'],
                 'limit' => $filters['limit'],
             ]),
+            self::tool('peep_webhooks', "Webhook rules the user made in the Peep viewer (what they call, how they sign, which events; never their secrets) and the calls they made to the app, newest first, with the app's answer. Give an id to see one call with its request and response.", [
+                'project' => $filters['project'],
+                'rule' => ['type' => 'string', 'description' => 'One rule: its id or name'],
+                'id' => ['type' => 'string', 'description' => 'One call in full: the id in square brackets (whd_...)'],
+                'since' => $filters['since'],
+                'search' => $filters['search'],
+                'limit' => $filters['limit'],
+            ]),
+            self::tool('peep_send_webhook', "Calls the app's webhook route the way the provider would (Mailgun, Twilio, Vonage or custom), signed so its signature check passes, with a rule the user made in the viewer. With an event, sends that call now and returns the app's answer; without one, runs every step of the rule on its schedule (read the answers with peep_webhooks). Uses a caught mail or SMS, or sample data.", [
+                'rule' => ['type' => 'string', 'description' => 'The rule: its id or name (peep_webhooks lists them)'],
+                'event' => ['type' => 'string', 'description' => 'One event to send now, such as delivered, failed or opened'],
+                'mail' => ['type' => 'string', 'description' => 'A caught mail\'s id, or "last" for the newest'],
+                'sms' => ['type' => 'string', 'description' => 'A caught SMS\'s id, or "last" for the newest'],
+                'project' => $filters['project'],
+            ], ['rule']),
             self::tool('peep_wait', 'Waits for new cards (after the user or a command runs the code), then returns them. Use it when something runs in the background, like a queued job.', [
                 'project' => $filters['project'],
                 'search' => $filters['search'],
@@ -195,6 +211,12 @@ TEXT;
             case 'peep_logs':
                 return $this->viewer->logs($filters, $string('file'), $string('level'));
 
+            case 'peep_webhooks':
+                return $this->viewer->webhooks($filters, $string('rule'), $string('id'));
+
+            case 'peep_send_webhook':
+                return $this->viewer->sendWebhook($string('rule'), $string('event'), $string('mail'), $string('sms'), $string('project'));
+
             case 'peep_wait':
                 $timeout = $string('timeout_seconds');
                 $count = $string('count');
@@ -217,20 +239,27 @@ TEXT;
 
     /**
      * @param array<string, array<string, mixed>> $properties
+     * @param list<string> $required
      * @return array<string, mixed>
      */
-    private static function tool(string $name, string $description, array $properties): array
+    private static function tool(string $name, string $description, array $properties, array $required = []): array
     {
+        $schema = [
+            'type' => 'object',
+            'properties' => $properties !== [] ? $properties : new \stdClass(),
+            'additionalProperties' => false,
+        ];
+        if ($required !== []) {
+            $schema['required'] = $required;
+        }
+
         return [
             'name' => $name,
             'description' => $description,
-            'inputSchema' => [
-                'type' => 'object',
-                'properties' => $properties !== [] ? $properties : new \stdClass(),
-                'additionalProperties' => false,
-            ],
+            'inputSchema' => $schema,
             'annotations' => [
-                'readOnlyHint' => $name !== 'peep_clear',
+                // peep_send_webhook calls the app but changes nothing in Peep or the code.
+                'readOnlyHint' => ! in_array($name, ['peep_clear', 'peep_send_webhook'], true),
                 'destructiveHint' => $name === 'peep_clear',
                 'openWorldHint' => false,
             ],

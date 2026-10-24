@@ -9,11 +9,13 @@ use ShibbirWeb\PeepServer\Log\LogEntry;
 use ShibbirWeb\PeepServer\Mail\Mail;
 use ShibbirWeb\PeepServer\Sms\Sms;
 use ShibbirWeb\PeepServer\Version;
+use ShibbirWeb\PeepServer\Webhook\Delivery;
 
 /**
  * A Markdown debug report of what Peep caught: the problems first (exceptions, failed jobs,
- * slow and duplicate queries, failed HTTP calls, error logs, error responses), then every
- * request with its cards, then mail and SMS. An AI agent shows it to the user as it is.
+ * slow and duplicate queries, failed HTTP calls and webhook calls, error logs, error
+ * responses), then every request with its cards, then mail, SMS and webhook calls. An AI
+ * agent shows it to the user as it is.
  */
 final readonly class Report
 {
@@ -32,8 +34,9 @@ final readonly class Report
      * @param list<Mail> $mails Newest first.
      * @param list<Sms> $messages Newest first.
      * @param list<array{project: string, file: string, entry: LogEntry}> $logErrors Error-level log entries in the window.
+     * @param list<Delivery> $deliveries Webhook calls the viewer made, newest first.
      */
-    public function render(array $cards, array $mails, array $messages, CardQuery $query, array $logErrors = []): string
+    public function render(array $cards, array $mails, array $messages, CardQuery $query, array $logErrors = [], array $deliveries = []): string
     {
         $requests = self::byRequest($cards);
         $problems = $this->problems($cards, $requests);
@@ -43,6 +46,13 @@ final readonly class Report
                 . ($entry->exception !== null ? ' at ' . $this->renderer->path($entry->exception['file']) . ':' . $entry->exception['line'] : '')
                 . ' (' . $logError['project'] . ', ' . $logError['file'] . ', ' . $entry->time . ')';
         }
+        $failedDeliveries = array_values(array_filter($deliveries, static fn(Delivery $delivery): bool => ! $delivery->ok()));
+        foreach ($failedDeliveries as $delivery) {
+            $problems['Failed webhook calls'][] = '`' . $delivery->request['method'] . ' ' . $delivery->request['url'] . '` -> '
+                . ($delivery->error !== null ? self::oneLine($delivery->error) : ($delivery->response['status'] ?? '?'))
+                . ' (' . $delivery->ruleName . ': ' . $delivery->event . ', ' . $delivery->project . ', ' . $delivery->id . ')';
+        }
+        $problems = self::ordered($problems);
         $queries = self::queryCounts($cards);
 
         $scope = [
@@ -61,14 +71,15 @@ final readonly class Report
             '- ' . self::plural(count($requests), 'request') . ', ' . self::plural(count($cards), 'card'),
             '- ' . self::plural($queries['total'], 'query card') . ' (' . $queries['slow'] . ' slow, ' . $queries['duplicate'] . ' repeated)'
                 . ', ' . self::plural(count($problems['Exceptions'] ?? []), 'exception') . ', ' . self::plural(count($problems['Failed jobs'] ?? []), 'failed job'),
-            '- ' . self::plural(count($mails), 'mail', 'mails') . ', ' . self::plural(count($messages), 'SMS', 'SMS') . ', ' . self::plural(count($logErrors), 'log file error'),
+            '- ' . self::plural(count($mails), 'mail', 'mails') . ', ' . self::plural(count($messages), 'SMS', 'SMS') . ', ' . self::plural(count($logErrors), 'log file error')
+                . ', ' . self::plural(count($deliveries), 'webhook call') . ' (' . count($failedDeliveries) . ' failed)',
             '',
             '## Problems',
             '',
         ];
 
         if ($problems === []) {
-            $lines[] = 'None found: no exceptions, failed jobs, slow or duplicate queries, failed HTTP calls, error logs, log file errors or error responses.';
+            $lines[] = 'None found: no exceptions, failed jobs, slow or duplicate queries, failed HTTP calls, failed webhook calls, error logs, log file errors or error responses.';
             $lines[] = '';
         }
 
@@ -126,6 +137,17 @@ final readonly class Report
             foreach ($messages as $sms) {
                 $lines[] = '```text';
                 $lines[] = str_replace('```', "'''", $this->renderer->sms($sms));
+                $lines[] = '```';
+                $lines[] = '';
+            }
+        }
+
+        if ($deliveries !== []) {
+            $lines[] = '## Webhook calls';
+            $lines[] = '';
+            foreach ($deliveries as $delivery) {
+                $lines[] = '```text';
+                $lines[] = str_replace('```', "'''", $this->renderer->delivery($delivery, false));
                 $lines[] = '```';
                 $lines[] = '';
             }
@@ -213,7 +235,18 @@ final readonly class Report
             $problems['Duplicate queries'] = array_values($duplicates);
         }
 
-        $order = ['Exceptions', 'Failed jobs', 'Error responses', 'Failed HTTP calls', 'Error logs', 'Log file errors', 'Slow queries', 'Duplicate queries'];
+        return $problems;
+    }
+
+    /**
+     * The kinds of problems in reading order, without the empty ones.
+     *
+     * @param array<string, list<string>> $problems
+     * @return array<string, list<string>>
+     */
+    private static function ordered(array $problems): array
+    {
+        $order = ['Exceptions', 'Failed jobs', 'Error responses', 'Failed HTTP calls', 'Failed webhook calls', 'Error logs', 'Log file errors', 'Slow queries', 'Duplicate queries'];
 
         return array_filter(array_merge(array_fill_keys($order, []), $problems), static fn(array $items): bool => $items !== []);
     }

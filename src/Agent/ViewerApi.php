@@ -18,7 +18,7 @@ final class ViewerApi
 {
     public const FILTERS = ['project', 'since', 'request', 'card', 'search', 'limit'];
 
-    public const CLEAR_WHAT = ['all', 'cards', 'mail', 'sms'];
+    public const CLEAR_WHAT = ['all', 'cards', 'mail', 'sms', 'webhooks'];
 
     private const CONNECT_TIMEOUT_MS = 1000;
 
@@ -156,6 +156,48 @@ final class ViewerApi
     }
 
     /**
+     * The webhook rules the user made in the viewer (never their secrets) and the calls they
+     * made, newest first; $deliveryId shows one call with its request and response.
+     *
+     * @param array<string, mixed> $filters project, since, search, limit
+     * @return array{ok: bool, text: string}
+     */
+    public function webhooks(array $filters, ?string $rule = null, ?string $deliveryId = null, bool $json = false): array
+    {
+        $query = $this->query($filters, $json);
+
+        if ($rule !== null && $rule !== '') {
+            $query['rule'] = $rule;
+        }
+
+        if ($deliveryId !== null && $deliveryId !== '') {
+            $query['id'] = $deliveryId;
+        }
+
+        return $this->get('webhooks', $query);
+    }
+
+    /**
+     * Calls the app with one of the user's webhook rules, signed the way the provider signs:
+     * $event now (the app's answer comes back), or every step of the rule on its schedule when
+     * $event is null. $mail and $sms take a caught message's id or "last"; without either, the
+     * call carries sample data. Without a rule, the viewer lists the rules there are.
+     *
+     * @return array{ok: bool, text: string}
+     */
+    public function sendWebhook(?string $rule, ?string $event = null, ?string $mail = null, ?string $sms = null, ?string $project = null): array
+    {
+        $payload = [];
+        foreach (['rule' => $rule, 'event' => $event, 'mail' => $mail, 'sms' => $sms, 'project' => $project !== null && $project !== '' ? $project : $this->defaultProject] as $name => $value) {
+            if ($value !== null && $value !== '') {
+                $payload[$name] = $value;
+            }
+        }
+
+        return $this->post('webhooks/send', $payload);
+    }
+
+    /**
      * Waits until $count new cards arrive (or change), then shows them.
      *
      * @param array<string, mixed> $filters
@@ -243,6 +285,25 @@ final class ViewerApi
 
         try {
             $response = $this->transport->get($path);
+        } catch (TransportException $exception) {
+            return $this->unreachable();
+        }
+
+        if (! $response->isSuccessful()) {
+            return $this->failed($response->status(), $response->body());
+        }
+
+        return ['ok' => true, 'text' => $response->body()];
+    }
+
+    /**
+     * @param array<string, string> $payload
+     * @return array{ok: bool, text: string}
+     */
+    private function post(string $endpoint, array $payload): array
+    {
+        try {
+            $response = $this->transport->post('/_peep/agent/' . $endpoint, (string) json_encode($payload));
         } catch (TransportException $exception) {
             return $this->unreachable();
         }

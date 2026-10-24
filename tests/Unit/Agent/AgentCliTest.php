@@ -76,6 +76,24 @@ final class AgentCliTest extends TestCase
         $this->assertStringContainsString('Saved to ' . $file, $result[1]);
     }
 
+    public function testSendWebhookExitsWithOneWhenTheAppAnswersAnError(): void
+    {
+        $this->transport->postResponses[] = new TransportResponse(202, "Scheduled 2 calls of \"Mailgun events\" with sample data: accepted now, delivered after 2000 ms.\n");
+        $this->transport->postResponses[] = new TransportResponse(502, "Sent \"Mailgun events\" event failed with mail mail_1.\n\n... -> 500 in 4 ms\n");
+
+        $scheduled = $this->command(['send-webhook', '--rule=Mailgun events']);
+        $failed = $this->command(['send-webhook', '--rule=wh_1', '--event=failed', '--mail=mail_1']);
+
+        $this->assertSame(0, $scheduled[0]);
+        $this->assertStringContainsString('Scheduled 2 calls', $scheduled[1]);
+        $this->assertSame(1, $failed[0]);
+        $this->assertStringContainsString('-> 500 in 4 ms', $failed[2]);
+        $this->assertSame([
+            ['path' => '/_peep/agent/webhooks/send', 'body' => ['rule' => 'Mailgun events']],
+            ['path' => '/_peep/agent/webhooks/send', 'body' => ['rule' => 'wh_1', 'event' => 'failed', 'mail' => 'mail_1']],
+        ], $this->transport->requests);
+    }
+
     public function testUsageErrors(): void
     {
         $this->assertSame(2, $this->command(['dance'])[0]);

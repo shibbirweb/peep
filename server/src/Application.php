@@ -225,7 +225,7 @@ final class Application
         $sms = new SmsController($this->catcher);
         $inbox = new InboxController($this->catcher, $this->hub);
         $webhooks = new WebhookController($this->webhooks, $this->catcher, $this->hub);
-        $agent = new AgentController($this->cards, $this->catcher, $this->hub, $this->receiving, $this->switches, $this->url(), $this->logFolders);
+        $agent = new AgentController($this->cards, $this->catcher, $this->hub, $this->receiving, $this->switches, $this->url(), $this->logFolders, $this->webhooks);
         $logs = new LogController($this->logFolders, $this->hub);
 
         $router = new Router()

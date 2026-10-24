@@ -6,13 +6,14 @@ const rule = (id, trigger, project = '*', steps = [{ event: 'delivered', delay_m
 describe('webhook state', () => {
   test('deliveries go on top and rules are replaced', () => {
     let state = { rules: [], deliveries: [] };
-    state = applyWebhookEvent(state, 'webhook.delivered', { id: 'a' });
-    state = applyWebhookEvent(state, 'webhook.delivered', { id: 'b' });
+    state = applyWebhookEvent(state, 'webhook.delivered', { id: 'a', project: 'shop' });
+    state = applyWebhookEvent(state, 'webhook.delivered', { id: 'b', project: 'blog' });
     state = applyWebhookEvent(state, 'webhooks.changed', { rules: [rule('r', 'manual')] });
 
     expect(state.deliveries.map((delivery) => delivery.id)).toEqual(['b', 'a']);
     expect(state.rules).toHaveLength(1);
     expect(applyWebhookEvent(state, 'webhook.cleared', {}).deliveries).toEqual([]);
+    expect(applyWebhookEvent(state, 'webhook.cleared', { project: 'blog' }).deliveries.map((delivery) => delivery.id)).toEqual(['a']);
   });
 });
 
