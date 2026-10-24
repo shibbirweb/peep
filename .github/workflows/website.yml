@@ -1,0 +1,95 @@
+# Builds the website (website/, VitePress) and publishes it to GitHub Pages, with every version of the docs.
+#
+# The docs on the website come from docs/wiki, so the wiki and the website never drift apart. Each version
+# is built from its own docs/wiki (website/scripts/build-versions.ts):
+#
+#   /peep/          the latest stable minor version, from its newest tag (v0.1.0 for 0.1)
+#   /peep/v0.1/     each older minor version, once a newer one is out
+#   /peep/next/     develop, the beta line
+#
+# So it publishes when a stable release is published (a new latest version), when develop changes the docs
+# (next), when main changes the website, and on "Run workflow". Pull requests that touch the website or
+# the docs only build the working tree once, so a broken page fails there.
+#
+# Set up once: Settings > Pages > Build and deployment > Source: GitHub Actions. Then Settings >
+# Environments > github-pages > Deployment branches: allow main and develop, or pushes to develop cannot publish.
+name: Website
+run-name: ${{ github.event_name == 'pull_request' && 'Build the website' || 'Publish the website' }}
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'docs/wiki/**'
+      - 'scripts/wiki.ts'
+      - 'website/**'
+      - '.github/workflows/website.yml'
+  pull_request:
+    paths:
+      - 'docs/wiki/**'
+      - 'scripts/wiki.ts'
+      - 'website/**'
+      - '.github/workflows/website.yml'
+  # A stable release adds a version. Its tag is made by stable-publish.yml with the built in token, which
+  # starts no workflow, so this waits for that workflow instead of the tag.
+  workflow_run:
+    workflows: [Publish stable]
+    types: [completed]
+  workflow_dispatch:
+
+# Two deployments at once would race; a newer one waits for the one in progress.
+concurrency:
+  group: website-${{ github.event_name == 'pull_request' && github.ref || 'pages' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Every tag and branch: the versions are worked out from them, and VitePress reads the history
+          # for "Last updated".
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install
+        working-directory: website
+        run: bun install --frozen-lockfile
+
+      - name: Build the working tree
+        if: github.event_name == 'pull_request'
+        working-directory: website
+        run: bun run build
+
+      - name: Build every version
+        if: github.event_name != 'pull_request'
+        working-directory: website
+        run: bun run build:versions
+
+      - name: Upload
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: website/.vitepress/dist
+
+  deploy:
+    name: Publish to GitHub Pages
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

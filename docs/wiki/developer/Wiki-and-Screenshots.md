@@ -47,3 +47,5 @@ The README shows the poster and plays the video in `demo/` (kept out of the Comp
 ## Publishing
 
 The Wiki workflow publishes on every push to `main` that changes the wiki, and "Run workflow" publishes from any branch. The wiki must exist first: open the Wiki tab on GitHub once and save any page; the next publish replaces it.
+
+The same pages are on the [website](https://shibbirweb.github.io/peep/), built from `website/` with VitePress. `website/scripts/sync-docs.ts` copies `docs/wiki` into it on every build, so a page is written once. The Website workflow builds it on pull requests that touch the docs or the website, and publishes it to GitHub Pages with every version of the docs: the latest stable minor at the root (from its newest tag), older minors under `/v0.1/` and so on, and `develop` under `/next/`, with a version menu in the nav. It publishes after a stable release, when `develop` changes the docs and when `main` changes the website. Its sidebar groups are in `website/.vitepress/config.mts`; a new page lands under "More" until it is given a group. To run it locally: `cd website && bun install && bun run dev`. See `website/README.md`.

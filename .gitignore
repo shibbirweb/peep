@@ -28,6 +28,14 @@
 /server/resources/ui/node_modules/
 /server/public/
 
+# Website: dependencies, the docs copied from docs/wiki, and build output
+/website/node_modules/
+/website/docs/
+/website/public/images/
+/website/.vitepress/cache/
+/website/.vitepress/dist/
+/website/.vitepress/versions/
+
 # Editors and OS
 .idea/
 .vscode/
