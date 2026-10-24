@@ -143,13 +143,15 @@ What the `peep` command line and its MCP server read (see the wiki page [AI agen
 
 | Method and path | Purpose |
 |-----------------|---------|
-| `GET /_peep/agent/status` | Viewer version and address, receiving or paused, each project with its card, mail and SMS counts, the query switches, and `now` (the viewer's clock, for `since`) |
+| `GET /_peep/agent/status` | Viewer version and address, receiving or paused, each project with its card, mail and SMS counts, the query switches, the number of webhook rules and calls, and `now` (the viewer's clock, for `since`) |
 | `GET /_peep/agent/cards` | Cards as text, oldest first; with `format=json`, each card's data and its `text` |
-| `GET /_peep/agent/report` | A Markdown debug report (`text/markdown`): summary, problems (with error-level log file entries since the window, the last clear, or the first card), every request with its cards, mail and SMS |
+| `GET /_peep/agent/report` | A Markdown debug report (`text/markdown`): summary, problems (with error-level log file entries since the window, the last clear, or the first card, and failed webhook calls), every request with its cards, mail, SMS and webhook calls |
 | `GET /_peep/agent/mail` | Caught mail; `id=` for one mail with its body |
 | `GET /_peep/agent/sms` | Caught SMS |
 | `GET /_peep/agent/logs` | Entries of a project's log file: `file=` (default the newest), `level=` (that level and above), plus `since`, `search` and `limit` |
-| `POST /_peep/agent/clear` | `{"project": "shop" or null, "what": "all" \| "cards" \| "mail" \| "sms"}`; `400` for anything else |
+| `GET /_peep/agent/webhooks` | Webhook rules made in the viewer (never their signing secret or variable values) and the calls they made, newest first: `rule=` (an id or name), `id=` for one call with its request and response (credential-like headers hidden), plus `project`, `since`, `search` and `limit` |
+| `POST /_peep/agent/webhooks/send` | `{"rule": id or name, "event": "delivered", "mail" or "sms": an id or "last", "project"}`. With `event`, sends that call now and answers with it: `200` when the app answered 2xx, `502` otherwise. Without, runs every step of the rule on its schedule and answers `202`. No mail or SMS means sample data. `400`, `404` or `409` (two rules with that name) explain themselves |
+| `POST /_peep/agent/clear` | `{"project": "shop" or null, "what": "all" \| "cards" \| "mail" \| "sms" \| "webhooks"}`; `400` for anything else |
 
 Filters, in the query string: `project`, `since` (unix time, or an age such as `90s`, `5m`, `2h`, `1d`), `request` and `card` (the start of an id, dashes ignored), `search` (case-insensitive), `limit` (default 50, at most 1000) and `base` (a directory; paths under it are shown relative to it).
 

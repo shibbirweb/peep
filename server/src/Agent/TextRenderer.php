@@ -8,9 +8,11 @@ use ShibbirWeb\PeepServer\Card\Card;
 use ShibbirWeb\PeepServer\Log\LogEntry;
 use ShibbirWeb\PeepServer\Mail\Mail;
 use ShibbirWeb\PeepServer\Sms\Sms;
+use ShibbirWeb\PeepServer\Webhook\Delivery;
+use ShibbirWeb\PeepServer\Webhook\Rule;
 
 /**
- * Plain-text forms of cards, mail and SMS for AI agents and terminals.
+ * Plain-text forms of cards, mail, SMS and webhooks for AI agents and terminals.
  *
  * Follows the UI's "Copy" text (resources/ui/src/lib/text.js) and adds the Laravel
  * payloads, so an agent reads the same thing a developer sees in the viewer.
@@ -22,6 +24,17 @@ final readonly class TextRenderer
     private const int MAX_FRAMES = 12;
 
     private const int MAX_BODY_CHARS = 2000;
+
+    private const array TRIGGERS = [
+        'mail.received' => 'on every caught mail',
+        'sms.received' => 'on every caught SMS',
+        'manual' => 'only when sent by hand',
+    ];
+
+    /**
+     * Header names whose values are shown as "(hidden)": what a rule may carry as a credential.
+     */
+    private const string SECRET_HEADER = '/authorization|cookie|token|secret|password|api-?key/i';
 
     /**
      * @param string|null $base Project root; paths under it are shown relative to it.
@@ -212,6 +225,101 @@ final readonly class TextRenderer
         }
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * A webhook rule as an agent needs it to pick one: when it runs, what it calls and which
+     * events it sends. Its signing secret and variable values are never shown.
+     */
+    public function rule(Rule $rule): string
+    {
+        $steps = array_map(static fn(array $step): string => $step['event'] . ($step['delay_ms'] > 0 ? ' (after ' . self::milliseconds($step['delay_ms']) . ')' : ''), $rule->steps);
+
+        $lines = [
+            '[' . $rule->id . '] ' . $rule->name . ($rule->enabled ? '' : '  DISABLED') . '  project ' . ($rule->project === '*' ? 'any' : $rule->project) . ', ' . (self::TRIGGERS[$rule->trigger] ?? $rule->trigger),
+            '  ' . $rule->method . ' ' . $rule->url . '  (' . $rule->format . ', signature ' . $rule->signature['type'] . ($rule->useStatusCallback ? ', or the SMS status callback URL' : '') . ')',
+            '  events: ' . implode(', ', $steps),
+        ];
+        if ($rule->toContains !== '') {
+            $lines[] = '  only when To contains "' . $rule->toContains . '"';
+        }
+        if ($rule->retry['enabled']) {
+            $lines[] = '  retries failed calls up to ' . $rule->retry['max'] . ' times';
+        }
+        if ($rule->vars !== []) {
+            $lines[] = '  variables: ' . implode(', ', array_keys($rule->vars)) . ' (values not shown)';
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * One webhook call: the rule and event, the URL and the app's answer. In full, the request
+     * and the response with their headers and bodies.
+     */
+    public function delivery(Delivery $delivery, bool $full): string
+    {
+        $answer = match (true) {
+            $delivery->error !== null => 'failed: ' . $delivery->error,
+            $delivery->response === null => 'no answer',
+            default => $delivery->response['status'] . ($delivery->ok() ? ' OK' : ''),
+        };
+
+        $lines = [
+            '[' . $delivery->id . '] ' . self::ago($this->now - $delivery->at) . '  ' . $delivery->project . '  ' . $delivery->ruleName . ': ' . $delivery->event
+                . ($delivery->subject !== null ? '  for ' . $delivery->subject : '')
+                . ($delivery->attempt > 1 ? '  attempt ' . $delivery->attempt : ''),
+            $delivery->request['method'] . ' ' . $delivery->request['url'] . ' -> ' . $answer . ' in ' . $delivery->durationMs . ' ms',
+        ];
+        if ($delivery->warnings !== []) {
+            $lines[] = 'Template warnings: ' . implode('; ', $delivery->warnings);
+        }
+
+        $answerBody = trim($delivery->response['body'] ?? '');
+        if (! $full) {
+            if (! $delivery->ok() && $answerBody !== '') {
+                $lines[] = 'Answer: ' . mb_substr((string) preg_replace('/\s+/u', ' ', $answerBody), 0, 160);
+            }
+
+            return implode("\n", $lines);
+        }
+
+        $lines[] = '';
+        $lines[] = 'Request headers:';
+        $lines[] = self::headers($delivery->request['headers']);
+        if ($delivery->request['body'] !== '') {
+            $lines[] = 'Request body:';
+            $lines[] = self::indent(self::cut(self::prettyJson($delivery->request['body']), self::MAX_BODY_CHARS * 5), '  ');
+        }
+
+        if ($delivery->response !== null) {
+            $lines[] = '';
+            $lines[] = 'Response headers:';
+            $lines[] = self::headers($delivery->response['headers']);
+            $lines[] = 'Response body:' . ($answerBody === '' ? ' (empty)' : '');
+            if ($answerBody !== '') {
+                $lines[] = self::indent(self::cut(self::prettyJson($answerBody), self::MAX_BODY_CHARS * 5), '  ');
+            }
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * Headers with the values of credential-like ones (Authorization, cookies, tokens) hidden.
+     *
+     * @param array<string, string> $headers
+     * @return array<string, string>
+     */
+    public static function hideSecretHeaders(array $headers): array
+    {
+        foreach ($headers as $name => $value) {
+            if (preg_match(self::SECRET_HEADER, (string) $name) === 1) {
+                $headers[$name] = '(hidden)';
+            }
+        }
+
+        return $headers;
     }
 
     public function sms(Sms $sms): string
@@ -456,6 +564,24 @@ final readonly class TextRenderer
         $parts = array_values(array_filter($parts, static fn(string $part): bool => $part !== ''));
 
         return $parts === [] ? '' : ' (' . implode(', ', $parts) . ')';
+    }
+
+    /**
+     * @param array<string, string> $headers
+     */
+    private static function headers(array $headers): string
+    {
+        $lines = [];
+        foreach (self::hideSecretHeaders($headers) as $name => $value) {
+            $lines[] = '  ' . $name . ': ' . $value;
+        }
+
+        return $lines === [] ? '  (none)' : implode("\n", $lines);
+    }
+
+    private static function milliseconds(int $milliseconds): string
+    {
+        return $milliseconds % 1000 === 0 ? ($milliseconds / 1000) . ' s' : $milliseconds . ' ms';
     }
 
     private static function prettyJson(string $json): string

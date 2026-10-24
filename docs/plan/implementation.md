@@ -689,6 +689,10 @@ An AI agent debugs with Peep through text. The viewer renders it, so the client 
 - `Agent\McpServer` speaks MCP (protocol 2024-11-05 to 2025-06-18) over stdio, one JSON-RPC message per line, with tools that map one to one to `ViewerApi`. Only `peep_clear` is marked destructive.
 - The skill (`resources/skills/peep/SKILL.md`) is the agent's manual: check, clear, instrument, reproduce, read, fix, clean up with `peep-clean --fix`, and report. It ships in the Composer package and the PHAR.
 
+### Webhooks for agents [AI-07]
+
+An agent tests the app's webhook handling only through rules the user made in the viewer: it never sees or chooses a signing secret, and a rule calls only the URL the user gave it, so no new outbound reach is added. `GET /_peep/agent/webhooks` renders rules (`TextRenderer::rule`, with the secret, variable values and credential-like headers left out) and `WebhookRunner`'s delivery log. `POST /_peep/agent/webhooks/send` finds the rule by id or name, takes a caught mail or SMS (`last` for the newest) or `Variables::sampleMail()` and `sampleSms()` for the target project, then either calls `deliver()` for one event and answers with the delivery (`502` when the app did not answer 2xx, so `peep` exits with 1 and MCP marks the result as an error) or `schedule()`s every step and answers `202`. The report lists calls that failed under **Failed webhook calls** and every call in the window under **Webhook calls**; `clear` with `webhooks` (or `all`) forgets a project's calls, and the UI drops only that project's.
+
 ### Logs [VF-25 to VF-27, AI-06]
 
 The viewer reads log files itself, so it shows what was written before Peep was on. The client only says where they are: `log_path` (Laravel: `storage/logs`) and `log_timezone` (Laravel: `app.timezone`) go into `meta.logs`, the path mapped like origins. `Log\LogFolders` keeps one folder per project in the settings (`log_folders`); a folder chosen in the tab (`manual`) wins over the reported one, and only its time zone follows the app.

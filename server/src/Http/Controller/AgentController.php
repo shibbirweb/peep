@@ -25,6 +25,10 @@ use ShibbirWeb\PeepServer\Mail\Mail;
 use ShibbirWeb\PeepServer\Sms\Sms;
 use ShibbirWeb\PeepServer\Switch\SwitchStore;
 use ShibbirWeb\PeepServer\Version;
+use ShibbirWeb\PeepServer\Webhook\Delivery;
+use ShibbirWeb\PeepServer\Webhook\Rule;
+use ShibbirWeb\PeepServer\Webhook\Variables;
+use ShibbirWeb\PeepServer\Webhook\WebhookRunner;
 
 /**
  * What AI agents and the `peep` command line read, as plain text (the default) or JSON
@@ -36,7 +40,12 @@ use ShibbirWeb\PeepServer\Version;
  * GET  /_peep/agent/mail           mail (id=... for one, with its body)
  * GET  /_peep/agent/sms            SMS
  * GET  /_peep/agent/logs           entries of a project's log file (file=, level=, since=, search=, limit=)
- * POST /_peep/agent/clear          {"project": "shop" or null, "what": "cards" | "mail" | "sms" | "all"}
+ * GET  /_peep/agent/webhooks       webhook rules (never their secrets) and the calls made (rule=, id=... for one in full)
+ * POST /_peep/agent/webhooks/send  {"rule", "event", "mail" or "sms" (an id or "last"), "project"}: call the app now
+ * POST /_peep/agent/clear          {"project": "shop" or null, "what": "cards" | "mail" | "sms" | "webhooks" | "all"}
+ *
+ * Agents send webhooks only through rules made in the viewer, so they never see or choose a
+ * signing secret, and a rule calls only the URL the user gave it.
  */
 final readonly class AgentController implements RequestHandler
 {
@@ -46,6 +55,8 @@ final readonly class AgentController implements RequestHandler
 
     private const float LOG_WINDOW_SECONDS = 900.0;
 
+    public const array CLEAR_WHAT = ['all', 'cards', 'mail', 'sms', 'webhooks'];
+
     public function __construct(
         private CardStore $cards,
         private Catcher $catcher,
@@ -54,6 +65,7 @@ final readonly class AgentController implements RequestHandler
         private SwitchStore $switches,
         private string $url,
         private ?LogFolders $logFolders = null,
+        private ?WebhookRunner $webhooks = null,
     ) {}
 
     public function handleRequest(Request $request): Response
@@ -67,9 +79,11 @@ final readonly class AgentController implements RequestHandler
         $renderer = new TextRenderer($now, $query->base);
 
         if ($request->getMethod() === 'POST') {
-            return $path === '/_peep/agent/clear'
-                ? $this->clear(JsonBody::read($request))
-                : Responses::error(404, 'not_found', 'Not found.');
+            return match ($path) {
+                '/_peep/agent/clear' => $this->clear(JsonBody::read($request)),
+                '/_peep/agent/webhooks/send' => $this->sendWebhook(JsonBody::read($request), $renderer),
+                default => Responses::error(404, 'not_found', 'Not found.'),
+            };
         }
 
         return match ($path) {
@@ -79,7 +93,8 @@ final readonly class AgentController implements RequestHandler
             '/_peep/agent/mail' => $this->mail($query, $renderer, $now, $json, is_string($parameters['id'] ?? null) ? $parameters['id'] : null),
             '/_peep/agent/sms' => $this->sms($query, $renderer, $now, $json),
             '/_peep/agent/logs' => $this->logs($query, $renderer, $now, $json, $parameters),
-            default => Responses::error(404, 'not_found', 'Not found. Agent paths: status, cards, report, mail, sms, logs, clear.'),
+            '/_peep/agent/webhooks' => $this->webhookList($query, $renderer, $now, $json, $parameters),
+            default => Responses::error(404, 'not_found', 'Not found. Agent paths: status, cards, report, mail, sms, logs, webhooks, webhooks/send, clear.'),
         };
     }
 
@@ -100,6 +115,13 @@ final readonly class AgentController implements RequestHandler
             $projects[$sms->project]['sms']++;
         }
 
+        $deliveries = $this->webhooks?->deliveries() ?? [];
+        $webhooks = [
+            'rules' => count($this->webhooks?->rules->all() ?? []),
+            'calls' => count($deliveries),
+            'failed' => count(array_filter($deliveries, static fn(Delivery $delivery): bool => ! $delivery->ok())),
+        ];
+
         if ($json) {
             return Responses::json(200, [
                 'app' => 'peep',
@@ -109,6 +131,7 @@ final readonly class AgentController implements RequestHandler
                 'receiving' => ! $this->receiving->paused,
                 'projects' => array_values($projects),
                 'switches' => $this->switches->all(),
+                'webhooks' => $webhooks,
             ]);
         }
 
@@ -127,6 +150,9 @@ final readonly class AgentController implements RequestHandler
                 array_keys($switches),
                 $switches,
             ));
+        }
+        if ($webhooks['rules'] > 0) {
+            $lines[] = '  webhooks: ' . $webhooks['rules'] . ' rules, ' . $webhooks['calls'] . ' calls made (' . $webhooks['failed'] . ' failed); see peep webhooks';
         }
         $lines[] = 'cursor: ' . sprintf('%.6F', $now);
 
@@ -163,6 +189,7 @@ final readonly class AgentController implements RequestHandler
             $query->sms($this->catcher->sms->all()),
             $query,
             $this->logErrors($query, $cards, $renderer->now),
+            $all->deliveries($this->webhooks?->deliveries() ?? []),
         );
     }
 
@@ -301,8 +328,8 @@ final readonly class AgentController implements RequestHandler
         $project = JsonBody::project($data);
         $what = is_string($data['what'] ?? null) ? $data['what'] : 'all';
 
-        if (! in_array($what, ['all', 'cards', 'mail', 'sms'], true)) {
-            return Responses::error(400, 'invalid_request', 'Send {"project": "shop" or null, "what": "all" | "cards" | "mail" | "sms"}.');
+        if (! in_array($what, self::CLEAR_WHAT, true)) {
+            return Responses::error(400, 'invalid_request', 'Send {"project": "shop" or null, "what": "all" | "cards" | "mail" | "sms" | "webhooks"}.');
         }
 
         if ($what === 'all' || $what === 'cards') {
@@ -315,8 +342,191 @@ final readonly class AgentController implements RequestHandler
         if ($what === 'all' || $what === 'sms') {
             $this->hub->publish($this->catcher->sms->clear($project));
         }
+        if ($what === 'all' || $what === 'webhooks') {
+            $this->webhooks?->clear($project);
+        }
 
         return Responses::json(200, ['cleared' => $what, 'project' => $project, 'now' => microtime(true)]);
+    }
+
+    /**
+     * The rules an agent can send and the calls made, newest first; id= shows one call in full.
+     *
+     * @param array<mixed> $parameters
+     */
+    private function webhookList(CardQuery $query, TextRenderer $renderer, float $now, bool $json, array $parameters): Response
+    {
+        $runner = $this->webhooks;
+        if ($runner === null) {
+            return self::text("This viewer has no webhook simulator.\n", 'text/plain', 404);
+        }
+
+        $deliveryId = is_string($parameters['id'] ?? null) && $parameters['id'] !== '' ? $parameters['id'] : null;
+        if ($deliveryId !== null) {
+            $delivery = $runner->find($deliveryId);
+            if ($delivery === null) {
+                return self::text('No webhook call ' . $deliveryId . '; the viewer keeps the last ' . WebhookRunner::MAX_DELIVERIES . " calls. peep webhooks lists them.\n", 'text/plain', 404);
+            }
+
+            return $json ? Responses::json(200, [...self::publicDelivery($delivery), 'now' => $now]) : self::text($renderer->delivery($delivery, true) . "\n");
+        }
+
+        $ruleName = is_string($parameters['rule'] ?? null) && $parameters['rule'] !== '' ? $parameters['rule'] : null;
+        $rules = array_values(array_filter($runner->rules->all(), static fn(Rule $rule): bool => ($query->project === null || $rule->project === '*' || $rule->project === $query->project)
+            && ($ruleName === null || self::isRule($rule, $ruleName))));
+        $ruleIds = array_map(static fn(Rule $rule): string => $rule->id, $rules);
+        $deliveries = array_values(array_filter($query->deliveries($runner->deliveries()), static fn(Delivery $delivery): bool => $ruleName === null || in_array($delivery->ruleId, $ruleIds, true)));
+
+        if ($json) {
+            return Responses::json(200, [
+                'now' => $now,
+                'rules' => array_map(self::publicRule(...), $rules),
+                'deliveries' => array_map(static fn(Delivery $delivery): array => $delivery->summary(), $deliveries),
+            ]);
+        }
+
+        if ($runner->rules->all() === []) {
+            return self::text("No webhook rules yet. The user creates them in the viewer's Webhooks tab (presets for Mailgun, Twilio and Vonage), because a rule holds the app's signing secret.\n");
+        }
+
+        $lines = ['Rules (' . count($rules) . '):', ''];
+        foreach ($rules as $rule) {
+            $lines[] = $renderer->rule($rule);
+        }
+        if ($rules === []) {
+            $lines[] = $ruleName !== null ? 'No rule is called "' . $ruleName . '".' : 'No rule applies to project ' . $query->project . '.';
+        }
+
+        $lines[] = '';
+        $lines[] = 'Calls made (' . count($deliveries) . ', newest first):';
+        $lines[] = '';
+        if ($deliveries === []) {
+            $lines[] = 'None yet. Send one: peep send-webhook --rule=' . ($rules[0]->id ?? 'ID') . ' --event=' . ($rules[0]->steps[0]['event'] ?? 'EVENT') . ' (with --mail=last or --sms=last for a caught message).';
+        }
+        foreach ($deliveries as $delivery) {
+            $lines[] = $renderer->delivery($delivery, false);
+            $lines[] = '';
+        }
+
+        return self::text(rtrim(implode("\n", $lines)) . "\n");
+    }
+
+    /**
+     * Calls the app with a rule: one event now (the answer comes back), or every step of the
+     * rule on its schedule when no event is given. Uses a caught mail or SMS ("last" for the
+     * newest), or sample data.
+     *
+     * @param array<mixed> $data
+     */
+    private function sendWebhook(array $data, TextRenderer $renderer): Response
+    {
+        $runner = $this->webhooks;
+        if ($runner === null) {
+            return self::text("This viewer has no webhook simulator.\n", 'text/plain', 404);
+        }
+
+        $project = JsonBody::project($data);
+        $ruleName = is_string($data['rule'] ?? null) ? trim($data['rule']) : '';
+        $known = implode(', ', array_map(static fn(Rule $rule): string => $rule->id . ' "' . $rule->name . '"', $runner->rules->all()));
+
+        if ($ruleName === '') {
+            return self::text('Say which rule: --rule=ID or name' . ($known !== '' ? ' (' . $known . ')' : '; none exist yet, the user creates them in the Webhooks tab') . ".\n", 'text/plain', 400);
+        }
+
+        $rules = array_values(array_filter($runner->rules->all(), static fn(Rule $rule): bool => self::isRule($rule, $ruleName)
+            && ($project === null || $rule->project === '*' || $rule->project === $project)));
+        if (count($rules) !== 1) {
+            return self::text(($rules === [] ? 'No webhook rule "' . $ruleName . '"' . ($project !== null ? ' for project ' . $project : '') : 'Several rules are called "' . $ruleName . '"; use the id')
+                . '. Rules: ' . ($known !== '' ? $known : 'none yet, the user creates them in the Webhooks tab') . ".\n", 'text/plain', $rules === [] ? 404 : 409);
+        }
+        $rule = $rules[0];
+
+        $event = is_string($data['event'] ?? null) && $data['event'] !== '' ? $data['event'] : null;
+        if ($event !== null && preg_match('/^[A-Za-z0-9_.-]{1,64}$/', $event) !== 1) {
+            return self::text("An event is a name such as delivered or failed (letters, digits, \"_\", \"-\", \".\").\n", 'text/plain', 400);
+        }
+
+        $target = $project ?? ($rule->project !== '*' ? $rule->project : null);
+        $mailId = is_string($data['mail'] ?? null) && $data['mail'] !== '' ? $data['mail'] : null;
+        $smsId = is_string($data['sms'] ?? null) && $data['sms'] !== '' ? $data['sms'] : null;
+        $mail = $mailId === null ? null : ($mailId === 'last' ? $this->lastMail($target) : $this->catcher->mails->find($mailId));
+        $sms = $smsId === null ? null : ($smsId === 'last' ? $this->lastSms($target) : $this->catcher->sms->find($smsId));
+
+        if ($mailId !== null && $mail === null) {
+            return self::text('No mail "' . $mailId . '"' . ($target !== null ? ' in project ' . $target : '') . " in the inbox. peep mail lists the caught mail.\n", 'text/plain', 404);
+        }
+        if ($smsId !== null && $sms === null) {
+            return self::text('No SMS "' . $smsId . '"' . ($target !== null ? ' in project ' . $target : '') . " in the inbox. peep sms lists the caught SMS.\n", 'text/plain', 404);
+        }
+
+        $sample = $mail === null && $sms === null;
+        $sampleProject = $target ?? 'default';
+        $mail ??= $sample ? Variables::sampleMail($sampleProject) : null;
+        $sms ??= $sample ? Variables::sampleSms($sampleProject) : null;
+        $with = $sample ? 'sample data' : ($mailId !== null ? 'mail ' . $mail?->id : 'SMS ' . $sms?->id);
+
+        if ($event === null) {
+            $runner->schedule($rule, $mail, $sms);
+            $plan = array_map(static fn(array $step): string => $step['event'] . ($step['delay_ms'] > 0 ? ' after ' . $step['delay_ms'] . ' ms' : ' now'), $rule->steps);
+
+            return self::text('Scheduled ' . count($rule->steps) . ' call' . (count($rule->steps) === 1 ? '' : 's') . ' of "' . $rule->name . '" with ' . $with . ': ' . implode(', ', $plan) . ".\n"
+                . 'Read the answers when they are done: peep webhooks --rule=' . $rule->id . ' --since=' . sprintf('%.6F', $renderer->now) . "\n", 'text/plain', 202);
+        }
+
+        $delivery = $runner->deliver($rule, $event, $mail, $sms);
+
+        return self::text('Sent "' . $rule->name . '" event ' . $event . ' with ' . $with . ".\n\n" . $renderer->delivery($delivery, true) . "\n", 'text/plain', $delivery->ok() ? 200 : 502);
+    }
+
+    private static function isRule(Rule $rule, string $idOrName): bool
+    {
+        return $rule->id === $idOrName || mb_strtolower($rule->name) === mb_strtolower($idOrName);
+    }
+
+    private function lastMail(?string $project): ?Mail
+    {
+        foreach ($this->catcher->mails->all() as $mail) {
+            if ($project === null || $mail->project === $project) {
+                return $mail;
+            }
+        }
+
+        return null;
+    }
+
+    private function lastSms(?string $project): ?Sms
+    {
+        foreach ($this->catcher->sms->all() as $sms) {
+            if ($project === null || $sms->project === $project) {
+                return $sms;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * A rule without its signing secret and with its variables' names only.
+     *
+     * @return array<string, mixed>
+     */
+    private static function publicRule(Rule $rule): array
+    {
+        $data = $rule->toArray();
+        $data['signature'] = ['type' => $rule->signature['type'], 'secret_set' => $rule->signature['secret'] !== '', 'header' => $rule->signature['header']];
+        $data['vars'] = array_keys($rule->vars);
+
+        return $data;
+    }
+
+    /**
+     * A call with credential-like request headers hidden, as the text shows it.
+     *
+     * @return array<string, mixed>
+     */
+    private static function publicDelivery(Delivery $delivery): array
+    {
+        return [...$delivery->toArray(), 'request' => [...$delivery->request, 'headers' => TextRenderer::hideSecretHeaders($delivery->request['headers'])]];
     }
 
     private static function text(string $text, string $type = 'text/plain', int $status = 200): Response

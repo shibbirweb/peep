@@ -46,11 +46,13 @@ The skill follows the [Agent Skills](https://agentskills.io) format, so agents t
 | `peep cards` | The newest cards as text, oldest first |
 | `peep mail`, `peep sms` | Caught mail and SMS; `peep mail --id=ID` shows one mail with its body |
 | `peep logs` | The app's log file (the newest in `storage/logs`): `--file=NAME`, `--level=error` for errors and worse, with context and stack traces |
+| `peep webhooks` | The webhook rules you made in the viewer and the calls they made with the app's answers: `--rule=NAME`, `--id=ID` for one call with its request and response |
+| `peep send-webhook` | Calls the app with one of your rules, signed like the provider: `--rule=NAME --event=delivered` sends one call now and shows the answer; without `--event`, every step of the rule runs on its schedule. `--mail=ID` or `--sms=ID` (`last` for the newest) uses a caught message, otherwise sample data |
 | `peep wait` | Waits for new cards and shows them (`--timeout=30`, `--count=1`): for a page the user clicks or a queued job |
-| `peep clear` | Empties the viewer before a run (`--what=all`, `cards`, `mail` or `sms`) |
+| `peep clear` | Empties the viewer before a run (`--what=all`, `cards`, `mail`, `sms` or `webhooks`) |
 | `peep mcp` | The MCP server |
 
-Filters for `report`, `cards`, `mail`, `sms`, `logs` and `wait`:
+Filters for `report`, `cards`, `mail`, `sms`, `logs`, `webhooks` and `wait`:
 
 | Option | Keeps |
 |--------|-------|
@@ -61,7 +63,7 @@ Filters for `report`, `cards`, `mail`, `sms`, `logs` and `wait`:
 | `--search=TEXT` | What contains the text |
 | `--limit=50` | The newest that many |
 
-`status`, `cards`, `mail`, `sms` and `logs` take `--json` for the full data. File paths are shown relative to the directory the command runs in. The exit code is 0 when it worked and 1 when the viewer is not reachable or nothing came, so a script can tell.
+`status`, `cards`, `mail`, `sms`, `logs` and `webhooks` take `--json` for the full data. File paths are shown relative to the directory the command runs in. The exit code is 0 when it worked and 1 when the viewer is not reachable or nothing came, so a script can tell.
 
 A card as the agent reads it:
 
@@ -76,7 +78,7 @@ A card as the agent reads it:
 
 ## The MCP server
 
-For agents that use MCP tools, `peep mcp` runs a Model Context Protocol server on stdin and stdout with the same abilities: `peep_status`, `peep_report`, `peep_cards`, `peep_mail`, `peep_sms`, `peep_logs`, `peep_wait` and `peep_clear`. Start it from the project directory.
+For agents that use MCP tools, `peep mcp` runs a Model Context Protocol server on stdin and stdout with the same abilities: `peep_status`, `peep_report`, `peep_cards`, `peep_mail`, `peep_sms`, `peep_logs`, `peep_webhooks`, `peep_send_webhook`, `peep_wait` and `peep_clear`. Start it from the project directory.
 
 Claude Code:
 
@@ -94,10 +96,30 @@ Other clients (Cursor's `.cursor/mcp.json`, Claude Desktop, VS Code and others):
 }
 ```
 
-Only `peep_clear` changes anything; the other tools only read.
+`peep_clear` empties the viewer and `peep_send_webhook` calls your app; the other tools only read.
+
+## Testing webhooks
+
+An agent can test how your app handles provider callbacks: Mailgun events, Twilio status callbacks, Vonage receipts or your own. It uses the rules you made in the viewer's [Webhooks](Webhooks.md) tab, so the calls are signed with your signing key and pass the app's signature check, and the agent never sees the key.
+
+```text
+$ vendor/bin/peep send-webhook --rule="Mailgun events" --event=failed --mail=last
+Sent "Mailgun events" event failed with mail mail_8f3a2c1d.
+
+[whd_4b1e9a20c7d3] 0s ago  shop  Mailgun events: failed  for mail_8f3a2c1d
+POST http://shop.test/webhooks/mailgun -> 500 in 41 ms
+...
+Response body:
+  {
+      "message": "Undefined array key \"delivery-status\""
+  }
+```
+
+The agent reads the answer, fixes the handler and sends again. `peep report` lists failed calls under **Problems**. Agents cannot create rules or change them: rules hold your secrets, so you make them in the viewer.
 
 ## Safety
 
 - The agent endpoints answer only on the machine the viewer runs on, like the viewer page. Apps on other machines can still send with the token, but cannot read.
+- Webhook rules are shown without their signing secret and variable values, and credential-like request headers (`Authorization`, cookies, tokens, API keys) as `(hidden)`. An agent can only send rules you made, to the URL you gave them.
 - Values under keys such as `password`, `token` and `authorization` are redacted by the client before they leave the app, so the agent never sees them.
 - The skill tells the agent to remove the calls it added (`vendor/bin/peep-clean --fix`) and never to use `pause()` or `pd()`. Check with `peep-clean` before you commit (see [Finding leftover calls](Finding-Leftover-Calls.md)).
